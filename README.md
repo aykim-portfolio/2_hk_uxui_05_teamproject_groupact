@@ -27,10 +27,15 @@
 | 코드/문서 관리 | GitHub                | 프로젝트 1, 2 레포지토리 분리 운영  |
 
 - 의견 불일치 시 다수결 원칙, 동률 시 캐주얼 결정 → 팀장 조율 → 강사 중재 순으로 진행
-- 회의록은 AI 회의록 툴로 요약본을 추출하여 `MeetingNotes/` 폴더에 기록
+- 회의록은 AI 회의록 툴로 요약본을 추출하여 `docs/meeting-notes/` 폴더에 기록
 
 ## 폴더 구조
 
 ```
-MeetingNotes/   # 회의록 및 프로젝트 계획서
+docs/
+  design/         # 디자인 시스템 및 UI 에셋 정리 (design.md)
+  meeting-notes/  # 회의록
+  planning/       # 프로젝트 계획서 및 마일스톤
+  deliverables/   # 스프린트별 산출물 요약
+CLAUDE.md         # 프로젝트 컨텍스트 (Claude Code용)
 ```
