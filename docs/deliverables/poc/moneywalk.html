@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>머니워크 MoneyWalk — 걸으면서 줍는 경제뉴스 (PoC)</title>
+<style>
+  :root{
+    --teal:#14b8a6; --teal-d:#0f766e; --navy:#0b1220; --ink:#111827; --sub:#6b7280;
+    --line:#e5e7eb; --up:#ef4444; --down:#3b82f6; --gold:#f59e0b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Pretendard","Malgun Gothic",-apple-system,sans-serif; background:#1a1f2b; color:var(--ink);
+       display:flex; justify-content:center; min-height:100vh;}
+  button{font-family:inherit; cursor:pointer;}
+
+  /* ── 폰 프레임 ── */
+  .app{width:390px; max-width:100vw; height:100vh; max-height:844px; background:#000; position:relative;
+       overflow:hidden; box-shadow:0 0 40px rgba(0,0,0,.6); align-self:center; border-radius:18px;}
+
+  /* ── 상단 바 ── */
+  .topbar{position:absolute; top:0; left:0; right:0; z-index:30; display:flex; align-items:center; gap:8px;
+          padding:14px 14px 30px; background:linear-gradient(rgba(0,0,0,.55), transparent); color:#fff;}
+  .loc-chip{background:rgba(0,0,0,.45); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.25);
+            border-radius:999px; padding:7px 14px; font-size:13px; font-weight:800;}
+  .loc-chip small{font-weight:400; opacity:.75; font-size:10.5px;}
+  .lv-chip{margin-left:auto; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.25);
+           border-radius:999px; padding:7px 12px; font-size:12px; font-weight:800; color:#fff; display:flex; gap:6px; align-items:center;}
+  .lv-chip .bar{width:44px; height:5px; background:rgba(255,255,255,.25); border-radius:3px; overflow:hidden;}
+  .lv-chip .fill{height:100%; background:var(--teal); border-radius:3px; transition:width .5s;}
+
+  /* ── 화면(탭) 전환 ── */
+  .scene{position:absolute; inset:0; display:none;}
+  .scene.active{display:block;}
+
+  /* ═══ AR 탐색 뷰 ═══ */
+  .ar-view{position:absolute; inset:0; overflow:hidden;}
+  .sky{position:absolute; inset:0 0 38% 0;}
+  .ground{position:absolute; left:0; right:0; bottom:0; height:40%;}
+  .road{position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:78%; height:38%;
+        background:linear-gradient(#3a4150,#262c38); clip-path:polygon(38% 0, 62% 0, 100% 100%, 0 100%);}
+  .road::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:5px; transform:translateX(-50%);
+        background:repeating-linear-gradient(#f5d76e 0 26px, transparent 26px 52px);}
+  .bld{position:absolute; bottom:36%; border-radius:4px 4px 0 0;
+       background:
+         repeating-linear-gradient(rgba(255,255,255,.13) 0 9px, transparent 9px 20px),
+         repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 9px, transparent 9px 20px),
+         var(--bcolor,#33405a);}
+  .bld .sign{position:absolute; top:12px; left:50%; transform:translateX(-50%); font-size:20px;
+             background:rgba(0,0,0,.35); border-radius:6px; padding:3px 7px;}
+  .cam-note{position:absolute; top:86px; left:50%; transform:translateX(-50%); z-index:9;
+            background:rgba(0,0,0,.4); color:rgba(255,255,255,.8); font-size:10px; border-radius:5px; padding:3px 9px; white-space:nowrap;}
+
+  /* AR 마커 */
+  .marker{position:absolute; z-index:20; transform:translate(-50%,-50%); text-align:center; background:none; border:none;}
+  .marker .pulse{position:absolute; left:50%; top:26px; transform:translate(-50%,-50%); width:64px; height:64px;
+                 border-radius:50%; border:2px solid rgba(20,184,166,.75); animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{transform:translate(-50%,-50%) scale(.55); opacity:.9;} 100%{transform:translate(-50%,-50%) scale(1.5); opacity:0;}}
+  .marker .orb{position:relative; width:52px; height:52px; border-radius:50%; margin:0 auto;
+               background:radial-gradient(circle at 32% 28%, #fff, #d9fff8 38%, var(--teal) 75%);
+               display:flex; align-items:center; justify-content:center; font-size:24px;
+               box-shadow:0 4px 16px rgba(20,184,166,.55); animation:bob 2.6s ease-in-out infinite;}
+  .marker.gotcha .orb{background:radial-gradient(circle at 32% 28%, #fff, #f1f5f9 38%, #94a3b8 75%); box-shadow:none;}
+  .marker.gotcha .pulse{display:none;}
+  @keyframes bob{0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);}}
+  .marker .tag{margin-top:5px; display:inline-block; background:rgba(0,0,0,.6); color:#fff; font-size:10.5px;
+               font-weight:700; border-radius:5px; padding:3px 8px; white-space:nowrap;}
+  .marker .dist{display:block; font-size:9px; color:rgba(255,255,255,.75); margin-top:2px;}
+  .radar{position:absolute; bottom:86px; left:12px; z-index:22; background:rgba(0,0,0,.5); color:#a7f3d0;
+         border:1px solid rgba(20,184,166,.4); border-radius:999px; padding:7px 13px; font-size:11.5px; font-weight:700;}
+
+  /* ═══ 지도 뷰 ═══ */
+  .map{position:absolute; inset:0; background:#e8efe6;
+       background-image:
+         linear-gradient(rgba(180,200,180,.5) 2px, transparent 2px),
+         linear-gradient(90deg, rgba(180,200,180,.5) 2px, transparent 2px);
+       background-size:46px 46px;}
+  .map .river{position:absolute; top:44%; left:-10%; right:-10%; height:60px; background:#bcd9ee; transform:rotate(-7deg); border-radius:40px;}
+  .map-title{position:absolute; top:76px; left:0; right:0; text-align:center; z-index:5; color:#374151; font-size:12px; font-weight:700;}
+  .pin{position:absolute; z-index:6; transform:translate(-50%,-100%); text-align:center; background:none; border:none;}
+  .pin .p-orb{width:46px; height:46px; border-radius:50% 50% 50% 8px; transform:rotate(-45deg); margin:0 auto;
+              background:var(--teal-d); display:flex; align-items:center; justify-content:center;
+              box-shadow:0 4px 10px rgba(0,0,0,.3); border:3px solid #fff;}
+  .pin .p-orb span{transform:rotate(45deg); font-size:19px;}
+  .pin.here .p-orb{background:#f59e0b;}
+  .pin .p-name{margin-top:6px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 8px;
+               font-size:11px; font-weight:800; color:#111; box-shadow:0 2px 6px rgba(0,0,0,.12);}
+  .pin .p-cnt{font-size:9.5px; color:var(--teal-d); font-weight:700;}
+  .me-dot{position:absolute; z-index:7; width:16px; height:16px; border-radius:50%; background:#3b82f6;
+          border:3px solid #fff; box-shadow:0 0 0 6px rgba(59,130,246,.25); transform:translate(-50%,-50%);}
+
+  /* ═══ 도감 뷰 ═══ */
+  .dex{position:absolute; inset:0; background:#0e1524; overflow-y:auto; padding:96px 16px 96px;}
+  .dex h2{color:#fff; font-size:18px; margin-bottom:3px;}
+  .dex .dex-sub{color:#94a3b8; font-size:12px; margin-bottom:14px;}
+  .dex-xp{background:#151f33; border:1px solid #24304a; border-radius:12px; padding:14px; margin-bottom:16px; color:#e2e8f0;}
+  .dex-xp .row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .dex-xp .em{font-size:24px;}
+  .dex-xp .nm{font-weight:900; font-size:15px;}
+  .dex-xp .lv{font-size:11px; color:#94a3b8;}
+  .dex-xp .st{margin-left:auto; background:#3b2a12; color:#fbbf24; font-size:10.5px; font-weight:800; border-radius:5px; padding:3px 7px;}
+  .dex-xp .bar{height:9px; background:#24304a; border-radius:5px; overflow:hidden;}
+  .dex-xp .fill{height:100%; background:linear-gradient(90deg,var(--teal-d),var(--teal)); transition:width .6s;}
+  .dex-xp .nxt{font-size:10.5px; color:#94a3b8; margin-top:5px;}
+  /* 블리스터 팩 도감 (3D 아이콘 약 포장 레퍼런스) */
+  .pack{border-radius:20px; padding:15px 14px 11px; margin-bottom:16px; position:relative;
+        background:
+          repeating-linear-gradient(115deg, rgba(255,255,255,.09) 0 3px, transparent 3px 7px),
+          linear-gradient(160deg,#d3dae2,#a9b3c0);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.65), 0 8px 18px rgba(0,0,0,.4);}
+  .pack-head{display:flex; justify-content:space-between; align-items:center; font-size:11.5px; font-weight:900;
+             color:#39434f; margin-bottom:11px;}
+  .pack-head .ph-cnt{background:rgba(255,255,255,.55); border-radius:6px; padding:2px 8px; font-size:10.5px;}
+  .pack-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .bubble{position:relative; height:88px; border-radius:18px; border:none; cursor:pointer; padding:6px;
+          background:linear-gradient(160deg, rgba(255,255,255,.92), rgba(228,234,241,.6));
+          box-shadow:inset 0 2px 5px rgba(255,255,255,.95), inset 0 -7px 12px rgba(118,132,152,.35), 0 3px 7px rgba(0,0,0,.18);
+          display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;}
+  .bubble:active{transform:scale(.96);}
+  .bubble .b-ico{font-size:30px; filter:drop-shadow(0 3px 3px rgba(0,0,0,.28));}
+  .bubble .b-name{font-size:9px; font-weight:800; color:#4b5563; text-align:center; line-height:1.35; padding:0 4px;}
+  .bubble.empty{background:linear-gradient(160deg, rgba(186,196,209,.55), rgba(157,169,185,.55));
+                box-shadow:inset 0 4px 9px rgba(84,96,114,.5), 0 1px 3px rgba(0,0,0,.12);}
+  .bubble.empty .b-ico{filter:grayscale(1); opacity:.4; font-size:24px;}
+  .bubble.empty .b-name{color:#6d7889;}
+  .pack-foot{font-size:9.5px; color:#57616e; margin-top:10px; text-align:right; font-weight:700; font-style:italic;}
+  .dex-tip{color:#64748b; font-size:10.5px; text-align:center; margin-top:14px;}
+
+  /* 도로표지판 (이정표 유머 레퍼런스) */
+  .roadsign{position:absolute; top:72px; left:50%; transform:translateX(-50%); z-index:5; min-width:230px;
+            background:#17713a; border:3px solid #fff; border-radius:12px; padding:11px 16px 9px; color:#fff;
+            text-align:center; box-shadow:0 5px 14px rgba(0,0,0,.35);}
+  .roadsign .rs-big{font-size:14.5px; font-weight:900; letter-spacing:-.3px;}
+  .roadsign .rs-big .rs-n{display:inline-flex; width:18px; height:18px; border-radius:50%; background:#fff;
+            color:#17713a; font-size:11px; font-weight:900; align-items:center; justify-content:center;
+            vertical-align:1px; margin-right:5px;}
+  .roadsign .rs-rom{font-size:8.5px; opacity:.72; margin-top:1px; letter-spacing:.5px;}
+  .roadsign .rs-sub{font-size:9.5px; opacity:.85; margin-top:6px; border-top:1px solid rgba(255,255,255,.35); padding-top:5px;}
+
+  /* ── 하단 탭 바 ── */
+  .tabbar{position:absolute; bottom:0; left:0; right:0; z-index:40; display:flex; background:rgba(10,15,26,.92);
+          backdrop-filter:blur(6px); border-top:1px solid rgba(255,255,255,.08); padding:8px 0 14px;}
+  .tabbar button{flex:1; background:none; border:none; color:#64748b; font-size:10.5px; font-weight:700;}
+  .tabbar button .ico{display:block; font-size:21px; margin-bottom:2px;}
+  .tabbar button.on{color:#5eead4;}
+
+  /* ── 바텀시트 (스팟 상세) ── */
+  .sheet-bg{position:absolute; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none;}
+  .sheet-bg.open{display:block;}
+  .sheet{position:absolute; left:0; right:0; bottom:0; z-index:51; background:#fff; border-radius:20px 20px 0 0;
+         padding:14px 18px 24px; max-height:76%; overflow-y:auto; transform:translateY(105%); transition:transform .28s;}
+  .sheet.open{transform:none;}
+  .sheet .grab{width:42px; height:4px; background:#d1d5db; border-radius:2px; margin:0 auto 12px;}
+  .sh-head{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .sh-emoji{width:46px; height:46px; border-radius:12px; background:#f0fdfa; border:1px solid #99f6e4;
+            display:flex; align-items:center; justify-content:center; font-size:24px;}
+  .sh-name{font-weight:900; font-size:16px;}
+  .sh-loc{font-size:11px; color:var(--sub);}
+  .stat-card{background:linear-gradient(120deg,#0f766e,#115e59); color:#fff; border-radius:12px; padding:14px 16px; margin-bottom:14px;}
+  .stat-card .s-label{font-size:11.5px; opacity:.85;}
+  .stat-card .s-value{font-size:24px; font-weight:900; margin:3px 0;}
+  .stat-card .s-delta{font-size:12px; font-weight:800;}
+  .stat-card .s-delta.up{color:#fca5a5;} .stat-card .s-delta.down{color:#93c5fd;}
+  .stat-card .s-src{font-size:9.5px; opacity:.6; margin-top:6px;}
+  .sh-sub{font-size:12.5px; font-weight:900; color:#374151; margin:0 0 8px;}
+  .news-item{border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:9px;}
+  .news-item h4{font-size:13.5px; line-height:1.45; margin-bottom:4px;}
+  .news-item .n-sum{font-size:11.5px; color:var(--sub); line-height:1.5;}
+  .n-impact{margin-top:8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:7px; padding:7px 9px;
+            font-size:11px; color:#134e4a; line-height:1.5;}
+  .n-impact b.t{color:#0f766e;}
+  .pick-btn{width:100%; margin-top:6px; background:var(--teal-d); color:#fff; border:none; border-radius:12px;
+            padding:14px; font-size:14.5px; font-weight:900;}
+  .pick-btn:disabled{background:#cbd5e1;}
+
+  /* ── 토스트 ── */
+  .toasts{position:absolute; top:96px; left:0; right:0; z-index:60; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;}
+  .toast{background:rgba(17,24,39,.92); color:#fff; border-radius:8px; padding:9px 15px; font-size:12.5px; font-weight:800;
+         animation:tIn .25s, tOut .4s 2.3s forwards;}
+  @keyframes tIn{from{opacity:0; transform:translateY(-8px);} to{opacity:1;}}
+  @keyframes tOut{to{opacity:0; transform:translateY(-8px);}}
+
+  /* ── blob 캐릭터 (클레이 캐릭터 레퍼런스) ── */
+  .blob{display:inline-block; width:44px; height:40px; position:relative; flex-shrink:0;
+        border-radius:47% 53% 55% 45% / 58% 62% 38% 42%;
+        background:radial-gradient(circle at 35% 26%, rgba(255,255,255,.55) 0 16%, transparent 42%), var(--bc,#f2b705);
+        box-shadow:inset -4px -6px 10px rgba(0,0,0,.16), 0 4px 8px rgba(0,0,0,.18);}
+  .blob i{position:absolute; width:6px; height:8px; background:#1f2937; border-radius:50%; top:40%;}
+  .blob i.l{left:29%;} .blob i.r{right:29%;}
+  .blob u{position:absolute; left:50%; transform:translateX(-50%); bottom:22%; width:11px; height:6px;
+          border:2.5px solid #1f2937; border-top:none; border-radius:0 0 12px 12px; text-decoration:none;}
+  .blob.flat u{height:0; width:9px; border-radius:0; border-bottom-width:3px; border-left:none; border-right:none;}
+  .blob.wow u{width:8px; height:8px; border:2.5px solid #1f2937; border-radius:50%;}
+  .blob.big{width:58px; height:53px;}
+  .blob.sm{width:34px; height:31px;}
+
+  /* ── 온보딩 (감정 선택 UI 레퍼런스: 라이트 파스텔 + 카드 그리드) ── */
+  .onb{position:absolute; inset:0; z-index:70; background:linear-gradient(170deg,#f6f3fd,#edf1f8); color:#1f2937;
+       display:flex; flex-direction:column; justify-content:center; padding:28px 24px; overflow-y:auto;}
+  .blob-row{display:flex; justify-content:center; align-items:flex-end; gap:10px; margin-bottom:16px;}
+  .blob-row .blob{animation:bob 2.8s ease-in-out infinite;}
+  .blob-row .blob:nth-child(2){animation-delay:.4s;} .blob-row .blob:nth-child(3){animation-delay:.8s;}
+  .blob-row .blob:nth-child(4){animation-delay:1.2s;}
+  .onb .step{text-align:center; font-size:10.5px; font-weight:900; color:#a1a8b8; letter-spacing:3px; margin-bottom:7px;}
+  .onb h1{font-size:22px; text-align:center; line-height:1.45; margin-bottom:10px; letter-spacing:-.3px; word-break:keep-all;}
+  .onb h1 b{color:#0f766e;}
+  .onb p{font-size:12px; color:#6b7280; text-align:center; line-height:1.7; margin-bottom:18px; word-break:keep-all;}
+  .pcards{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:20px;}
+  .pcard{background:#fff; border:2px solid transparent; border-radius:18px; padding:13px; min-height:88px;
+         display:flex; justify-content:space-between; align-items:flex-end; gap:6px;
+         box-shadow:0 2px 10px rgba(80,90,120,.09); cursor:pointer;}
+  .pcard .p-label{font-size:13px; font-weight:800; color:#374151; text-align:left; line-height:1.45; align-self:flex-start;}
+  .pcard.sel{border-color:#0f766e; background:#f0fdfa; box-shadow:0 5px 14px rgba(15,118,110,.2);}
+  .onb .go{background:#111827; color:#fff; border:none; border-radius:999px; padding:15px; font-size:14.5px; font-weight:900;}
+  .onb .skip{background:none; border:none; color:#9ca3af; font-size:12px; margin-top:11px; text-decoration:underline;}
+  .onb .powered{position:absolute; bottom:14px; left:0; right:0; text-align:center; font-size:10px; color:#b6bcc8;}
+
+  .poc-note{position:absolute; bottom:64px; right:10px; z-index:41; background:rgba(0,0,0,.55); color:#94a3b8;
+            font-size:9px; padding:3px 7px; border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 상단 바 -->
+  <div class="topbar">
+    <span class="loc-chip" id="locChip">📍 역삼동 오피스텔 거리 <small>서울 강남구</small></span>
+    <span class="lv-chip" id="lvChip"></span>
+  </div>
+
+  <!-- AR 탐색 -->
+  <div class="scene active" id="scene-ar">
+    <div class="ar-view" id="arView"></div>
+    <span class="cam-note">📷 카메라 화면 시뮬레이션 (PoC)</span>
+    <span class="radar" id="radar"></span>
+  </div>
+
+  <!-- 지도 -->
+  <div class="scene" id="scene-map">
+    <div class="map" id="mapView"></div>
+    <div class="roadsign" id="roadsign"></div>
+  </div>
+
+  <!-- 도감 -->
+  <div class="scene" id="scene-dex">
+    <div class="dex" id="dexView"></div>
+  </div>
+
+  <!-- 하단 탭 -->
+  <div class="tabbar">
+    <button data-tab="ar" class="on"><span class="ico">📷</span>탐색</button>
+    <button data-tab="map"><span class="ico">🗺️</span>지도</button>
+    <button data-tab="dex"><span class="ico">📖</span>도감</button>
+  </div>
+
+  <!-- 스팟 상세 바텀시트 -->
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet"></div>
+
+  <!-- 토스트 -->
+  <div class="toasts" id="toasts"></div>
+
+  <!-- 온보딩 -->
+  <div class="onb" id="onb">
+    <div>
+      <div class="blob-row">
+        <span class="blob sm flat" style="--bc:#35b06f"><i class="l"></i><i class="r"></i><u></u></span>
+        <span class="blob big" style="--bc:#f2b705"><i class="l"></i><i class="r"></i><u></u></span>
+        <span class="blob wow" style="--bc:#e8833a"><i class="l"></i><i class="r"></i><u></u></span>
+        <span class="blob sm" style="--bc:#3e8ed0"><i class="l"></i><i class="r"></i><u></u></span>
+      </div>
+      <div class="step">MONEYWALK · STEP 1</div>
+      <h1>가로막힌 경제,<br><b>산책</b>하면서 시작하면 돼</h1>
+      <p>부동산 앞에선 월세가, 증권가에선 코스피가 말을 걸어요.<br>
+         먼저 <b>내 지갑 상황</b>을 골라주세요 — 뉴스를 내 돈으로 번역해드려요.</p>
+      <div class="pcards" id="onbChips">
+        <button class="pcard" data-tag="jeonse">
+          <span class="p-label">전세·월세<br>살아요</span>
+          <span class="blob" style="--bc:#f2b705"><i class="l"></i><i class="r"></i><u></u></span>
+        </button>
+        <button class="pcard" data-tag="stock">
+          <span class="p-label">주식<br>투자 중</span>
+          <span class="blob wow" style="--bc:#e8833a"><i class="l"></i><i class="r"></i><u></u></span>
+        </button>
+        <button class="pcard" data-tag="self">
+          <span class="p-label">장사해요<br>(자영업)</span>
+          <span class="blob flat" style="--bc:#35b06f"><i class="l"></i><i class="r"></i><u></u></span>
+        </button>
+        <button class="pcard" data-tag="savings">
+          <span class="p-label">예·적금<br>위주</span>
+          <span class="blob" style="--bc:#3e8ed0"><i class="l"></i><i class="r"></i><u></u></span>
+        </button>
+      </div>
+      <button class="go" id="onbGo">산책 시작하기 🚶</button>
+      <div style="text-align:center;"><button class="skip" id="onbSkip">건너뛰기</button></div>
+    </div>
+    <div class="powered">PoC 프로토타입 · powered by 한국경제</div>
+  </div>
+
+  <span class="poc-note">PoC · 실제 위치/카메라 미사용</span>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   데이터: 지갑 태그 / 레벨 / 동네 / 뉴스 스팟
+───────────────────────────────────────────── */
+const TAGS = {
+  jeonse:{label:'전세·월세', emoji:'🏠'},
+  stock:{label:'주식 투자', emoji:'📈'},
+  self:{label:'자영업', emoji:'🏪'},
+  savings:{label:'예·적금', emoji:'💵'},
+};
+const LEVELS = [
+  {min:0,  name:'경제 새싹',   emoji:'🌱', rom:'Gyeongje Saessak',   bc:'#35b06f', mood:'flat'},
+  {min:40, name:'경제 관심러', emoji:'👀', rom:'Gwansimneo',         bc:'#f2b705', mood:''},
+  {min:100,name:'경제 똑똑이', emoji:'💡', rom:'Ttokttoki',          bc:'#e8833a', mood:''},
+  {min:200,name:'경제 고수',   emoji:'🎯', rom:'Gosu',               bc:'#3e8ed0', mood:'wow'},
+  {min:350,name:'경제 프로',   emoji:'🏆', rom:'Pro',                bc:'#8b5cf6', mood:''},
+];
+function blobHtml(bc, mood, size){
+  return `<span class="blob ${mood||''} ${size||''}" style="--bc:${bc}"><i class="l"></i><i class="r"></i><u></u></span>`;
+}
+
+const LOCATIONS = {
+  yeoksam:{name:'역삼동 오피스텔 거리', gu:'서울 강남구', mapX:72, mapY:30,
+    sky:'linear-gradient(#7fb2e5,#cfe3f5)', buildings:[
+      {left:'2%',  width:'26%', height:'44%', color:'#3b4a68', sign:'🏢'},
+      {left:'70%', width:'28%', height:'52%', color:'#4a4258', sign:'🏨'},
+      {left:'30%', width:'13%', height:'26%', color:'#5a4a3f', sign:'🏠'},
+      {left:'57%', width:'12%', height:'22%', color:'#3f5a4a', sign:'🏦'}]},
+  yeouido:{name:'여의도 증권가', gu:'서울 영등포구', mapX:24, mapY:38,
+    sky:'linear-gradient(#5b79b8,#b8cce8)', buildings:[
+      {left:'4%',  width:'22%', height:'56%', color:'#2e3d5c', sign:'📈'},
+      {left:'28%', width:'18%', height:'48%', color:'#3a4a6e', sign:'🏛️'},
+      {left:'72%', width:'24%', height:'60%', color:'#28364f', sign:'🏢'},
+      {left:'50%', width:'14%', height:'24%', color:'#4a3f5a', sign:'💱'}]},
+  hongdae:{name:'홍대 상권 골목', gu:'서울 마포구', mapX:18, mapY:66,
+    sky:'linear-gradient(#e8a86f,#f5d8b8)', buildings:[
+      {left:'3%',  width:'20%', height:'30%', color:'#8a5a4a', sign:'☕'},
+      {left:'25%', width:'16%', height:'24%', color:'#6e5a8a', sign:'🎸'},
+      {left:'62%', width:'17%', height:'27%', color:'#5a6e4a', sign:'🍜'},
+      {left:'81%', width:'17%', height:'33%', color:'#666', sign:'🏚️'}]},
+};
+
+const POIS = {
+  realty:{loc:'yeoksam', emoji:'🏠', name:'대박공인중개사', x:36, y:52, dist:'12m',
+    stat:{label:'이 동네 원룸 월세 평균', value:'78만원', delta:'▲ 전년比 +9%', dir:'up', src:'출처: 한경 집코노미 시세 (2026.07)'},
+    news:[
+      {title:'내년 서울 입주물량 1.3만가구…1990년 이후 최저', sum:'공급 절벽에 전·월세 상승 압력이 커지고 있다.',
+       impact:{tag:'jeonse', text:'재계약 때 월세 인상 요구 가능성이 커요. 갱신청구권 사용 계획을 미리 세워두세요.'}},
+      {title:'"전세 대신 월세" 계약 비중 60% 돌파', sum:'금리 부담에 월세 선호가 뚜렷해지며 월세가 오르는 중.',
+       impact:{tag:'jeonse', text:'월세 재계약 시즌 전에 주변 시세를 미리 확인해두면 협상에 유리해요.'}}]},
+  bank:{loc:'yeoksam', emoji:'🏦', name:'시중은행 역삼지점', x:62, y:58, dist:'27m',
+    stat:{label:'정기예금 금리 (12개월)', value:'연 2.8%', delta:'▼ 전월比 -0.3%p', dir:'down', src:'출처: 은행연합회 공시 (2026.07)'},
+    news:[
+      {title:'기준금리 인하 기대에 예금금리 뚝뚝', sum:'시중은행 예금금리가 일제히 2%대로 내려앉았다.',
+       impact:{tag:'savings', text:'만기가 다가온 예금이 있다면, 갈아타기 전에 금리 비교가 필수인 구간이에요.'}},
+      {title:'증시는 역대급 랠리…예·적금 자금 대이동', sum:'은행에서 증시로 자금이 빠르게 이동하고 있다.',
+       impact:{tag:'savings', text:'유행 따라 무리하게 갈아타기보다 비중 조절로 접근하는 게 안전해요.'}}]},
+  store:{loc:'yeoksam', emoji:'🏪', name:'편의점 앞', x:18, y:66, dist:'8m',
+    stat:{label:'편의점 도시락 평균가', value:'5,900원', delta:'▲ 전년比 +12%', dir:'up', src:'출처: 한경 유통 데이터 (2026.07)'},
+    news:[
+      {title:'"점심값이 무섭다" 런치플레이션 재점화', sum:'외식·간편식 물가가 다시 뛰며 직장인 부담이 커졌다.',
+       impact:{tag:'savings', text:'한 달 점심 예산을 정해두면 물가 상승기의 지출 방어에 도움이 돼요.'}}]},
+  sec:{loc:'yeouido', emoji:'📈', name:'OO증권 본사', x:22, y:48, dist:'15m',
+    stat:{label:'코스피 (오늘)', value:'8,252.65', delta:'▼ -0.42%', dir:'down', src:'출처: KRX (2026.07.06 종가)'},
+    news:[
+      {title:'코스피, 외인·기관 \'팔자\'에 하락…8000선은 사수', sum:'외국인·기관 동반 매도에도 8,000선은 지켜냈다.',
+       impact:{tag:'stock', text:'내 보유 종목의 수급 주체를 확인하고 분할 대응을 고려해 보세요.'}},
+      {title:'증시는 역대급 랠리…기업 자금조달은 \'반토막\'', sum:'증시로 몰린 돈이 실물 투자로 흐르지 않고 있다.',
+       impact:{tag:'stock', text:'랠리 추격 매수가 가장 위험한 구간이에요. 정해둔 원칙을 지키세요.'}}]},
+  fx:{loc:'yeouido', emoji:'💱', name:'환전소', x:57, y:62, dist:'9m',
+    stat:{label:'원/달러 환율', value:'1,532.64', delta:'▲ 연중 최고권', dir:'up', src:'출처: 서울외환시장 (2026.07.06)'},
+    news:[
+      {title:'환율 1,530원대…\'킹달러\' 다시 오나', sum:'달러 강세가 이어지며 수입 물가 부담이 커지고 있다.',
+       impact:{tag:'stock', text:'지금 달러 환전 후 미국주식 추가 매수는 환율 부담이 큰 구간이에요.'}},
+      {title:'해외여행 경비 부담 쑥…환테크 관심 급증', sum:'환율 상승에 여행 경비와 직구 비용이 늘었다.',
+       impact:{tag:'savings', text:'달러 예금이 있다면 평가익 구간이에요. 분할 차익 실현을 고민해볼 만해요.'}}]},
+  cafe:{loc:'hongdae', emoji:'☕', name:'카페거리 상가', x:24, y:56, dist:'11m',
+    stat:{label:'이 골목 상가 임대료 (3.3㎡)', value:'18.2만원', delta:'▲ 전년比 +6%', dir:'up', src:'출처: 한경 상권 리포트 (2026 상반기)'},
+    news:[
+      {title:'홍대 상권 임대료 다시 상승세…"버티기 힘들다"', sum:'유동인구 회복에 임대료가 오르며 자영업 부담 가중.',
+       impact:{tag:'self', text:'재계약 앞두고 있다면 주변 공실률 데이터가 임대료 협상 카드가 돼요.'}},
+      {title:'배달비 부담에 \'홀 장사\' 회귀하는 사장님들', sum:'수수료 부담에 매장 중심 운영으로 돌아서는 추세.',
+       impact:{tag:'self', text:'배달 비중이 높다면 수수료 구조를 다시 계산해볼 타이밍이에요.'}}]},
+  vacant:{loc:'hongdae', emoji:'🏚️', name:'공실 상가', x:76, y:50, dist:'19m',
+    stat:{label:'이 상권 공실률', value:'12.4%', delta:'▲ 전분기比 +1.1%p', dir:'up', src:'출처: 한국부동산원 (2026 2분기)'},
+    news:[
+      {title:'목 좋아도 빈다…거리 상권 양극화 심화', sum:'같은 상권에서도 골목별 희비가 갈리고 있다.',
+       impact:{tag:'self', text:'창업 준비 중이라면 공실률·권리금 추이를 함께 봐야 해요. 지금은 협상력이 세입자에게 있어요.'}}]},
+};
+
+const XP_PICK = 15, XP_SPOT_ALL = 30;
+
+/* ─────────────────────────────────────────────
+   상태
+───────────────────────────────────────────── */
+let mwProfile  = JSON.parse(localStorage.getItem('mw_profile') || 'null');   // null = 온보딩 전
+let mwXp       = parseInt(localStorage.getItem('mw_xp')||'0',10);
+let collected  = new Set(JSON.parse(localStorage.getItem('mw_collected')||'[]'));
+let curLoc     = localStorage.getItem('mw_loc') || 'yeoksam';
+let curPoi     = null;
+
+function save(){
+  localStorage.setItem('mw_xp', String(mwXp));
+  localStorage.setItem('mw_collected', JSON.stringify([...collected]));
+  localStorage.setItem('mw_loc', curLoc);
+}
+function levelOf(v){ let i=0; LEVELS.forEach((l,k)=>{ if(v>=l.min) i=k; }); return i; }
+
+/* 탭 헬퍼: click이 씹히는 환경(터치/임베드 패널) 대비 pointerup 폴백 + 중복 방지 */
+function onTap(el, fn){
+  let last = 0;
+  el.addEventListener('pointerup', e=>{
+    if(e.button !== undefined && e.button !== 0) return;
+    last = Date.now(); fn(e);
+  });
+  el.addEventListener('click', e=>{
+    if(Date.now() - last < 600) return; // pointerup에서 이미 처리됨
+    fn(e);
+  });
+}
+function toast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.getElementById('toasts').appendChild(t); setTimeout(()=>t.remove(), 3000);
+}
+function addXP(n, reason){
+  const before=levelOf(mwXp); mwXp+=n; save();
+  toast(`+${n} XP · ${reason}`);
+  const after=levelOf(mwXp);
+  if(after!==before) setTimeout(()=>toast(`${LEVELS[after].emoji} 레벨 업! ${LEVELS[after].name} 달성`), 500);
+  renderLvChip();
+  renderRoadsign();
+}
+
+/* ─────────────────────────────────────────────
+   렌더링: 상단 레벨칩 / AR / 지도 / 도감
+───────────────────────────────────────────── */
+function renderLvChip(){
+  const li=levelOf(mwXp), cur=LEVELS[li], next=LEVELS[li+1];
+  const pct = next ? Math.min(100, Math.round((mwXp-cur.min)/(next.min-cur.min)*100)) : 100;
+  document.getElementById('lvChip').innerHTML =
+    `${cur.emoji} Lv.${li+1} <span class="bar"><span class="fill" style="width:${pct}%"></span></span> ${mwXp}XP`;
+}
+
+function renderAR(){
+  const loc = LOCATIONS[curLoc];
+  document.getElementById('locChip').innerHTML = `📍 ${loc.name} <small>${loc.gu}</small>`;
+  const pois = Object.entries(POIS).filter(([id,p])=>p.loc===curLoc);
+  document.getElementById('arView').innerHTML = `
+    <div class="sky" style="background:${loc.sky}"></div>
+    <div class="ground" style="background:linear-gradient(#59616f,#3c4350)"></div>
+    ${loc.buildings.map(b=>`<div class="bld" style="left:${b.left}; width:${b.width}; height:${b.height}; --bcolor:${b.color};"><span class="sign">${b.sign}</span></div>`).join('')}
+    <div class="road"></div>
+    ${pois.map(([id,p])=>{
+      const done = p.news.every((n,i)=>collected.has(id+'_'+i));
+      return `<button class="marker ${done?'gotcha':''}" data-poi="${id}" style="left:${p.x}%; top:${p.y}%;">
+        <span class="pulse"></span>
+        <span class="orb">${p.emoji}</span>
+        <span class="tag">${p.name}${done?' ✓':''}</span>
+        <span class="dist">${p.dist}</span>
+      </button>`;
+    }).join('')}`;
+  document.getElementById('radar').textContent = `📡 주변 뉴스 스팟 ${pois.length}곳`;
+  document.querySelectorAll('.marker').forEach(m=>{
+    onTap(m, ()=>openSheet(m.dataset.poi));
+  });
+}
+
+/* 도로표지판: 다음 레벨 이정표 + 미룸 유머 */
+function renderRoadsign(){
+  const el = document.getElementById('roadsign');
+  if(!el) return;
+  const li = levelOf(mwXp), next = LEVELS[li+1];
+  el.innerHTML = next ? `
+    <div class="rs-big"><span class="rs-n">${li+2}</span>↑ ${next.name} <small style="opacity:.8;">${next.min-mwXp} XP</small></div>
+    <div class="rs-rom">${next.rom} ${next.min-mwXp}XP</div>
+    <div class="rs-sub">← 안 읽음 <i>Anilgeum</i> &nbsp;·&nbsp; 미룸 <i>Mirum</i> →</div>`
+    : `
+    <div class="rs-big">🏆 정상 도착 · 경제 프로</div>
+    <div class="rs-rom">Gyeongje Pro — You made it!</div>`;
+}
+
+function renderMap(){
+  renderRoadsign();
+  const el = document.getElementById('mapView');
+  el.innerHTML = `
+    <div class="river"></div>
+    <div class="me-dot" style="left:${LOCATIONS[curLoc].mapX}%; top:${LOCATIONS[curLoc].mapY + 9}%;"></div>
+    ${Object.entries(LOCATIONS).map(([id,l])=>{
+      const cnt = Object.values(POIS).filter(p=>p.loc===id).length;
+      return `<button class="pin ${id===curLoc?'here':''}" data-loc="${id}" style="left:${l.mapX}%; top:${l.mapY}%;">
+        <span class="p-orb"><span>${id===curLoc?'🚶':'📍'}</span></span>
+        <span class="p-name">${l.name}<br><span class="p-cnt">뉴스 스팟 ${cnt}곳</span></span>
+      </button>`;
+    }).join('')}`;
+  el.querySelectorAll('.pin').forEach(p=>{
+    onTap(p, ()=>{
+      if(p.dataset.loc===curLoc) return;
+      curLoc = p.dataset.loc; save();
+      renderAR(); renderMap();
+      switchTab('ar');
+      toast(`🚶 ${LOCATIONS[curLoc].name}에 도착! (PoC라 순간이동)`);
+    });
+  });
+}
+
+function renderDex(){
+  const total = Object.entries(POIS).reduce((a,[id,p])=>a+p.news.length, 0);
+  const li=levelOf(mwXp), cur=LEVELS[li], next=LEVELS[li+1];
+  const pct = next ? Math.min(100, Math.round((mwXp-cur.min)/(next.min-cur.min)*100)) : 100;
+
+  // 동네별 블리스터 팩: 한 칸 = 뉴스 1정
+  const packs = Object.entries(LOCATIONS).map(([lid,l])=>{
+    const bubbles = [];
+    let got = 0, tot = 0;
+    Object.entries(POIS).filter(([id,p])=>p.loc===lid).forEach(([id,p])=>{
+      p.news.forEach((n,i)=>{
+        tot++;
+        const has = collected.has(id+'_'+i);
+        if(has) got++;
+        bubbles.push(`
+          <button class="bubble ${has?'':'empty'}" data-poi="${id}">
+            <span class="b-ico">${has ? p.emoji : '❔'}</span>
+            <span class="b-name">${has ? (n.title.length>14 ? n.title.slice(0,14)+'…' : n.title) : '미발견 · '+p.name}</span>
+          </button>`);
+      });
+    });
+    return `
+      <div class="pack">
+        <div class="pack-head"><span>💊 ${l.name} 뉴스 ${tot}정</span><span class="ph-cnt">${got}/${tot} 복용</span></div>
+        <div class="pack-grid">${bubbles.join('')}</div>
+        <div class="pack-foot">하루 한 알, 경제뉴스 — 식후 산책 시 흡수율 ↑</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('dexView').innerHTML = `
+    <h2>📖 뉴스 도감</h2>
+    <div class="dex-sub">주운 뉴스 <b style="color:#5eead4;">${collected.size}</b> / ${total}정 — 가로막힌 경제도 한 알씩 하면 돼</div>
+    <div class="dex-xp">
+      <div class="row">
+        ${blobHtml(cur.bc, cur.mood, 'sm')}
+        <span><span class="nm">${cur.name}</span><br><span class="lv">Lv.${li+1} · ${mwXp} XP</span></span>
+        <span class="st">🔥 3일째 산책</span>
+      </div>
+      <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="nxt">${next?`다음 레벨 ${next.name}까지 ${next.min-mwXp} XP`:'최고 레벨! 🎉'}</div>
+    </div>
+    ${packs}
+    <div class="dex-tip">한 칸을 누르면 그 뉴스 스팟이 바로 열려요</div>`;
+
+  document.querySelectorAll('#dexView .bubble').forEach(b=>{
+    onTap(b, ()=>openSheet(b.dataset.poi));
+  });
+}
+
+/* ─────────────────────────────────────────────
+   바텀시트: 스팟 상세 (시세 + 뉴스 줍기)
+───────────────────────────────────────────── */
+function openSheet(poiId){
+  curPoi = poiId;
+  const p = POIS[poiId];
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="grab"></div>
+    <div class="sh-head">
+      <span class="sh-emoji">${p.emoji}</span>
+      <span><div class="sh-name">${p.name}</div><div class="sh-loc">📍 ${LOCATIONS[p.loc].name} · ${p.dist} 앞</div></span>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">${p.stat.label}</div>
+      <div class="s-value">${p.stat.value}</div>
+      <div class="s-delta ${p.stat.dir}">${p.stat.delta}</div>
+      <div class="s-src">${p.stat.src}</div>
+    </div>
+    <p class="sh-sub">📰 이 스팟에서 발견한 뉴스</p>
+    ${p.news.map((n,i)=>{
+      const key = poiId+'_'+i;
+      const imp = (mwProfile && mwProfile.includes(n.impact.tag))
+        ? `<div class="n-impact">💰 <b class="t">${TAGS[n.impact.tag].emoji} ${TAGS[n.impact.tag].label}인 나에게:</b> ${n.impact.text}</div>` : '';
+      return `<div class="news-item">
+        <h4>${n.title}</h4>
+        <p class="n-sum">${n.sum}</p>
+        ${imp}
+        <button class="pick-btn" data-key="${key}" ${collected.has(key)?'disabled':''}>
+          ${collected.has(key)?'주웠음 ✓':`이 뉴스 줍기 🫳 +${XP_PICK} XP`}
+        </button>
+      </div>`;
+    }).join('')}`;
+  sheet.querySelectorAll('.pick-btn:not(:disabled)').forEach(b=>{
+    onTap(b, ()=>{
+      if(b.disabled) return;
+      const key = b.dataset.key;
+      if(collected.has(key)) return;
+      collected.add(key); save();
+      b.disabled = true; b.textContent = '주웠음 ✓';
+      addXP(XP_PICK, '뉴스 주움! 🫳');
+      if(p.news.every((n,i)=>collected.has(poiId+'_'+i))){
+        setTimeout(()=>addXP(XP_SPOT_ALL, `${p.name} 스팟 클리어! 🏁`), 400);
+      }
+      renderAR(); renderDex();
+    });
+  });
+  document.getElementById('sheetBg').classList.add('open');
+  sheet.offsetHeight; // 리플로우 강제 → 백그라운드 탭에서도 슬라이드업 보장
+  sheet.classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheetBg').classList.remove('open');
+}
+onTap(document.getElementById('sheetBg'), closeSheet);
+
+/* ─────────────────────────────────────────────
+   탭 / 온보딩 / 초기화
+───────────────────────────────────────────── */
+function switchTab(tab){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scene-'+tab).classList.add('active');
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  if(tab==='dex') renderDex();
+  closeSheet();
+}
+document.querySelectorAll('.tabbar button').forEach(b=>{
+  onTap(b, ()=>switchTab(b.dataset.tab));
+});
+
+/* 온보딩 */
+document.querySelectorAll('#onbChips button').forEach(b=>{
+  onTap(b, ()=>b.classList.toggle('sel'));
+});
+function startWalk(tags){
+  mwProfile = tags;
+  localStorage.setItem('mw_profile', JSON.stringify(tags));
+  document.getElementById('onb').style.display = 'none';
+  toast('🚶 산책 시작! 주변 뉴스 스팟을 눌러보세요');
+}
+onTap(document.getElementById('onbGo'), ()=>{
+  startWalk([...document.querySelectorAll('#onbChips button.sel')].map(b=>b.dataset.tag));
+});
+onTap(document.getElementById('onbSkip'), ()=>startWalk([]));
+
+/* 초기화 */
+renderLvChip();
+renderAR();
+renderMap();
+renderDex();
+if(mwProfile !== null) document.getElementById('onb').style.display = 'none';
+</script>
+</body>
+</html>
