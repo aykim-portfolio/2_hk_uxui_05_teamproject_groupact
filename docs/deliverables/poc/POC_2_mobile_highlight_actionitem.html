@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>한경 모바일 POC — 형광펜 하이라이트 → 액션아이템 내보내기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+@font-face{font-family:'Pretendard';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Regular.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face{font-family:'Pretendard';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Medium.woff2') format('woff2');font-weight:500;font-display:swap;}
+@font-face{font-family:'Pretendard';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Bold.woff2') format('woff2');font-weight:700;font-display:swap;}
+@font-face{font-family:'Pretendard';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraBold.woff2') format('woff2');font-weight:800;font-display:swap;}
+
+:root{
+  --font-sans:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Inter','Pretendard',sans-serif;
+  --text-primary:#191f28; --text-secondary:#4e5968; --text-muted:#8b95a1;
+  --border:rgba(0,0,0,0.08); --border-strong:rgba(0,0,0,0.14);
+  --navy:#143c7e; --navy-deep:#0e2856; --accent:#3182f6;
+  --up:#e2231a; --down:#1a56db;
+  --radius:10px;
+  --hl-lime:#ABF800; --hl-purple:#8344FF; --hl-pink:#FF3CA4; --hl-orange:#FF7D00; --hl-navy:#143C7E;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#e9edf1;font-family:var(--font-sans);color:var(--text-primary);-webkit-font-smoothing:antialiased;}
+
+.poc-frame{max-width:430px;margin:0 auto;min-height:100vh;background:#fff;position:relative;box-shadow:0 0 40px rgba(0,0,0,0.14);overflow-x:hidden;}
+
+.poc-banner{background:#14171c;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:11px;gap:8px;flex-wrap:wrap;}
+.poc-banner b{font-weight:700;}
+.poc-banner .tag{background:rgba(255,255,255,0.14);border-radius:999px;padding:3px 9px;font-size:10.5px;}
+.dev-toggle{display:flex;align-items:center;gap:6px;background:#fff7e0;color:#7a5b00;font-size:11px;padding:8px 16px;border-bottom:1px solid #f0dca0;}
+.dev-switch{width:32px;height:18px;border-radius:10px;background:#d1d5db;border:none;position:relative;flex-shrink:0;cursor:pointer;}
+.dev-switch .dot{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;}
+.dev-switch.on{background:var(--navy);}
+.dev-switch.on .dot{left:16px;}
+
+/* ── mobile header ── */
+.m-utility{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;font-size:10.5px;color:var(--text-muted);border-bottom:1px solid var(--border);}
+.m-logo-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+.m-logo{height:22px;width:auto;}
+.m-header-icons{display:flex;align-items:center;gap:16px;font-size:18px;color:var(--text-primary);}
+.m-trial{background:var(--navy);color:#fff;border:none;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:4px;white-space:nowrap;font-family:var(--font-sans);}
+.m-nav{display:flex;gap:16px;overflow-x:auto;padding:0 16px 10px;border-bottom:2px solid var(--text-primary);font-size:13.5px;color:#333;scrollbar-width:none;}
+.m-nav::-webkit-scrollbar{display:none;}
+.m-nav span{white-space:nowrap;flex-shrink:0;}
+.m-nav span.active{font-weight:700;color:var(--text-primary);}
+.m-ticker{display:flex;gap:16px;overflow-x:auto;padding:7px 16px;font-size:11px;border-bottom:1px solid var(--border);scrollbar-width:none;}
+.m-ticker::-webkit-scrollbar{display:none;}
+.m-tick{display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
+.m-tick-val{font-family:var(--font-num);font-weight:700;}
+.m-tick-chg{font-family:var(--font-num);}
+.m-tick-chg.up{color:var(--up);} .m-tick-chg.down{color:var(--down);}
+
+/* ── article ── */
+.m-art-header{padding:20px 16px 0;}
+.m-art-title{font-size:21px;font-weight:800;line-height:1.4;letter-spacing:-.01em;margin-bottom:14px;}
+.m-byline{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;gap:8px;}
+.m-authors{display:flex;align-items:center;gap:-6px;}
+.m-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-left:-8px;background:#e5e8eb;}
+.m-avatar:first-child{margin-left:0;}
+.m-byline-text{font-size:11.5px;color:var(--text-secondary);}
+.m-byline-text b{color:var(--text-primary);}
+.m-hl-icons{display:flex;align-items:center;gap:14px;color:var(--text-muted);flex-shrink:0;position:relative;}
+.m-hl-icons svg{cursor:pointer;width:19px;height:19px;}
+.m-hl-icons svg.active{color:var(--accent);}
+.hk-palette{position:absolute;top:calc(100% + 10px);right:0;display:flex;gap:8px;background:#fff;border:1px solid #cfe0ff;border-radius:999px;padding:9px 12px;box-shadow:0 8px 20px rgba(0,0,0,.14);z-index:30;}
+.hk-swatch{width:22px;height:22px;border-radius:50%;border:none;padding:0;cursor:pointer;}
+.m-mode-label{font-size:10.5px;color:var(--accent);text-align:right;padding:6px 16px 0;min-height:16px;}
+
+.m-art-body{font-size:15.5px;line-height:1.85;color:#333;padding:2px 16px 8px;}
+.m-art-body p{margin-bottom:16px;}
+.hk-stat{border-bottom:1px dotted var(--navy);color:var(--navy);font-weight:600;font-family:var(--font-num);}
+.hk-highlight-mark{color:inherit;border-radius:2px;cursor:pointer;}
+
+.m-author-card{margin:8px 16px 24px;padding:16px;background:#f9fafb;border-radius:12px;}
+.m-author-card .name{font-size:14px;font-weight:700;margin-bottom:6px;}
+.m-author-card .desc{font-size:12.5px;color:var(--text-secondary);}
+
+/* ── toast ── */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120%);background:#191f28;color:#fff;font-size:12.5px;padding:11px 18px;border-radius:10px;z-index:400;transition:transform .2s ease;display:flex;align-items:center;gap:8px;max-width:90%;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── sheets (bottom) ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.sheet-overlay.show{display:flex;}
+.sheet{background:#fff;width:100%;max-width:430px;border-radius:18px 18px 0 0;padding:10px 18px 22px;box-shadow:0 -4px 20px rgba(0,0,0,.16);animation:sheet-up .18s ease;}
+@keyframes sheet-up{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:8px auto 14px;}
+.sheet-quote{font-family:'Noto Serif KR',serif;font-size:13.5px;background:#fff8e1;color:#5c4400;padding:10px 12px;border-radius:8px;margin-bottom:10px;line-height:1.5;}
+.sheet-row{display:flex;align-items:center;gap:13px;padding:12px 2px;border-radius:10px;}
+.sheet-row .ic{width:38px;height:38px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:18px;flex-shrink:0;}
+.sheet-row.danger .ic{background:#fef2f2;color:#dc2626;}
+.sheet-row span{font-size:14px;}
+
+/* ── full-screen overlays ── */
+.full-overlay{position:fixed;inset:0;background:#fff;z-index:200;display:none;flex-direction:column;max-width:430px;margin:0 auto;}
+.full-overlay.show{display:flex;}
+.ov-appbar{display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ov-appbar .t{font-size:15.5px;font-weight:700;flex:1;}
+.ov-appbar i{font-size:20px;cursor:pointer;}
+.ov-body{flex:1;overflow-y:auto;padding:18px 16px;}
+
+/* card export */
+.card-preview{position:relative;width:100%;aspect-ratio:1/1;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:18px;background:#FFF6D9;color:#5c4400;}
+.card-preview .scrim{position:absolute;inset:0;background:rgba(0,0,0,.32);display:none;}
+.card-preview .kicker{position:relative;z-index:2;align-self:flex-start;background:rgba(0,0,0,.08);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.card-preview .quote{position:relative;z-index:2;font-family:'Noto Serif KR',serif;font-size:19px;line-height:1.5;margin:12px 0 8px;}
+.card-preview .meta{position:relative;z-index:2;font-size:11px;}
+.card-remove{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;display:none;align-items:center;justify-content:center;z-index:3;}
+.section-label{font-size:12px;color:var(--text-muted);margin:16px 0 8px;}
+.swatch-row{display:flex;gap:9px;overflow-x:auto;}
+.bg-swatch{width:36px;height:36px;border-radius:10px;border:2px solid transparent;flex-shrink:0;padding:0;}
+.bg-swatch.on{border-color:var(--navy);}
+.upload-tile{width:36px;height:36px;border-radius:10px;border:1.5px dashed var(--border-strong);background:none;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ratio-row{display:flex;gap:8px;}
+.chip-btn{font-size:12.5px;padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--text-secondary);}
+.chip-btn.on{background:#eef2ff;border-color:transparent;color:var(--navy);font-weight:700;}
+.btn-row{display:flex;gap:10px;margin-top:22px;}
+.btn-outline{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--navy);background:none;color:var(--navy);font-weight:700;font-size:14px;font-family:var(--font-sans);}
+.btn-filled{flex:1;padding:12px;border-radius:10px;border:none;background:var(--navy);color:#fff;font-weight:700;font-size:14px;font-family:var(--font-sans);}
+
+/* scrap */
+.scrap-item{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.scrap-thumb{width:46px;height:46px;border-radius:10px;flex-shrink:0;}
+.snap-tag{font-size:10.5px;padding:2px 7px;border-radius:8px;display:inline-flex;align-items:center;gap:2px;margin-top:5px;}
+.snap-tag.up{background:#fef2f2;color:var(--up);} .snap-tag.down{background:#eff6ff;color:var(--down);}
+.metric-mini{background:#f9fafb;border-radius:10px;padding:11px;}
+.metric-mini .l{font-size:11px;color:var(--text-secondary);margin-bottom:4px;}
+.metric-mini .v{font-size:15px;font-weight:700;}
+.term-chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:7px 13px;border-radius:999px;background:#eef2ff;color:var(--navy);cursor:pointer;font-weight:600;}
+.related-row{padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.related-row .d{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.follow-switch{width:40px;height:22px;border-radius:11px;background:#d1d5db;border:none;position:relative;flex-shrink:0;}
+.follow-switch .dot{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;}
+.follow-switch.on{background:var(--navy);} .follow-switch.on .dot{left:20px;}
+
+/* payment (실제 SubscriptionModal 톤 재사용) */
+.plan-card{background:#312e81;color:#e0e7ff;border-radius:14px;padding:18px;margin-bottom:18px;}
+.plan-card .kicker{font-size:11px;color:#a5b4fc;margin-bottom:6px;}
+.plan-card .price{font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;}
+.plan-card .desc{font-size:12px;color:#c7d2fe;line-height:1.6;}
+.pay-row{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid var(--border);cursor:pointer;}
+.pay-radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-strong);position:relative;flex-shrink:0;}
+.pay-radio.on{border-color:var(--accent);}
+.pay-radio.on::after{content:'';position:absolute;top:3px;left:3px;width:8px;height:8px;border-radius:50%;background:var(--accent);}
+.pay-icon{font-size:18px;color:var(--text-secondary);}
+
+/* ── AI 플로팅 버튼 + 바텀시트 (실제 Sidebar.jsx Epic AI 이식) ── */
+.ai-fab{position:fixed;right:20px;bottom:26px;z-index:90;width:54px;height:54px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:23px;border:none;box-shadow:0 6px 16px rgba(20,60,126,.35);}
+.ai-sheet-overlay{position:fixed;inset:0;z-index:150;display:none;align-items:flex-end;justify-content:center;pointer-events:none;}
+.ai-sheet-overlay.show{display:flex;}
+.ai-sheet-panel{background:#fff;width:100%;max-width:430px;height:36vh;max-height:36vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.22);border-top:1px solid var(--border);animation:sheet-up .18s ease;pointer-events:auto;}
+.ai-sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:9px auto 0;flex-shrink:0;}
+.ai-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 16px 10px;flex-shrink:0;}
+.ai-sheet-head .ttl{font-size:17px;font-weight:800;margin-bottom:4px;}
+.ai-sheet-head .sub{font-size:12px;color:var(--text-muted);}
+.ai-sheet-head i{font-size:20px;color:var(--text-muted);cursor:pointer;flex-shrink:0;margin-left:12px;}
+.ai-sheet-body{flex:1;overflow-y:auto;padding:0 16px 20px;}
+.ai-tabbar{display:grid;grid-template-columns:1fr 1fr;background:#f2f4f6;border-radius:10px;padding:3px;margin-bottom:14px;}
+.ai-tab-btn{padding:9px 0;font-size:13px;font-weight:500;border:none;cursor:pointer;border-radius:8px;background:transparent;color:var(--text-secondary);font-family:var(--font-sans);}
+.ai-tab-btn.active{background:#fff;color:var(--text-primary);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.ai-view{display:none;}
+.ai-view.active{display:block;}
+.paywall-wrap{position:relative;}
+.ai-locked{transition:opacity .15s;}
+.ai-locked.locked{opacity:.3;pointer-events:none;}
+.ai-box{background:#f9fafb;border-radius:10px;border:0.5px solid var(--border);padding:14px 16px;margin-bottom:14px;font-size:12.5px;line-height:1.7;}
+.chips{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.chip{padding:10px 12px;background:#f9fafb;border:0.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;text-align:left;font-family:var(--font-sans);width:100%;}
+.ai-qa-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.ai-qa-bubble{max-width:80%;width:fit-content;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5;}
+.ai-qa-q{margin-left:auto;background:#eef2ff;color:var(--text-primary);border-bottom-right-radius:4px;}
+.ai-qa-a{background:#f9fafb;color:var(--text-primary);border-bottom-left-radius:4px;}
+.ai-qa-dots{display:inline-flex;gap:3px;}
+.ai-qa-dots span{width:5px;height:5px;border-radius:50%;background:#9ca3af;animation:ai-qa-blink 1.2s infinite ease-in-out;}
+.ai-qa-dots span:nth-child(2){animation-delay:.2s;} .ai-qa-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes ai-qa-blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
+.ai-input-row{display:flex;gap:8px;margin-bottom:14px;}
+.ai-input{flex:1;min-width:0;padding:9px 12px;background:#f9fafb;border:0.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-sans);}
+.ask-btn{padding:9px 15px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);white-space:nowrap;}
+.sim-card{background:#f9fafb;border-radius:10px;border:0.5px solid var(--border);padding:13px 14px;}
+.sim-label{font-size:11.5px;color:var(--text-muted);margin-bottom:10px;font-weight:500;}
+.sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sim-cell{background:#fff;border-radius:8px;padding:9px;text-align:center;}
+.sim-key{font-size:10.5px;color:var(--text-secondary);margin-bottom:4px;}
+.sim-val{font-size:13.5px;font-weight:700;font-family:var(--font-num);}
+.stake-card{background:#f9fafb;border-radius:10px;padding:13px 14px;margin-bottom:9px;border:0.5px solid var(--border);}
+.stake-label{font-size:12px;font-weight:700;margin-bottom:5px;}
+.stake-body{font-size:12px;color:var(--text-secondary);line-height:1.6;}
+.paywall-overlay{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(180deg,rgba(255,255,255,.3) 0%,rgba(255,255,255,.96) 40%,#fff 100%);}
+.lock-gate{width:100%;background:#fff;border:0.5px solid var(--border);border-radius:12px;padding:20px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.lock-icon{font-size:26px;color:var(--text-muted);margin-bottom:8px;}
+.lock-title{font-size:13.5px;font-weight:700;margin-bottom:4px;}
+.lock-desc{font-size:11.5px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;}
+.lock-cta{display:block;width:100%;padding:11px 0;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;font-family:var(--font-sans);}
+.lock-cta-note{font-size:10.5px;color:var(--text-muted);margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="poc-frame">
+
+  <div class="poc-banner">
+    <span><b>POC 2</b> · 형광펜 하이라이트 → 액션아이템 내보내기 (모바일)</span>
+    <span class="tag">react-app 실사용 UI/데이터 기반</span>
+  </div>
+  <div class="dev-toggle">
+    <button id="devSubBtn" class="dev-switch"><span class="dot"></span></button>
+    <span id="devSubLabel">테스트용 · 무료 회원 (카드 내보내기 1회 제한)</span>
+  </div>
+
+  <!-- ── 헤더 (실제 Header.jsx 축약 · 모바일) ── -->
+  <div class="m-utility">
+    <span>2026.06.30</span>
+    <span>로그인</span>
+  </div>
+  <div class="m-logo-row">
+    <svg class="m-logo" viewBox="0 0 80.399 19.6" role="img" aria-label="한국경제" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#142C67">
+        <path d="M37.3,1.5c0-0.7-0.601-1.1-1.2-1.1H23.5v1.2h10.699v2.8c0,1.1-0.1,2.1-0.399,3H21.199v1.3h7.4v2.4h-5.3v1.2h10.899v6.5H36c0.899,0,1.3-0.301,1.3-1.301v-5.3c0-0.7-0.5-1.1-1.101-1.1h-4.5V8.7h7.7V7.4h-3c0.5-0.7,0.9-2,0.9-3.1V1.5L37.3,1.5z"/>
+        <path d="M7.5,12.4H4c0.3,0.3,0.399,1,0.399,1.6v3.5C4.399,18.7,4.8,19,6,19h10.8V17.8h-9.4v-5.4H7.5z"/>
+        <path d="M11.3,1.6H7.199V0H3.8C4,0.2,4.1,0.8,4.1,1.3v0.3H0v1.2h2.699c-1.199,0.8-2,2.1-2,3.7c0,2.7,2.301,4.6,4.9,4.6c2.7,0,4.9-1.9,5-4.6c0-1.6-0.8-2.9-2-3.7h2.7V1.6z M5.6,9.9c-1.4,0-2.3-1.4-2.3-3.3c0-2,0.899-3.3,2.3-3.3s2.3,1.4,2.3,3.3C7.899,8.5,7,9.9,5.6,9.9z"/>
+        <path d="M16.1,0.4h-3.5c0.3,0.3,0.4,1,0.4,1.6v11.6h1.8c0.899,0,1.3-0.4,1.3-1.3V6.1h3V4.9h-3C16.1,4.8,16.1,0.4,16.1,0.4z"/>
+        <path d="M77,0.4c0.399,0.3,0.6,1,0.6,1.6v17H79c1,0,1.399-0.6,1.399-1.6v-17H77L77,0.4z"/>
+        <path d="M73.5,6.3h-3v1.2h3v9.7h1.3c1,0,1.399-0.6,1.399-1.7V0.4h-3.3c0.4,0.3,0.5,1,0.5,1.6L73.5,6.3L73.5,6.3z"/>
+        <path d="M52.3,2.3c0.1-0.7-0.3-1.2-1-1.2h-8.2v1.3h6.1c0,4.4-2.699,7.2-7.1,8l0.6,0.8C48.399,10.5,51.8,7.8,52.3,2.3"/>
+        <path d="M58.6,0.4h-3.5c0.4,0.3,0.5,1,0.5,1.6v1.4h-3.2v1.3h3.2v1.7h-3.3v1.2h3.3V10.5c-0.8-0.3-1.7-0.5-2.6-0.5c-3,0-5.5,2-5.5,4.8c0,2.899,2.5,4.8,5.5,4.8s5.5-2,5.6-4.8c0-0.101,0-0.101,0-0.2l0,0V0.4z M53,18.3c-1.601,0-2.7-1.4-2.7-3.5c0-2.101,1.1-3.5,2.7-3.5c1.6,0,2.699,1.399,2.699,3.5C55.699,16.9,54.6,18.3,53,18.3z"/>
+        <path d="M71.399,2.2c0-0.8-0.5-1.1-1.1-1.1h-7.2v1.3h5.3c0,3.8-2.7,6.3-6.6,7.7c4.3,0.7,7.5,2.8,9.7,5.899v-3.8c-1.801-1.399-3.801-2.2-5.7-2.5C68.699,8.5,71.399,4.8,71.399,2.2"/>
+      </g>
+    </svg>
+    <div class="m-header-icons">
+      <i class="ti ti-search" aria-hidden="true"></i>
+      <i class="ti ti-menu-2" aria-hidden="true"></i>
+    </div>
+  </div>
+  <nav class="m-nav">
+    <button id="trialBtn" class="m-trial"><i class="ti ti-sparkles" aria-hidden="true" style="font-size:12px;"></i>유료 구독 체험하기</button>
+    <span>경제</span><span>산업</span><span class="active">사회</span><span>코리아마켓</span><span>글로벌마켓</span><span>집코노미</span>
+  </nav>
+  <div class="m-ticker">
+    <div class="m-tick"><span>코스피200</span><span class="m-tick-val">1,330.57</span><span class="m-tick-chg down">-8.50%</span></div>
+    <div class="m-tick"><span>반도체</span><span class="m-tick-val">13,940.87</span><span class="m-tick-chg up">+3.59%</span></div>
+    <div class="m-tick"><span>환율 USD/KRW</span><span class="m-tick-val">1,545.25</span></div>
+  </div>
+
+  <!-- ── 기사 헤더 (실제 ArticleHeader.jsx 로직 이식) ── -->
+  <div class="m-art-header">
+    <h1 class="m-art-title">매년 2조 적자… 하반기 수도요금 오른다</h1>
+    <div class="m-byline">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="m-authors">
+          <img class="m-avatar" src="../react-app/public/Lee.png" alt="이소이 기자">
+          <img class="m-avatar" src="../react-app/public/kang-taewoo.png" alt="강태우 기자">
+          <img class="m-avatar" src="../react-app/public/Kim.png" alt="김해연 기자">
+        </div>
+        <div class="m-byline-text"><b>이소이 외 2인</b><br>2026.06.30 18:17</div>
+      </div>
+      <div class="m-hl-icons">
+        <div id="paletteWrap" style="position:relative;">
+          <svg id="hlIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" aria-label="형광펜">
+            <path d="M9 11L3 17V20H12L15 17M22 12L17.4 16.6C17.0261 16.9665 16.5235 17.1717 16 17.1717C15.4765 17.1717 14.9739 16.9665 14.6 16.6L9.4 11.4C9.03355 11.0261 8.82829 10.5235 8.82829 10C8.82829 9.47649 9.03355 8.97386 9.4 8.6L14 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div id="hkPalette" class="hk-palette" style="display:none;">
+            <button class="hk-swatch" data-color="#ABF800" style="background:#ABF800;"></button>
+            <button class="hk-swatch" data-color="#8344FF" style="background:#8344FF;"></button>
+            <button class="hk-swatch" data-color="#FF3CA4" style="background:#FF3CA4;"></button>
+            <button class="hk-swatch" data-color="#FF7D00" style="background:#FF7D00;"></button>
+            <button class="hk-swatch" data-color="#143C7E" style="background:#143C7E;"></button>
+          </div>
+        </div>
+        <svg id="eraserIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" aria-label="지우개">
+          <path d="M20.9999 21.0001H12.8339M12.8339 21.0001H7.99994C7.73624 21.0007 7.47502 20.9491 7.23132 20.8484C6.98762 20.7476 6.76624 20.5997 6.57994 20.4131L2.58594 16.4141C2.211 16.039 2.00037 15.5304 2.00037 15.0001C2.00037 14.4697 2.211 13.9611 2.58594 13.5861L12.5859 3.58607C12.7717 3.40027 12.9922 3.25288 13.2349 3.15232C13.4776 3.05176 13.7377 3 14.0004 3C14.2632 3 14.5233 3.05176 14.766 3.15232C15.0087 3.25288 15.2292 3.40027 15.4149 3.58607L21.4139 9.58607C21.7889 9.96113 21.9995 10.4697 21.9995 11.0001C21.9995 11.5304 21.7889 12.039 21.4139 12.4141L12.8339 21.0001ZM5.08194 11.0901L13.9099 19.9181" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <p class="m-mode-label" id="modeLabel">&nbsp;</p>
+
+  <!-- ── 기사 본문 (실제 levels[0].body 원문 이식) ── -->
+  <div class="m-art-body" id="articleBody">
+    <p><strong>◇충남·경기·경남 등 줄줄이 요금 인상</strong></p>
+    <p>전국 지방자치단체가 하반기부터 상하수도 요금을 인상한다. 보령시는 2020년 이후 6년간 동결한 요금을 7월 1일부터 단계적으로 인상하며, 가정용 상수도는 ㎥당 1000원의 단일요금으로 개편한 후 2029년까지 매년 <span class="hk-stat">5.5%</span>씩 올려 ㎥당 1180원으로 조정한다. 가정용 하수도 요금은 ㎥당 590원에서 매년 14%씩 올려 2029년에는 1010원으로 인상된다.</p>
+    <p>경기 수원시는 8월 고지분부터 상수도 요금을 ㎥당 60원 인상하며, 월평균 19㎥를 사용하는 3인 가구의 상수도 요금은 월 1만70원에서 <span class="hk-stat">1만1210원</span>으로 1140원 증가할 것으로 전망된다. 경남 창원시는 7월 1일부터 상수도 요금을 ㎥당 960원에서 1070원으로 인상한다. 최근 5년간 상수도 경영적자 누적액이 연평균 약 <span class="hk-stat">151억원</span>에 달한다.</p>
+    <p>경기 용인시는 올해 초부터 상수도 요금을 ㎥당 24원, 하수도 요금은 86원 올렸다. 경기 여주시는 3월 고지분부터 수도 요금을 <span class="hk-stat">19.3%</span> 인상했으며, 세종시는 내년 인상을, 울산시도 하수도 요금 인상을 검토 중이다.</p>
+    <p><strong>◇상하수도 순손실 2조3138억원</strong></p>
+    <p>행정안전부의 '2024사업연도 지방공기업 결산 및 경영분석'에 따르면 지난해 전국 평균 상수도 요금 현실화율은 <span class="hk-stat">74.5%</span>, 하수도 요금 현실화율은 <span class="hk-stat">47.5%</span>에 그쳤다. 상하수도 부문 순손실은 2024년 <span class="hk-stat">2조3138억원</span>으로 전년보다 7.6% 증가했다. 충청북도 관계자는 "노후 관로 보수와 정수시설 투자를 고려할 때 요금 인상이 불가피하다"고 설명했다.</p>
+    <p style="font-size:12px;color:var(--text-muted);">문장을 길게 눌러 선택하면(형광펜 켠 상태) 하이라이트가 적용되고, 형광펜을 끈 채 이미 칠해진 하이라이트를 탭하면 액션시트가 올라옵니다.</p>
+  </div>
+
+  <div class="m-author-card">
+    <div class="name">이소이·강태우·김해연 기자</div>
+    <div class="desc">안녕하세요. 한국경제 사회부입니다.</div>
+  </div>
+
+  <!-- ── 액션시트: 하이라이트 탭 시 ── -->
+  <div id="actionSheet" class="sheet-overlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div id="sheetQuote" class="sheet-quote"></div>
+      <div class="sheet-row" data-action="card"><span class="ic"><i class="ti ti-photo" aria-hidden="true"></i></span><span>액션아이템으로 내보내기</span></div>
+      <div class="sheet-row" data-action="scrap"><span class="ic"><i class="ti ti-bookmark" aria-hidden="true"></i></span><span>스크랩하기</span></div>
+      <div class="sheet-row" data-action="copy"><span class="ic"><i class="ti ti-copy" aria-hidden="true"></i></span><span>복사하기</span></div>
+      <div class="sheet-row danger" data-action="delete"><span class="ic"><i class="ti ti-trash" aria-hidden="true"></i></span><span>하이라이트 삭제</span></div>
+    </div>
+  </div>
+
+  <!-- ── 페이월 시트 ── -->
+  <div id="paywallSheet" class="sheet-overlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <p style="font-size:15px;font-weight:700;margin-bottom:6px;">무료 내보내기를 모두 사용했어요</p>
+      <p style="font-size:12.5px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;">모바일 한경 구독하면 액션아이템 내보내기가 무제한이에요.</p>
+      <button id="goPaymentBtn" class="btn-filled" style="width:100%;margin-bottom:8px;">구독하고 계속하기</button>
+      <button id="closePaywallBtn" class="btn-outline" style="width:100%;">닫기</button>
+    </div>
+  </div>
+
+  <!-- ── 공유 대상 시트 ── -->
+  <div id="shareSheet" class="sheet-overlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <p style="font-size:14px;font-weight:700;margin-bottom:10px;">공유 대상 선택</p>
+      <div class="sheet-row" data-target="카카오톡"><span class="ic"><i class="ti ti-message-circle" aria-hidden="true"></i></span><span>카카오톡</span></div>
+      <div class="sheet-row" data-target="인스타그램 스토리"><span class="ic"><i class="ti ti-brand-instagram" aria-hidden="true"></i></span><span>인스타그램 스토리</span></div>
+      <div class="sheet-row" data-target="링크 복사"><span class="ic"><i class="ti ti-link" aria-hidden="true"></i></span><span>링크 복사 (실제 클립보드 복사)</span></div>
+    </div>
+  </div>
+
+  <!-- ── 카드 내보내기 화면 ── -->
+  <div id="cardScreen" class="full-overlay">
+    <div class="ov-appbar"><i class="ti ti-arrow-left" data-close="cardScreen" aria-hidden="true"></i><span class="t">액션아이템 내보내기</span></div>
+    <div class="ov-body">
+      <div id="cardPreview" class="card-preview">
+        <button id="cardRemovePhoto" class="card-remove" aria-label="사진 제거"><i class="ti ti-x" style="font-size:13px;" aria-hidden="true"></i></button>
+        <div id="cardScrim" class="scrim"></div>
+        <span class="kicker">사회 · 수도요금</span>
+        <p id="cardQuote" class="quote"></p>
+        <p id="cardMeta" class="meta">한국경제 · 2026.06.30</p>
+      </div>
+
+      <p class="section-label">배경</p>
+      <div class="swatch-row">
+        <button id="uploadPhotoBtn" class="upload-tile" aria-label="사진 업로드"><i class="ti ti-camera" aria-hidden="true"></i></button>
+        <input type="file" id="bgPhotoInput" accept="image/*" style="display:none;">
+        <button class="bg-swatch on" data-bg="#FFF6D9" data-text="#5c4400" style="background:#ABF800;"></button>
+        <button class="bg-swatch" data-bg="#F1E9FF" data-text="#3a1c8c" style="background:#8344FF;"></button>
+        <button class="bg-swatch" data-bg="#FFE6F3" data-text="#8c1257" style="background:#FF3CA4;"></button>
+        <button class="bg-swatch" data-bg="#FFEBDB" data-text="#8c3d00" style="background:#FF7D00;"></button>
+        <button class="bg-swatch" data-bg="#E5EBF7" data-text="#143C7E" style="background:#143C7E;"></button>
+      </div>
+      <p id="photoHint" style="font-size:11px;color:var(--text-muted);margin-top:6px;display:none;"><i class="ti ti-check" aria-hidden="true"></i> 내 사진이 배경으로 적용됐어요</p>
+
+      <p class="section-label">비율</p>
+      <div class="ratio-row">
+        <button class="chip-btn on" data-ratio="1/1">1:1</button>
+        <button class="chip-btn" data-ratio="4/5">4:5</button>
+        <button class="chip-btn" data-ratio="9/16">9:16</button>
+      </div>
+
+      <div class="btn-row">
+        <button id="cardScrapBtn" class="btn-outline">스크랩에 저장</button>
+        <button id="cardShareBtn" class="btn-filled">공유하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 결제(구독) 화면 — 실제 SubscriptionModal 톤 축약 ── -->
+  <div id="paymentScreen" class="full-overlay">
+    <div class="ov-appbar"><i class="ti ti-arrow-left" data-close="paymentScreen" aria-hidden="true"></i><span class="t">한경 프리미엄 구독</span></div>
+    <div class="ov-body">
+      <div id="paymentForm">
+        <div class="plan-card">
+          <div class="kicker">모바일 한경</div>
+          <div class="price">7,500원 <span style="font-size:12px;font-weight:500;">/월</span></div>
+          <div class="desc">출퇴근 시간, 바쁜 일상 속에서도 액션아이템 내보내기 무제한 · 광고 제거</div>
+        </div>
+        <p class="section-label">결제 수단</p>
+        <div class="pay-row" data-pay="card"><span class="pay-radio on"></span><i class="ti ti-credit-card pay-icon" aria-hidden="true"></i><span>신용카드</span></div>
+        <div class="pay-row" data-pay="kakao"><span class="pay-radio"></span><i class="ti ti-message-circle pay-icon" aria-hidden="true"></i><span>카카오페이</span></div>
+        <div class="pay-row" data-pay="naver"><span class="pay-radio"></span><i class="ti ti-brand-naver pay-icon" aria-hidden="true"></i><span>네이버페이</span></div>
+        <button id="payNowBtn" class="btn-filled" style="width:100%;margin-top:20px;">7,500원 결제하기</button>
+        <p style="font-size:10.5px;color:var(--text-muted);text-align:center;margin-top:8px;">7일 무료 체험 후 결제 · 언제든 해지 가능</p>
+      </div>
+      <div id="paymentSuccess" style="display:none;text-align:center;padding-top:36px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:#eff9f1;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <i class="ti ti-check" style="font-size:26px;color:#16a34a;" aria-hidden="true"></i>
+        </div>
+        <p style="font-size:16px;font-weight:700;margin-bottom:6px;">구독이 시작되었습니다</p>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:22px;">이제 액션아이템 내보내기가 무제한이에요</p>
+        <button id="continueAfterPayBtn" class="btn-filled" style="width:100%;">하던 작업 계속하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 보낸것 확인 ── -->
+  <div id="confirmScreen" class="full-overlay">
+    <div class="ov-appbar"><i class="ti ti-arrow-left" data-close="confirmScreen" aria-hidden="true"></i><span class="t">보낸것 확인</span></div>
+    <div class="ov-body" style="text-align:center;padding-top:30px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:#eff9f1;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <i class="ti ti-check" style="font-size:26px;color:#16a34a;" aria-hidden="true"></i>
+      </div>
+      <p style="font-size:16px;font-weight:700;margin-bottom:6px;">공유 완료</p>
+      <p id="confirmSub" style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;"></p>
+      <div id="confirmThumb" class="card-preview" style="width:130px;aspect-ratio:1/1;margin:0 auto 22px;padding:12px;"><p id="confirmThumbText" style="position:relative;z-index:2;font-family:'Noto Serif KR',serif;font-size:11px;text-align:left;"></p></div>
+      <div style="display:flex;flex-direction:column;gap:9px;text-align:left;">
+        <button class="btn-filled" data-close="confirmScreen" data-open="scrapScreen">스크랩함에서 보기</button>
+        <button class="btn-outline" data-close="confirmScreen">기사로 돌아가기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 스크랩함 ── -->
+  <div id="scrapScreen" class="full-overlay">
+    <div class="ov-appbar"><i class="ti ti-arrow-left" data-close="scrapScreen" aria-hidden="true"></i><span class="t">내 스크랩</span></div>
+    <div class="ov-body">
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <button class="chip-btn on">전체</button>
+        <button class="chip-btn">이번 주</button>
+        <button class="chip-btn">이번 달</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">스크랩을 탭하면 그 순간의 시장 상황을 다시 볼 수 있어요.</p>
+      <div id="scrapList"></div>
+    </div>
+  </div>
+
+  <!-- ── 스크랩 상세 ── -->
+  <div id="scrapDetailScreen" class="full-overlay">
+    <div class="ov-appbar"><i class="ti ti-arrow-left" data-close="scrapDetailScreen" aria-hidden="true"></i><span class="t">스크랩 상세</span></div>
+    <div class="ov-body">
+      <div id="detailQuoteCard" class="card-preview" style="aspect-ratio:auto;padding:16px;">
+        <p id="detailQuote" style="position:relative;z-index:2;font-family:'Noto Serif KR',serif;font-size:16px;line-height:1.5;margin-bottom:8px;"></p>
+        <p id="detailMeta" style="position:relative;z-index:2;font-size:11px;opacity:.75;"></p>
+      </div>
+      <p class="section-label">스크랩 당시 시장 상황</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div class="metric-mini"><p class="l">코스피</p><p class="v" id="kospiVal">-</p><span class="snap-tag" id="kospiTag"></span></div>
+        <div class="metric-mini"><p class="l">원/달러 환율</p><p class="v" id="fxVal">-</p><span class="snap-tag" id="fxTag"></span></div>
+        <div class="metric-mini"><p class="l">기준금리</p><p class="v" id="rateVal">-</p></div>
+        <div class="metric-mini"><p class="l">3년 국고채</p><p class="v" id="bondVal">-</p></div>
+      </div>
+      <p class="section-label">함께 알아두면 좋은 용어</p>
+      <span id="termChip" class="term-chip"><i class="ti ti-info-circle" aria-hidden="true"></i><span id="termName">-</span></span>
+      <p id="termDesc" style="font-size:12.5px;color:var(--text-secondary);margin-top:8px;display:none;line-height:1.6;"></p>
+      <p class="section-label" style="margin-top:18px;">관련 기사 더보기</p>
+      <div id="relatedList"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+        <span style="font-size:13.5px;">이 이슈 후속 소식 알림받기</span>
+        <button id="followSwitch" class="follow-switch"><span class="dot"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AI 플로팅 버튼 (실제 Sidebar.jsx Epic AI 이식) ── -->
+  <button id="aiFab" class="ai-fab" aria-label="AI 궁금증 해결소"><i class="ti ti-sparkles" aria-hidden="true"></i></button>
+
+  <div id="aiSheetOverlay" class="ai-sheet-overlay">
+    <div class="ai-sheet-panel">
+      <div class="ai-sheet-handle"></div>
+      <div class="ai-sheet-head">
+        <div>
+          <div class="ttl">AI 궁금증 해결소</div>
+          <div class="sub">기사 밖으로 나갈 필요 없는 원스톱 자본시장 분석</div>
+        </div>
+        <i class="ti ti-x" id="aiSheetClose" aria-hidden="true"></i>
+      </div>
+      <div class="ai-sheet-body">
+        <div class="ai-tabbar">
+          <button class="ai-tab-btn active" data-ai-tab="chat">AI 대화</button>
+          <button class="ai-tab-btn" data-ai-tab="stake">다른 생각</button>
+        </div>
+
+        <!-- AI 대화 -->
+        <div class="ai-view active" data-ai-view="chat">
+          <div class="paywall-wrap">
+            <div class="ai-locked" id="aiChatLocked">
+              <div class="ai-box">
+                <i class="ti ti-search" aria-hidden="true" style="margin-right:6px;color:var(--text-muted);"></i><strong>Epic AI 경제 분석 대기 중</strong><br>
+                기사 본문에서 밑줄 있는 수치를 클릭하여 실시간 검증을 실행해 보세요.<br><br>
+                - <strong>실시간 데이터 교차 검증:</strong> 행안부 지방공기업 결산 원자료와 지자체 고시를 즉시 대조합니다.<br>
+                - <strong>맞춤 분석 피드백:</strong> 선택된 요금·적자 수치의 기준 연도와 산정 단위를 명확히 밝혀드립니다.<br>
+                - <strong>전문가 Insight:</strong> 우리 지역 가구별 요금 인상 부담을 시뮬레이션해 드립니다.
+              </div>
+              <div id="aiChips" class="chips">
+                <button class="chip" data-q="상하수도 순손실 2조3138억원의 정확한 출처는?">상하수도 순손실 2조3138억원의 출처는?</button>
+                <button class="chip" data-q="우리 지역 3인 가구 기준 요금 인상액은 얼마인가요?">우리 지역 3인 가구 요금 인상액은?</button>
+                <button class="chip" data-q="요금 현실화율이 낮은 지자체 순위 요약은?">요금 현실화율이 낮은 지자체 순위는?</button>
+              </div>
+              <div id="aiQaList" class="ai-qa-list"></div>
+              <div class="ai-input-row">
+                <input id="aiInput" class="ai-input" type="text" placeholder="궁금한 점을 물어보세요">
+                <button id="aiAskBtn" class="ask-btn">질문</button>
+              </div>
+              <div class="sim-card">
+                <div class="sim-label"><i class="ti ti-chart-dots" aria-hidden="true"></i> 구독 활용 현황</div>
+                <div class="sim-grid">
+                  <div class="sim-cell"><div class="sim-key">AI 검증 대화 사용</div><div class="sim-val" id="askCountVal">0회</div></div>
+                  <div class="sim-cell"><div class="sim-key">이 기사 프리미엄 인사이트</div><div class="sim-val" id="insightCountVal">0개</div></div>
+                </div>
+              </div>
+            </div>
+            <div id="aiChatPaywall" class="paywall-overlay">
+              <div class="lock-gate">
+                <div class="lock-icon"><i class="ti ti-lock" aria-hidden="true"></i></div>
+                <p class="lock-title">유료 구독 전용 기능입니다</p>
+                <p class="lock-desc">AI 대화 및 구독 활용 현황은<br>한경 프리미엄 구독자에게 제공됩니다.</p>
+                <button class="lock-cta ai-lock-cta"><i class="ti ti-sparkles" aria-hidden="true" style="margin-right:4px;font-size:11px;"></i>유료 구독 신청 후 잠금해제 →</button>
+                <p class="lock-cta-note">7일 무료 체험 후 결제 · 언제든 해지 가능</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 다른 생각 -->
+        <div class="ai-view" data-ai-view="stake">
+          <div class="paywall-wrap">
+            <div class="ai-locked" id="aiStakeLocked">
+              <div class="stake-card"><p class="stake-label">행정안전부 지방재정 담당 입장</p><p class="stake-body">"상하수도 순손실이 2조원을 넘어선 만큼 요금 현실화는 불가피하다. 노후 관로 보수와 정수시설 투자 재원을 확보하지 못하면 안전 사고로 이어질 수 있다는 점을 지자체와 공유하고 있다."</p></div>
+              <div class="stake-card"><p class="stake-label">지자체(창원·보령 등) 상수도사업본부 설명</p><p class="stake-body">"수년간 요금을 동결해 온 탓에 연평균 100억원대 적자가 누적됐다. 단계적 인상으로 주민 부담을 최소화하되 원가 회수율을 정상화하는 것이 목표다."</p></div>
+              <div class="stake-card"><p class="stake-label">시민·소비자 단체 논평</p><p class="stake-body">"동시다발적 인상은 취약계층 생계비를 직접 압박한다. 요금 인상에 앞서 공기업 방만 경영 점검과 누수율 개선이 선행돼야 한다."</p></div>
+            </div>
+            <div id="aiStakePaywall" class="paywall-overlay">
+              <div class="lock-gate">
+                <div class="lock-icon"><i class="ti ti-users" aria-hidden="true"></i></div>
+                <p class="lock-title">다른 생각 요약 (유료 전용)</p>
+                <p class="lock-desc">기사 원문 내의 다양한 이익집단의<br>상충되는 시선을 요약합니다.</p>
+                <button class="lock-cta ai-lock-cta"><i class="ti ti-sparkles" aria-hidden="true" style="margin-right:4px;font-size:11px;"></i>유료 구독 신청 후 잠금해제 →</button>
+                <p class="lock-cta-note">7일 무료 체험 후 결제 · 언제든 해지 가능</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<script>
+// ══════════════ 전역 상태 ══════════════
+var highlightColor = null;
+var eraserActive = false;
+var subscribed = false;
+var exportsUsed = 0;
+var exportLimit = 1;
+var pendingQuote = null;
+
+var articleBody = document.getElementById('articleBody');
+var hlIcon = document.getElementById('hlIcon');
+var eraserIcon = document.getElementById('eraserIcon');
+var hkPalette = document.getElementById('hkPalette');
+var modeLabel = document.getElementById('modeLabel');
+
+function hexToRgba(hex, alpha){
+  var h = hex.replace('#','');
+  var r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+function unwrapMark(mark){
+  var parent = mark.parentNode; if(!parent) return;
+  while(mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+  parent.removeChild(mark); parent.normalize();
+}
+function setModeLabel(){
+  if(eraserActive) modeLabel.textContent = '지우개 모드 · 하이라이트를 눌러 지우세요';
+  else if(highlightColor) modeLabel.textContent = '형광펜 모드 · 문장을 드래그해 선택하세요';
+  else modeLabel.textContent = ' ';
+}
+
+// ── 형광펜 아이콘 / 팔레트 (실제 ArticleHeader.jsx 로직) ──
+hlIcon.addEventListener('click', function(){
+  if(highlightColor){ highlightColor = null; hlIcon.classList.remove('active'); hkPalette.style.display='none'; setModeLabel(); return; }
+  eraserActive = false; eraserIcon.classList.remove('active');
+  hkPalette.style.display = hkPalette.style.display === 'flex' ? 'none' : 'flex';
+});
+document.querySelectorAll('.hk-swatch').forEach(function(sw){
+  sw.addEventListener('click', function(){
+    eraserActive = false; eraserIcon.classList.remove('active');
+    highlightColor = sw.getAttribute('data-color');
+    hlIcon.classList.add('active');
+    hkPalette.style.display = 'none';
+    setModeLabel();
+  });
+});
+eraserIcon.addEventListener('click', function(){
+  if(eraserActive){ eraserActive = false; eraserIcon.classList.remove('active'); setModeLabel(); return; }
+  highlightColor = null; hlIcon.classList.remove('active'); hkPalette.style.display='none';
+  eraserActive = true; eraserIcon.classList.add('active');
+  setModeLabel();
+});
+document.addEventListener('mousedown', function(e){
+  if(!hkPalette.contains(e.target) && e.target !== hlIcon && !hlIcon.contains(e.target)) hkPalette.style.display = 'none';
+});
+
+// ── 형광펜으로 실제 텍스트 선택 하이라이트 (Article.jsx 로직 이식) ──
+function handleHighlight(){
+  if(!highlightColor) return;
+  var sel = window.getSelection();
+  if(!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  var range = sel.getRangeAt(0);
+  if(!articleBody.contains(range.commonAncestorContainer)) return;
+  var mark = document.createElement('mark');
+  mark.className = 'hk-highlight-mark';
+  mark.style.backgroundColor = hexToRgba(highlightColor, 0.28);
+  mark.dataset.color = highlightColor;
+  try{ range.surroundContents(mark); } catch(err){ mark.appendChild(range.extractContents()); range.insertNode(mark); }
+  sel.removeAllRanges();
+}
+function handleEraseSelection(){
+  var body = articleBody;
+  var sel = window.getSelection();
+  var marks = body.querySelectorAll('.hk-highlight-mark');
+  if(sel && sel.rangeCount > 0 && !sel.isCollapsed){
+    var range = sel.getRangeAt(0);
+    if(body.contains(range.commonAncestorContainer)){
+      marks.forEach(function(m){ if(range.intersectsNode(m)) unwrapMark(m); });
+    }
+    sel.removeAllRanges();
+  }
+}
+function handleBodyPointerUp(e){
+  if(eraserActive){
+    handleEraseSelection();
+    var clickedMark = e.target.closest && e.target.closest('.hk-highlight-mark');
+    if(clickedMark && articleBody.contains(clickedMark)) unwrapMark(clickedMark);
+    return;
+  }
+  if(highlightColor){ handleHighlight(); return; }
+  // 형광펜/지우개 모두 꺼진 상태 — 이미 칠해진 하이라이트를 탭하면 액션시트 (신규 기능)
+  var mark = e.target.closest && e.target.closest('.hk-highlight-mark');
+  if(mark && articleBody.contains(mark)) openActionSheet(mark);
+}
+articleBody.addEventListener('mouseup', handleBodyPointerUp);
+articleBody.addEventListener('touchend', handleBodyPointerUp);
+
+// ══════════════ 화면 전환 헬퍼 ══════════════
+function openOverlay(id){ document.getElementById(id).classList.add('show'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('show'); }
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> ' + msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+document.querySelectorAll('[data-close]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    closeOverlay(btn.getAttribute('data-close'));
+    if(btn.getAttribute('data-open')) openOverlay(btn.getAttribute('data-open'));
+  });
+});
+
+// ══════════════ 액션시트 ══════════════
+var activeMark = null;
+var actionSheet = document.getElementById('actionSheet');
+var sheetQuote = document.getElementById('sheetQuote');
+
+function openActionSheet(mark){
+  activeMark = mark;
+  sheetQuote.textContent = mark.textContent;
+  openOverlay('actionSheet');
+}
+document.querySelectorAll('#actionSheet .sheet-row').forEach(function(row){
+  row.addEventListener('click', function(){
+    var action = row.getAttribute('data-action');
+    var quote = activeMark ? activeMark.textContent : sheetQuote.textContent;
+    var color = activeMark ? (activeMark.dataset.color || '#ABF800') : '#ABF800';
+    closeOverlay('actionSheet');
+    if(action === 'card'){
+      if(!subscribed && exportsUsed >= exportLimit){
+        pendingQuote = { quote: quote, color: color };
+        openOverlay('paywallSheet');
+      } else {
+        if(!subscribed) exportsUsed++;
+        openCardScreen(quote, color);
+      }
+    } else if(action === 'scrap'){
+      addScrap({ quote: quote, color: color, meta: '방금 스크랩됨', isNew: true, snapshot: defaultSnapshot() });
+      showToast('스크랩에 저장되었습니다');
+    } else if(action === 'copy'){
+      if(navigator.clipboard){ navigator.clipboard.writeText(quote).catch(function(){}); }
+      showToast('문장이 복사되었습니다');
+    } else if(action === 'delete'){
+      if(activeMark) unwrapMark(activeMark);
+      showToast('하이라이트가 삭제되었습니다');
+    }
+  });
+});
+
+// ══════════════ 카드 내보내기 화면 ══════════════
+var cardPreview = document.getElementById('cardPreview');
+var cardQuote = document.getElementById('cardQuote');
+var cardMeta = document.getElementById('cardMeta');
+var cardScrim = document.getElementById('cardScrim');
+var cardRemovePhoto = document.getElementById('cardRemovePhoto');
+var photoHint = document.getElementById('photoHint');
+var currentBg = '#FFF6D9', currentText = '#5c4400', currentPhoto = null;
+
+function todayStr(){
+  var d = new Date();
+  return '한국경제 · ' + d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+}
+function applyColorBg(bg, text){
+  currentPhoto = null; currentBg = bg; currentText = text;
+  cardPreview.style.backgroundImage = 'none';
+  cardPreview.style.background = bg;
+  cardPreview.style.color = text;
+  cardScrim.style.display = 'none';
+  cardRemovePhoto.style.display = 'none';
+  photoHint.style.display = 'none';
+}
+function openCardScreen(quote, color){
+  cardQuote.textContent = quote;
+  cardMeta.textContent = todayStr();
+  var swatch = document.querySelector('.bg-swatch[style*="' + color + '"]') || document.querySelector('.bg-swatch');
+  document.querySelectorAll('.bg-swatch').forEach(function(b){ b.classList.remove('on'); });
+  swatch.classList.add('on');
+  applyColorBg(swatch.getAttribute('data-bg'), swatch.getAttribute('data-text'));
+  openOverlay('cardScreen');
+}
+document.querySelectorAll('.bg-swatch').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.bg-swatch').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    applyColorBg(btn.getAttribute('data-bg'), btn.getAttribute('data-text'));
+  });
+});
+document.getElementById('uploadPhotoBtn').addEventListener('click', function(){
+  document.getElementById('bgPhotoInput').click();
+});
+document.getElementById('bgPhotoInput').addEventListener('change', function(e){
+  var file = e.target.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    currentPhoto = ev.target.result;
+    cardPreview.style.background = 'none';
+    cardPreview.style.backgroundImage = 'url(' + currentPhoto + ')';
+    cardPreview.style.backgroundSize = 'cover';
+    cardPreview.style.backgroundPosition = 'center';
+    cardPreview.style.color = '#ffffff';
+    cardScrim.style.display = 'block';
+    cardRemovePhoto.style.display = 'flex';
+    photoHint.style.display = 'block';
+    document.querySelectorAll('.bg-swatch').forEach(function(b){ b.classList.remove('on'); });
+  };
+  reader.readAsDataURL(file);
+});
+cardRemovePhoto.addEventListener('click', function(){
+  applyColorBg(currentBg, currentText);
+  document.querySelector('.bg-swatch').classList.add('on');
+  document.getElementById('bgPhotoInput').value = '';
+});
+document.querySelectorAll('.ratio-row .chip-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.ratio-row .chip-btn').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    cardPreview.style.aspectRatio = btn.getAttribute('data-ratio');
+  });
+});
+document.getElementById('cardScrapBtn').addEventListener('click', function(){
+  addScrap({ quote: cardQuote.textContent, color: currentPhoto ? '#2C2C2A' : currentBg, meta: '방금 스크랩됨', isNew: true, snapshot: defaultSnapshot() });
+  showToast('스크랩에 저장되었습니다');
+});
+document.getElementById('cardShareBtn').addEventListener('click', function(){ openOverlay('shareSheet'); });
+
+// ══════════════ 페이월 → 결제 ══════════════
+var devSubBtn = document.getElementById('devSubBtn');
+var devSubLabel = document.getElementById('devSubLabel');
+function setSubscribed(v){
+  subscribed = v;
+  devSubBtn.classList.toggle('on', v);
+  devSubLabel.textContent = v ? '테스트용 · 프리미엄 구독자 (내보내기 무제한)' : '테스트용 · 무료 회원 (카드 내보내기 1회 제한)';
+  refreshAiLock();
+}
+devSubBtn.addEventListener('click', function(){ setSubscribed(!subscribed); });
+
+document.getElementById('closePaywallBtn').addEventListener('click', function(){ closeOverlay('paywallSheet'); });
+document.getElementById('goPaymentBtn').addEventListener('click', function(){
+  closeOverlay('paywallSheet');
+  document.getElementById('paymentForm').style.display = 'block';
+  document.getElementById('paymentSuccess').style.display = 'none';
+  openOverlay('paymentScreen');
+});
+document.querySelectorAll('.pay-row').forEach(function(row){
+  row.addEventListener('click', function(){
+    document.querySelectorAll('.pay-radio').forEach(function(r){ r.classList.remove('on'); });
+    row.querySelector('.pay-radio').classList.add('on');
+  });
+});
+document.getElementById('payNowBtn').addEventListener('click', function(){
+  setSubscribed(true);
+  document.getElementById('paymentForm').style.display = 'none';
+  document.getElementById('paymentSuccess').style.display = 'block';
+});
+document.getElementById('continueAfterPayBtn').addEventListener('click', function(){
+  closeOverlay('paymentScreen');
+  if(pendingQuote){ var q = pendingQuote; pendingQuote = null; openCardScreen(q.quote, q.color); }
+});
+
+// ══════════════ 공유 → 보낸것 확인 ══════════════
+var confirmSub = document.getElementById('confirmSub');
+var confirmThumb = document.getElementById('confirmThumb');
+var confirmThumbText = document.getElementById('confirmThumbText');
+document.querySelectorAll('#shareSheet .sheet-row').forEach(function(row){
+  row.addEventListener('click', function(){
+    var target = row.getAttribute('data-target');
+    if(target === '링크 복사' && navigator.clipboard){
+      navigator.clipboard.writeText('https://www.hankyung.com/article/mock-' + Date.now()).catch(function(){});
+    }
+    confirmSub.textContent = target + '으로 보냈어요';
+    if(currentPhoto){ confirmThumb.style.backgroundImage = 'url(' + currentPhoto + ')'; confirmThumb.style.background=''; confirmThumbText.style.color = '#fff'; }
+    else { confirmThumb.style.backgroundImage = 'none'; confirmThumb.style.background = currentBg; confirmThumbText.style.color = currentText; }
+    confirmThumbText.textContent = cardQuote.textContent;
+    addScrap({ quote: cardQuote.textContent, color: currentPhoto ? '#2C2C2A' : currentBg, meta: '방금 스크랩됨', isNew: true, snapshot: defaultSnapshot() });
+    closeOverlay('shareSheet');
+    closeOverlay('cardScreen');
+    openOverlay('confirmScreen');
+  });
+});
+
+// ══════════════ 스크랩 (경제지 특성: 시장 스냅샷 · 용어 · 관련기사 · 후속알림) ══════════════
+function defaultSnapshot(){
+  return {
+    kospi:{v:'2,687.32',dir:'up',pct:'0.42%'}, fx:{v:'1,362.50',dir:'down',pct:'0.15%'},
+    rate:'3.25%', bond:'2.98%',
+    term:{name:'기준금리', desc:'한국은행 금융통화위원회가 결정하는 정책금리로, 시중은행의 예금·대출 금리와 국고채 금리에 직접 영향을 줍니다.'},
+    related:[{title:'한은, 8월 금통위서 추가 인하 시사', date:'07.03'},{title:'국고채 금리 3개월래 최저', date:'07.01'}]
+  };
+}
+var scrapItems = [
+  { quote:'상하수도 순손실 2조3138억원으로 전년보다 7.6% 증가했다.', color:'#143C7E', meta:'사회 · 06.30',
+    snapshot:{ kospi:{v:'2,671.05',dir:'up',pct:'0.28%'}, fx:{v:'1,365.20',dir:'down',pct:'0.08%'}, rate:'3.25%', bond:'2.99%',
+      term:{name:'요금 현실화율', desc:'원가 대비 실제로 받는 요금의 비율. 100%보다 낮으면 팔수록 손해라는 뜻입니다.'},
+      related:[{title:'전국 지자체 수도요금 인상 러시', date:'06.29'},{title:'노후 상수도관 교체 예산 2배 증액', date:'06.20'}] } },
+  { quote:'요금 인상에 앞서 공기업 방만 경영 점검과 누수율 개선이 선행돼야 한다.', color:'#8344FF', meta:'오피니언 · 06.28',
+    snapshot:{ kospi:{v:'2,655.40',dir:'down',pct:'0.61%'}, fx:{v:'1,368.90',dir:'up',pct:'0.22%'}, rate:'3.25%', bond:'3.01%',
+      term:{name:'누수율', desc:'정수장에서 보낸 물 중 가정에 도달하지 못하고 새는 물의 비율입니다.'},
+      related:[{title:'시민단체 "요금 인상 전 누수율부터"', date:'06.28'},{title:'전문가 "단계적 인상이 합리적"', date:'06.25'}] } }
+];
+function addScrap(item){ scrapItems.unshift(item); }
+function renderScrap(){
+  var list = document.getElementById('scrapList');
+  list.innerHTML = '';
+  scrapItems.forEach(function(item, idx){
+    var snap = item.snapshot || defaultSnapshot();
+    var row = document.createElement('div');
+    row.className = 'scrap-item';
+    row.innerHTML =
+      '<div class="scrap-thumb" style="background:' + item.color + ';"></div>' +
+      '<div style="flex:1;"><p style="font-size:13.5px;margin-bottom:4px;">' + item.quote + '</p>' +
+      '<p style="font-size:11px;color:var(--text-muted);">' + item.meta + (item.isNew ? ' <span style="color:var(--navy);font-weight:700;">· NEW</span>' : '') + '</p>' +
+      '<span class="snap-tag ' + snap.kospi.dir + '"><i class="ti ti-arrow-narrow-' + (snap.kospi.dir==='up'?'up':'down') + '" aria-hidden="true"></i>코스피 ' + snap.kospi.v + '</span></div>' +
+      '<i class="ti ti-chevron-right" style="color:var(--text-muted);"></i>';
+    row.addEventListener('click', function(){ openScrapDetail(idx); });
+    list.appendChild(row);
+  });
+}
+function openScrapDetail(idx){
+  var item = scrapItems[idx]; var snap = item.snapshot || defaultSnapshot();
+  var qc = document.getElementById('detailQuoteCard');
+  qc.style.background = item.color; qc.style.color = '#fff';
+  document.getElementById('detailQuote').textContent = item.quote;
+  document.getElementById('detailMeta').textContent = item.meta;
+  document.getElementById('kospiVal').textContent = snap.kospi.v;
+  var kt = document.getElementById('kospiTag'); kt.className = 'snap-tag ' + snap.kospi.dir;
+  kt.innerHTML = '<i class="ti ti-arrow-narrow-' + (snap.kospi.dir==='up'?'up':'down') + '" aria-hidden="true"></i>' + snap.kospi.pct;
+  document.getElementById('fxVal').textContent = snap.fx.v + '원';
+  var ft = document.getElementById('fxTag'); ft.className = 'snap-tag ' + snap.fx.dir;
+  ft.innerHTML = '<i class="ti ti-arrow-narrow-' + (snap.fx.dir==='up'?'up':'down') + '" aria-hidden="true"></i>' + snap.fx.pct;
+  document.getElementById('rateVal').textContent = snap.rate;
+  document.getElementById('bondVal').textContent = snap.bond;
+  document.getElementById('termName').textContent = snap.term.name;
+  var td = document.getElementById('termDesc'); td.textContent = snap.term.desc; td.style.display = 'none';
+  var rl = document.getElementById('relatedList'); rl.innerHTML = '';
+  snap.related.forEach(function(r){
+    var d = document.createElement('div'); d.className = 'related-row';
+    d.innerHTML = r.title + '<p class="d">' + r.date + '</p>';
+    rl.appendChild(d);
+  });
+  openOverlay('scrapDetailScreen');
+}
+document.getElementById('termChip').addEventListener('click', function(){
+  var td = document.getElementById('termDesc');
+  td.style.display = td.style.display === 'none' ? 'block' : 'none';
+});
+var followSwitch = document.getElementById('followSwitch');
+followSwitch.addEventListener('click', function(){ followSwitch.classList.toggle('on'); });
+
+document.querySelectorAll('[data-open="scrapScreen"]').forEach(function(el){
+  if(el.getAttribute('data-close')) return;
+  el.addEventListener('click', function(){ renderScrap(); });
+});
+document.querySelector('.ov-appbar i[data-close="confirmScreen"]').addEventListener('click', function(){});
+document.querySelectorAll('[data-close="confirmScreen"][data-open="scrapScreen"]').forEach(function(el){
+  el.addEventListener('click', renderScrap);
+});
+document.getElementById('trialBtn').addEventListener('click', function(){
+  document.getElementById('paymentForm').style.display = 'block';
+  document.getElementById('paymentSuccess').style.display = 'none';
+  openOverlay('paymentScreen');
+});
+
+// ══════════════ AI 궁금증 해결소 (실제 Sidebar.jsx Epic AI 이식, subscribed 상태 공유) ══════════════
+var aiFab = document.getElementById('aiFab');
+aiFab.addEventListener('click', function(){ openOverlay('aiSheetOverlay'); refreshAiLock(); });
+document.getElementById('aiSheetClose').addEventListener('click', function(){ closeOverlay('aiSheetOverlay'); });
+
+document.querySelectorAll('.ai-tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var tab = btn.getAttribute('data-ai-tab');
+    document.querySelectorAll('.ai-tab-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+    document.querySelectorAll('.ai-view').forEach(function(v){ v.classList.toggle('active', v.getAttribute('data-ai-view') === tab); });
+  });
+});
+
+function refreshAiLock(){
+  document.getElementById('aiChatLocked').classList.toggle('locked', !subscribed);
+  document.getElementById('aiChatPaywall').style.display = subscribed ? 'none' : 'flex';
+  document.getElementById('aiStakeLocked').classList.toggle('locked', !subscribed);
+  document.getElementById('aiStakePaywall').style.display = subscribed ? 'none' : 'flex';
+  document.getElementById('insightCountVal').textContent = (document.querySelectorAll('#articleBody .hk-stat').length + 3) + '개';
+}
+
+document.querySelectorAll('.ai-lock-cta').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.getElementById('paymentForm').style.display = 'block';
+    document.getElementById('paymentSuccess').style.display = 'none';
+    openOverlay('paymentScreen');
+  });
+});
+
+var askCount = 0;
+var aiMessages = [];
+var msgIdCounter = 0;
+document.querySelectorAll('#aiChips .chip').forEach(function(chip){
+  chip.addEventListener('click', function(){
+    if(!subscribed) return;
+    document.getElementById('aiInput').value = chip.getAttribute('data-q');
+  });
+});
+function renderAiMessages(){
+  var list = document.getElementById('aiQaList');
+  list.innerHTML = '';
+  aiMessages.forEach(function(m){
+    var q = document.createElement('div'); q.className = 'ai-qa-bubble ai-qa-q'; q.textContent = m.question;
+    var a = document.createElement('div'); a.className = 'ai-qa-bubble ai-qa-a';
+    if(m.loading){ a.innerHTML = '<span class="ai-qa-dots"><span></span><span></span><span></span></span>'; }
+    else { a.textContent = m.answer; }
+    list.appendChild(q); list.appendChild(a);
+  });
+}
+document.getElementById('aiAskBtn').addEventListener('click', function(){
+  if(!subscribed) return;
+  var input = document.getElementById('aiInput');
+  var v = input.value.trim();
+  if(!v) return;
+  var id = msgIdCounter++;
+  aiMessages.push({ id: id, question: v, answer: '', loading: true });
+  input.value = '';
+  askCount++;
+  document.getElementById('askCountVal').textContent = askCount + '회';
+  renderAiMessages();
+  setTimeout(function(){
+    aiMessages = aiMessages.map(function(m){
+      return m.id === id ? Object.assign({}, m, { loading:false, answer:'실시간 데이터 교차 검증 결과, 관련 수치는 행안부 지방공기업 결산 원자료 및 지자체 고시와 일치합니다.' }) : m;
+    });
+    renderAiMessages();
+  }, 1200);
+});
+
+renderScrap();
+setModeLabel();
+refreshAiLock();
+</script>
+</body>
+</html>
