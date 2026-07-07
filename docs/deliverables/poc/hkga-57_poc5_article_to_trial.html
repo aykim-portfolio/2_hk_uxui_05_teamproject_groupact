@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>한국경제 — 기사에서 재판으로 (POC_5)</title>
+<style>
+  :root{
+    --navy:#143C7E; --navy-dark:#0d2a5c;
+    --lime:#ABF800; --purple:#8344FF; --pink:#FF3CA4; --orange:#FF7D00;
+    --bg:#f4f5f8; --card:#fff; --ink:#1a1a1a; --sub:#6b7280; --line:#e5e7eb;
+    --red:#e5484d; --green:#16a34a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+    background:#c9ccd4;display:flex;justify-content:center;color:var(--ink);
+  }
+  #phone{
+    width:100%;max-width:400px;height:100vh;max-height:860px;
+    background:#fff;position:relative;overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,.3);display:flex;flex-direction:column;
+  }
+  .scene{position:absolute;inset:0;display:none;flex-direction:column;}
+  .scene.active{display:flex;}
+
+  /* ═══ 기사 화면 ═══ */
+  #scr-article{background:#fff;}
+  .hk-bar{
+    background:var(--navy);color:#fff;padding:13px 16px;
+    display:flex;align-items:center;justify-content:space-between;flex:none;z-index:20;
+  }
+  .hk-bar .hk-logo{font-weight:900;font-size:16px;letter-spacing:-.5px;}
+  .hk-bar .hk-menu{font-size:18px;opacity:.85;}
+  #article-scroll{flex:1;overflow-y:auto;position:relative;}
+  .art-head{padding:22px 20px 6px;}
+  .art-cat{
+    display:inline-block;background:var(--pink);color:#fff;font-size:11px;font-weight:800;
+    padding:4px 10px;border-radius:4px;margin-bottom:12px;
+  }
+  .art-title{font-size:23px;font-weight:800;line-height:1.4;letter-spacing:-.6px;}
+  .art-meta{font-size:12px;color:var(--sub);margin-top:12px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+  .art-hero{padding:16px 20px 4px;}
+  .art-hero svg{width:100%;border-radius:12px;display:block;}
+  .art-hero .cap{font-size:11px;color:var(--sub);margin-top:7px;}
+  .art-body{padding:8px 20px 0;}
+  .art-body p{font-size:15.5px;line-height:1.85;letter-spacing:-.2px;margin-bottom:20px;color:#222;}
+  .art-body h4{font-size:16px;margin:26px 0 12px;letter-spacing:-.3px;}
+
+  /* 증거 문장: 스크롤 시 형광펜 스윕 */
+  .ev-sent{
+    background-image:linear-gradient(rgba(171,248,0,.55),rgba(171,248,0,.55));
+    background-repeat:no-repeat;background-size:0% 88%;background-position:0 60%;
+    transition:background-size .9s cubic-bezier(.3,.9,.3,1);
+    border-radius:3px;font-weight:600;
+  }
+  .ev-sent.lit{background-size:100% 88%;}
+  .ev-sent .ev-pin{
+    display:inline-block;font-size:11px;font-weight:800;color:var(--navy);
+    background:var(--lime);border-radius:10px;padding:1px 8px;margin-left:6px;
+    vertical-align:2px;opacity:0;transform:scale(.4);transition:all .35s .6s;
+  }
+  .ev-sent.lit .ev-pin{opacity:1;transform:scale(1);}
+
+  /* 증거 카운터 배지 */
+  #ev-badge{
+    position:absolute;top:58px;right:12px;z-index:30;
+    background:var(--navy);color:#fff;font-size:12px;font-weight:800;
+    padding:8px 13px;border-radius:22px;box-shadow:0 4px 14px rgba(13,42,92,.35);
+    display:flex;align-items:center;gap:6px;transition:transform .2s;
+  }
+  #ev-badge.bump{animation:badgeBump .4s;}
+  @keyframes badgeBump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+  #ev-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);}
+
+  /* 증거 확보 토스트 */
+  #collect-toast{
+    position:absolute;top:104px;right:12px;z-index:30;
+    background:var(--lime);color:var(--navy);font-size:12px;font-weight:800;
+    padding:8px 13px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.18);
+    display:none;
+  }
+  #collect-toast.show{display:block;animation:toastIn 1.6s forwards;}
+  @keyframes toastIn{
+    0%{opacity:0;transform:translateY(-6px)}12%{opacity:1;transform:translateY(0)}
+    80%{opacity:1}100%{opacity:0;transform:translateY(-6px)}
+  }
+
+  /* 인라인 훅 (기사 중간) */
+  .inline-hook{
+    margin:6px 0 24px;border:1.5px solid rgba(131,68,255,.35);border-radius:16px;
+    background:linear-gradient(135deg,#faf7ff, #f3ecff);padding:16px;
+  }
+  .inline-hook .ih-tag{font-size:11px;font-weight:800;color:var(--purple);margin-bottom:8px;}
+  .inline-hook .ih-quote{
+    font-size:14.5px;font-weight:700;line-height:1.6;letter-spacing:-.3px;
+    padding-left:12px;border-left:3px solid var(--purple);margin-bottom:10px;
+  }
+  .inline-hook .ih-q{font-size:13px;color:#4b5563;line-height:1.6;margin-bottom:12px;}
+  .inline-hook button{
+    width:100%;padding:13px;border:none;border-radius:12px;cursor:pointer;
+    background:var(--purple);color:#fff;font-size:14.5px;font-weight:800;
+  }
+  .inline-hook button:active{transform:scale(.98);}
+
+  /* 기사 끝 CTA */
+  #end-cta{
+    margin:8px 20px 30px;border-radius:18px;overflow:hidden;
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-dark) 100%);
+    color:#fff;padding:20px 18px;
+  }
+  #end-cta .ec-tag{display:inline-block;background:var(--lime);color:var(--navy);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:12px;}
+  #end-cta h3{font-size:18px;line-height:1.45;letter-spacing:-.4px;}
+  #end-cta .ec-evs{margin:13px 0 3px;}
+  #end-cta .ec-ev{
+    display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.55;
+    color:rgba(255,255,255,.85);margin-bottom:7px;
+  }
+  #end-cta .ec-ev::before{content:"🔑";flex:none;font-size:11px;margin-top:1px;}
+  #end-cta button{
+    width:100%;margin-top:12px;padding:15px;border:none;border-radius:13px;cursor:pointer;
+    background:var(--lime);color:var(--navy);font-size:15.5px;font-weight:900;
+    box-shadow:0 4px 0 #7fb800;
+  }
+  #end-cta button:active{transform:translateY(3px);box-shadow:0 1px 0 #7fb800;}
+  #end-cta button:disabled{opacity:.45;box-shadow:none;}
+  #end-cta .ec-done{display:none;margin-top:12px;text-align:center;}
+  #end-cta.finished .ec-done{display:block;}
+  #end-cta .ec-done .win{font-size:15px;font-weight:800;color:var(--lime);}
+  #end-cta .ec-done .sub2{font-size:12px;color:rgba(255,255,255,.7);margin-top:5px;}
+  .related{padding:0 20px 40px;}
+  .related h4{font-size:15px;margin-bottom:10px;}
+  .rel-item{
+    display:block;background:var(--bg);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;margin-bottom:8px;text-decoration:none;color:var(--ink);
+  }
+  .rel-item b{font-size:13px;display:block;line-height:1.45;letter-spacing:-.3px;}
+  .rel-item span{font-size:11px;color:var(--sub);display:block;margin-top:3px;}
+
+  /* ═══ 사건 파일 생성 트랜지션 ═══ */
+  #casefile-fx{
+    position:absolute;inset:0;z-index:95;display:none;
+    background:rgba(13,42,92,.97);color:#fff;
+    flex-direction:column;align-items:center;justify-content:center;padding:34px;
+  }
+  #casefile-fx.show{display:flex;}
+  #casefile-fx .cf-icon{font-size:46px;animation:cfPulse 1s infinite alternate;}
+  @keyframes cfPulse{from{transform:scale(1)}to{transform:scale(1.12)}}
+  #casefile-fx h3{font-size:19px;margin-top:14px;letter-spacing:-.4px;}
+  #casefile-fx .cf-sub{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px;}
+  #casefile-fx .cf-list{margin-top:20px;width:100%;}
+  #casefile-fx .cf-item{
+    background:rgba(255,255,255,.09);border:1px solid rgba(171,248,0,.4);
+    border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.55;
+    margin-bottom:8px;opacity:0;transform:translateY(10px);
+    animation:cfIn .4s forwards;
+  }
+  #casefile-fx .cf-item:nth-child(1){animation-delay:.15s}
+  #casefile-fx .cf-item:nth-child(2){animation-delay:.5s}
+  #casefile-fx .cf-item:nth-child(3){animation-delay:.85s}
+  @keyframes cfIn{to{opacity:1;transform:translateY(0)}}
+
+  /* ═══ 법정 (POC_4 이식) ═══ */
+  .scene-art{flex:1;position:relative;overflow:hidden;}
+  .scene-art svg{width:100%;height:100%;display:block;}
+  .shake{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-7px,3px)}40%{transform:translate(7px,-3px)}60%{transform:translate(-5px,2px)}80%{transform:translate(4px,-2px)}}
+  svg .mouth{transform-box:fill-box;transform-origin:center;}
+  svg g.talking .mouth{animation:mouthMove .16s infinite alternate;}
+  @keyframes mouthMove{from{transform:scaleY(.4)}to{transform:scaleY(1.6)}}
+  svg .sweatg{opacity:0;}
+  svg g.expr-sweat .sweatg{opacity:1;}
+  svg g.expr-sweat .sweatg path{transform-box:fill-box;transform-origin:center;animation:sweatDrop 1s infinite;}
+  @keyframes sweatDrop{0%{transform:translateY(0);opacity:1}100%{transform:translateY(10px);opacity:0}}
+  svg .shockg{opacity:0;}
+  svg g.expr-shock .shockg{opacity:1;}
+  svg g.expr-shock .eyes-n,svg g.expr-shock .mouth-n{opacity:0;}
+  svg g.expr-shock{animation:shockJump .3s;}
+  @keyframes shockJump{0%{transform:translateY(0)}40%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+  svg .gavel-g{transform-box:fill-box;transform-origin:80% 80%;}
+  svg .gavel-bang{animation:gavelBang .5s ease-in-out;}
+  @keyframes gavelBang{0%{transform:rotate(0)}35%{transform:rotate(-46deg)}60%{transform:rotate(8deg)}100%{transform:rotate(0)}}
+
+  #dialog{position:absolute;left:10px;right:10px;bottom:12px;z-index:40;display:none;cursor:pointer;}
+  #dialog.show{display:block;}
+  #dlg-name{
+    display:inline-block;background:var(--navy);color:#fff;font-size:12px;font-weight:800;
+    padding:5px 14px;border-radius:10px 10px 0 0;margin-left:6px;position:relative;z-index:2;
+  }
+  #dlg-name.n-witness{background:#8a5a2b;}
+  #dlg-name.n-judge{background:#3f3f46;}
+  #dlg-name.n-me{background:var(--pink);}
+  #dlg-name.n-sys{background:var(--purple);}
+  #dlg-box{
+    background:rgba(13,42,92,.94);border:1.5px solid rgba(171,248,0,.5);border-radius:14px;
+    padding:14px 16px 22px;color:#fff;min-height:88px;font-size:15px;line-height:1.65;position:relative;
+  }
+  #dlg-next{position:absolute;right:14px;bottom:8px;font-size:12px;color:var(--lime);animation:blinkNext 1s infinite;}
+  @keyframes blinkNext{0%,100%{opacity:1}50%{opacity:.15}}
+
+  #court-hud{position:absolute;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;}
+  #court-hud .case-tag{background:rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;}
+  #court-hud .trust{background:rgba(0,0,0,.45);padding:5px 11px;border-radius:20px;font-size:13px;letter-spacing:1px;}
+  #stmt-banner{
+    position:absolute;top:52px;left:14px;right:14px;z-index:28;display:none;
+    background:rgba(255,255,255,.96);border-radius:14px;padding:12px 14px;box-shadow:0 8px 22px rgba(0,0,0,.3);
+  }
+  #stmt-banner.show{display:block;animation:pop .25s;}
+  #stmt-banner .sb-tag{font-size:10.5px;font-weight:800;color:var(--pink);margin-bottom:5px;}
+  #stmt-banner .sb-text{font-size:13.5px;line-height:1.6;font-weight:600;}
+  @keyframes pop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  #court-menu{position:absolute;left:10px;right:10px;bottom:12px;z-index:35;display:none;}
+  #court-menu.show{display:block;}
+  #court-menu .menu-label{text-align:center;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.6);margin-bottom:8px;}
+  #court-menu .menu-row{display:flex;gap:8px;}
+  .act-btn{flex:1;padding:15px 6px;border:none;border-radius:14px;cursor:pointer;font-size:14.5px;font-weight:800;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.35);}
+  .act-btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35);}
+  .act-btn.press{background:linear-gradient(180deg,#2563eb,#1e40af);}
+  .act-btn.present{background:linear-gradient(180deg,var(--pink),#c9186f);}
+
+  .sheet-dim{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:70;display:none;}
+  .sheet-dim.show{display:block;}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:80;background:var(--card);
+    border-radius:22px 22px 0 0;transform:translateY(105%);
+    transition:transform .28s cubic-bezier(.3,1,.4,1);max-height:76%;display:flex;flex-direction:column;
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:10px auto 4px;}
+  .sheet .sheet-title{padding:8px 20px 3px;font-size:16px;font-weight:800;}
+  .sheet .sheet-sub{padding:0 20px 10px;font-size:12px;color:var(--sub);}
+  .sheet .ev-list{overflow-y:auto;padding:0 16px 24px;}
+  .ev-card{
+    border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;
+  }
+  .ev-card:active{border-color:var(--purple);}
+  .ev-card .eq-tag{font-size:10px;font-weight:800;color:#fff;background:var(--navy);padding:2.5px 8px;border-radius:4px;display:inline-block;margin-bottom:7px;}
+  .ev-card .eq-text{
+    font-size:13px;line-height:1.6;font-weight:600;letter-spacing:-.2px;
+    padding-left:10px;border-left:3px solid var(--lime);
+  }
+  .ev-card.used{opacity:.35;pointer-events:none;}
+
+  #objection-fx{position:absolute;inset:0;z-index:90;display:none;align-items:center;justify-content:center;overflow:hidden;background:#fff;}
+  #objection-fx.show{display:flex;animation:objBg .15s;}
+  @keyframes objBg{from{background:#fff}to{background:transparent}}
+  #objection-fx .speed{position:absolute;inset:-40%;}
+  #objection-fx .word{
+    position:relative;font-size:58px;font-weight:900;color:#fff;letter-spacing:-2px;transform:rotate(-7deg);
+    text-shadow:0 0 0 #000,4px 4px 0 var(--navy),8px 8px 0 var(--pink),0 14px 34px rgba(0,0,0,.5);
+    -webkit-text-stroke:2px var(--navy);animation:slam .45s cubic-bezier(.15,2.4,.35,1);
+  }
+  @keyframes slam{0%{transform:rotate(-7deg) scale(3.4);opacity:0}55%{transform:rotate(-7deg) scale(.9);opacity:1}100%{transform:rotate(-7deg) scale(1)}}
+
+  /* ═══ 판결 ═══ */
+  #scn-verdict{background:linear-gradient(180deg,#2a2118 0%,#3d3226 26%,var(--bg) 26%);}
+  #verdict-scroll{flex:1;overflow-y:auto;}
+  .verdict-paper{
+    margin:60px 20px 16px;background:#fffef8;border-radius:8px;padding:24px 20px 20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);text-align:center;
+  }
+  .verdict-paper .vp-court{font-size:11px;color:#8a8264;letter-spacing:2px;}
+  .verdict-paper h2{font-size:21px;letter-spacing:10px;margin-top:6px;}
+  .verdict-paper .vp-stamp{
+    margin:16px auto 4px;width:160px;height:72px;border:5px solid var(--red);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;color:var(--red);
+    font-size:26px;font-weight:900;letter-spacing:3px;transform:rotate(-7deg);
+    animation:stampSlam .5s cubic-bezier(.2,2.6,.4,1);
+  }
+  .verdict-paper .vp-stamp.lose{border-color:#57534e;color:#57534e;}
+  @keyframes stampSlam{0%{transform:rotate(-7deg) scale(3.2);opacity:0}60%{transform:rotate(-7deg) scale(.9);opacity:1}100%{transform:rotate(-7deg) scale(1)}}
+  .verdict-paper .vp-msg{font-size:13px;line-height:1.7;color:#374151;margin-top:12px;text-align:left;}
+  .navy-btn{
+    padding:15px;border:none;border-radius:14px;background:var(--navy);color:#fff;
+    font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 var(--navy-dark);
+  }
+  .navy-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--navy-dark);}
+  .verdict-actions{margin:0 20px 30px;display:flex;flex-direction:column;gap:9px;}
+</style>
+</head>
+<body>
+<div id="phone">
+
+  <!-- ═════════ 기사 화면 ═════════ -->
+  <div class="scene active" id="scr-article">
+    <div class="hk-bar">
+      <span class="hk-logo">한국경제</span>
+      <span class="hk-menu">☰</span>
+    </div>
+    <div id="ev-badge"><span class="dot"></span>증거 <span id="ev-cnt">0</span>/3</div>
+    <div id="collect-toast">🔑 증거 확보!</div>
+    <div id="article-scroll">
+      <div class="art-head">
+        <span class="art-cat">심층기획</span>
+        <div class="art-title">레고랜드 사태 3년 — ‘안전한 채권’은 어떻게 노후자금을 삼켰나</div>
+        <div class="art-meta">김팩트 기자 · 2026.07.07 · 심층기획 [그날의 시장] ③</div>
+      </div>
+      <div class="art-hero">
+        <svg viewBox="0 0 360 180">
+          <rect width="360" height="180" rx="0" fill="#0d2a5c"/>
+          <g opacity=".25" stroke="#7fa8e0" stroke-width="2" fill="none">
+            <polyline points="20,130 70,110 110,125 160,80 210,95 260,50 320,70 350,40"/>
+          </g>
+          <polyline points="20,60 80,75 130,65 180,110 230,100 280,150 340,135" stroke="#FF3CA4" stroke-width="3.5" fill="none"/>
+          <circle cx="280" cy="150" r="6" fill="#FF3CA4"/>
+          <text x="24" y="34" fill="#fff" font-size="15" font-weight="700" font-family="sans-serif">CP 금리 vs 채권 신뢰지수</text>
+          <text x="24" y="52" fill="rgba(255,255,255,.55)" font-size="10" font-family="sans-serif">2022.09 ~ 2022.11</text>
+        </svg>
+        <div class="cap">2022년 가을, 채권 신뢰지수(분홍)는 수직 낙하했다. 그래픽=한국경제</div>
+      </div>
+      <div class="art-body">
+        <p>“지자체가 보증하는 채권입니다. 나라가 망하지 않는 한 안전해요.” 2022년 봄, 퇴직을 앞둔 김모(58) 씨가 증권사 창구에서 들은 말이다. 그는 노후자금 2억 원을 레고랜드 테마파크 자금조달용 자산유동화기업어음(ABCP)에 넣었다.</p>
+        <p>그 믿음이 흔들리기 시작한 건 그해 9월 말이었다. <span class="ev-sent" data-ev="0">강원도는 9월 28일, 보증 이행 대신 시행사 GJC의 기업회생 신청 방침을 발표했다.<span class="ev-pin">🔑 증거 1</span></span> ‘지자체 보증 = 사실상 국가 보증’이라는 채권시장의 오랜 공식에 금이 간 순간이었다.</p>
+        <h4>“부도날 수 없는 채권”의 부도</h4>
+        <p>시장은 처음엔 반신반의했다. 그러나 일주일 뒤 상황은 뒤집혔다. <span class="ev-sent" data-ev="1">신용등급 최상위(A1)였던 이 채권은 10월 5일 최종 부도 처리됐다.<span class="ev-pin">🔑 증거 2</span></span> 신용평가 체계 자체에 대한 불신이 삽시간에 번졌다.</p>
+        <div class="inline-hook">
+          <div class="ih-tag">⚖️ 그런데, 이 사람의 말은 —</div>
+          <div class="ih-quote">“위험은 충분히 설명했습니다. 저희도 예상할 수 없던 일이고요.” — 당시 판매 담당 PB 허풍선 씨</div>
+          <div class="ih-q">방금 읽으신 내용과 맞습니까? 기사 속 팩트로 직접 검증해 보세요.</div>
+          <button onclick="startCasefile('hook')">🔍 이 발언, 지금 검증하기</button>
+        </div>
+        <p>여파는 레고랜드에서 멈추지 않았다. 우량 기업들조차 회사채 발행에 줄줄이 실패했고, 단기자금시장은 급속히 얼어붙었다. <span class="ev-sent" data-ev="2">CP 금리는 연 5%를 돌파했고, ‘돈맥경화’라는 단어가 연일 경제지 1면을 장식했다.<span class="ev-pin">🔑 증거 3</span></span></p>
+        <p>강원도가 뒤늦게 보증채무 전액 이행을 발표하고(10월 21일), 정부가 ‘50조 원+α’ 유동성 대책을 내놓은(10월 23일) 뒤에야 시장은 서서히 진정됐다. 그러나 김씨의 노후자금은 돌아오지 않았다. 책임은 누구에게 있는가 — 3년이 지난 지금도 법정에서는 공방이 이어지고 있다.</p>
+      </div>
+      <div id="end-cta">
+        <span class="ec-tag">여기까지 읽은 당신에게</span>
+        <h3>이미 이 사건의 증거<br><b id="ec-cnt">0</b>건을 확보하셨습니다</h3>
+        <div class="ec-evs" id="ec-evs"></div>
+        <button id="ec-btn" onclick="startCasefile('end')" disabled>⚖️ 확보한 증거로 재판 참여하기 (3분)</button>
+        <div class="ec-done">
+          <div class="win" id="ec-done-msg">🏆 재판 완료 — 반박 성공!</div>
+          <div class="sub2">아래 관련 심층 기사로 사건을 더 깊이 파보세요.</div>
+        </div>
+      </div>
+      <div class="related">
+        <h4>관련 심층 기사</h4>
+        <a class="rel-item" href="https://www.hankyung.com/search?query=%EA%B0%95%EC%9B%90%EB%8F%84%20%EB%A0%88%EA%B3%A0%EB%9E%9C%EB%93%9C%20%ED%9A%8C%EC%83%9D%EC%8B%A0%EC%B2%AD" target="_blank" rel="noopener"><b>[그날의 시장] ① ‘지자체 보증’의 배신 — 강원도는 왜 회생신청을 택했나</b><span>심층기획 · 5분 읽기</span></a>
+        <a class="rel-item" href="https://www.hankyung.com/search?query=%EB%A0%88%EA%B3%A0%EB%9E%9C%EB%93%9C%20ABCP%20%EB%B6%80%EB%8F%84" target="_blank" rel="noopener"><b>[그날의 시장] ② A1등급 ABCP는 어떻게 부도가 났나</b><span>심층기획 · 6분 읽기</span></a>
+        <a class="rel-item" href="https://www.hankyung.com/search?query=%EB%A0%88%EA%B3%A0%EB%9E%9C%EB%93%9C%20CP%EA%B8%88%EB%A6%AC%20%EA%B8%89%EB%93%B1" target="_blank" rel="noopener"><b>[그날의 시장] ④ 레고랜드발 나비효과 — CP금리 13년 만에 최고</b><span>심층기획 · 4분 읽기</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ 사건 파일 생성 트랜지션 ═════════ -->
+  <div id="casefile-fx">
+    <div class="cf-icon">📁</div>
+    <h3>사건 파일 생성 중…</h3>
+    <div class="cf-sub">방금 읽으신 기사에서 증거를 옮겨 담고 있습니다</div>
+    <div class="cf-list" id="cf-list"></div>
+  </div>
+
+  <!-- ═════════ 법정 ═════════ -->
+  <div class="scene" id="scn-court">
+    <div class="scene-art" id="court-art">
+      <svg viewBox="0 0 400 560" preserveAspectRatio="xMidYMax slice">
+        <rect width="400" height="560" fill="url(#wallgrad)"/>
+        <defs>
+          <linearGradient id="wallgrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5d4a33"/><stop offset="1" stop-color="#3b2e1f"/>
+          </linearGradient>
+        </defs>
+        <g fill="#54432e" stroke="#2e2417" stroke-width="2">
+          <rect x="18" y="30" width="80" height="150" rx="4"/>
+          <rect x="302" y="30" width="80" height="150" rx="4"/>
+        </g>
+        <g transform="translate(200 68)">
+          <circle r="34" fill="#c9a227"/><circle r="28" fill="#3b2e1f"/>
+          <g stroke="#c9a227" stroke-width="3" fill="none" stroke-linecap="round">
+            <line x1="0" y1="-16" x2="0" y2="14"/><line x1="-13" y1="-9" x2="13" y2="-9"/>
+            <path d="M-13,-9 L-18,0 Q-13,6 -8,0 Z" fill="rgba(201,162,39,.4)"/>
+            <path d="M13,-9 L8,0 Q13,6 18,0 Z" fill="rgba(201,162,39,.4)"/>
+            <line x1="-8" y1="16" x2="8" y2="16"/>
+          </g>
+        </g>
+        <rect x="60" y="196" width="280" height="26" rx="6" fill="#8a5a2b"/>
+        <rect x="70" y="222" width="260" height="70" fill="#6e4620"/>
+        <rect x="70" y="222" width="260" height="10" fill="#5a3818"/>
+        <g id="ch-judge">
+          <path d="M156,206 Q158,152 200,148 Q242,152 244,206 Z" fill="#2f2f38"/>
+          <path d="M192,156 L200,176 L208,156 Z" fill="#fff"/>
+          <circle cx="200" cy="124" r="30" fill="#f0c8a0"/>
+          <path d="M170,120 Q168,90 200,88 Q232,90 230,120 Q224,100 200,100 Q176,100 170,120 Z" fill="#d8d8dc"/>
+          <path d="M170,122 Q166,134 172,142" stroke="#d8d8dc" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <path d="M230,122 Q234,134 228,142" stroke="#d8d8dc" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <g stroke="#4a4a52" stroke-width="2.5" fill="none">
+            <circle cx="188" cy="122" r="8"/><circle cx="212" cy="122" r="8"/><line x1="196" y1="122" x2="204" y2="122"/>
+          </g>
+          <g class="eyes-n"><circle cx="188" cy="122" r="2.6" fill="#2a2a2a"/><circle cx="212" cy="122" r="2.6" fill="#2a2a2a"/></g>
+          <path d="M190,136 Q200,142 210,136 Q200,139 190,136" fill="#bdbdc4"/>
+          <ellipse class="mouth mouth-n" cx="200" cy="142" rx="5" ry="2" fill="#8c5a4a"/>
+          <g class="gavel-g" id="judge-gavel">
+            <line x1="258" y1="206" x2="286" y2="178" stroke="#5a3818" stroke-width="7" stroke-linecap="round"/>
+            <rect x="274" y="160" width="30" height="20" rx="5" fill="#8a5a2b" transform="rotate(-45 289 170)"/>
+          </g>
+          <circle cx="304" cy="206" r="7" fill="#8a5a2b"/>
+        </g>
+        <rect x="96" y="428" width="208" height="20" rx="5" fill="#8a5a2b"/>
+        <rect x="104" y="448" width="192" height="112" fill="#6e4620"/>
+        <rect x="104" y="448" width="192" height="9" fill="#5a3818"/>
+        <g id="ch-witness">
+          <path d="M118,436 Q122,342 200,336 Q278,342 282,436 Z" fill="#7a5230"/>
+          <path d="M182,344 L200,392 L218,344 L207,338 L200,362 L193,338 Z" fill="#f4efe2"/>
+          <path d="M196,346 L200,388 L204,346 Z" fill="#b3452e"/>
+          <path d="M182,344 L160,376 L178,382 Z" fill="#684528"/>
+          <path d="M218,344 L240,376 L222,382 Z" fill="#684528"/>
+          <rect x="238" y="380" width="18" height="10" rx="2" fill="#e8b84a" transform="rotate(-8 247 385)"/>
+          <circle cx="200" cy="282" r="50" fill="#efc196"/>
+          <circle cx="151" cy="284" r="9" fill="#efc196"/><circle cx="249" cy="284" r="9" fill="#efc196"/>
+          <ellipse cx="200" cy="246" rx="62" ry="12" fill="#33271c"/>
+          <path d="M164,246 Q162,204 200,202 Q238,204 236,246 Z" fill="#33271c"/>
+          <rect x="164" y="234" width="72" height="7" fill="#b3452e"/>
+          <path d="M170,268 Q180,262 190,267" stroke="#4a3826" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+          <path d="M210,267 Q220,262 230,268" stroke="#4a3826" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+          <g class="eyes-n"><circle cx="181" cy="280" r="4.6" fill="#26211c"/><circle cx="219" cy="280" r="4.6" fill="#26211c"/></g>
+          <path d="M200,282 Q206,294 199,298" stroke="#d99f6e" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M172,306 Q186,298 200,306 Q214,298 228,306 Q220,315 200,310 Q180,315 172,306" fill="#4a3826"/>
+          <path d="M170,306 Q162,304 158,296" stroke="#4a3826" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M230,306 Q238,304 242,296" stroke="#4a3826" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <ellipse class="mouth mouth-n" cx="200" cy="318" rx="9" ry="3.4" fill="#9c5a42"/>
+          <g class="sweatg">
+            <path d="M252,258 q6,12 0,18 q-6,-6 0,-18" fill="#7fd4ff"/>
+            <path d="M148,266 q6,12 0,18 q-6,-6 0,-18" fill="#7fd4ff"/>
+          </g>
+          <g class="shockg">
+            <circle cx="181" cy="280" r="9" fill="#fff" stroke="#26211c" stroke-width="2.5"/>
+            <circle cx="219" cy="280" r="9" fill="#fff" stroke="#26211c" stroke-width="2.5"/>
+            <circle cx="181" cy="280" r="2.6" fill="#26211c"/><circle cx="219" cy="280" r="2.6" fill="#26211c"/>
+            <ellipse cx="200" cy="322" rx="9" ry="12" fill="#7a3b2a"/>
+            <path d="M244,240 l14,-12 M250,252 l16,-6 M240,230 l8,-14" stroke="#ffd23c" stroke-width="3.5" stroke-linecap="round"/>
+          </g>
+        </g>
+        <rect x="162" y="470" width="76" height="26" rx="4" fill="#3b2e1f" stroke="#c9a227" stroke-width="1.5"/>
+        <text x="200" y="488" text-anchor="middle" fill="#c9a227" font-size="14" font-weight="700" font-family="sans-serif">증 인</text>
+      </svg>
+    </div>
+    <div id="court-hud">
+      <span class="case-tag">독자 참여 재판 — 발언 검증</span>
+      <span class="trust" id="trust-disp">⚖️⚖️⚖️</span>
+    </div>
+    <div id="stmt-banner">
+      <div class="sb-tag" id="sb-tag">발언 1/3</div>
+      <div class="sb-text" id="sb-text"></div>
+    </div>
+    <div id="court-menu">
+      <div class="menu-label">— 방금 읽은 기사가 당신의 무기 —</div>
+      <div class="menu-row">
+        <button class="act-btn press" onclick="pressWitness()">🔍 추궁한다</button>
+        <button class="act-btn present" onclick="openEvidence()">🔑 기사 문장 제시</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ 판결 ═════════ -->
+  <div class="scene" id="scn-verdict">
+    <div id="verdict-scroll">
+      <div class="verdict-paper" id="verdict-paper"></div>
+      <div class="verdict-actions" id="verdict-actions"></div>
+    </div>
+  </div>
+
+  <!-- 공통 오버레이 -->
+  <div id="dialog" onclick="advance()">
+    <span id="dlg-name">???</span>
+    <div id="dlg-box"><span id="dlg-text"></span><span id="dlg-next">▼ TAP</span></div>
+  </div>
+  <div class="sheet-dim" id="sheet-dim" onclick="closeEvidence()"></div>
+  <div class="sheet" id="ev-sheet">
+    <div class="grip"></div>
+    <div class="sheet-title">🔑 기사에서 확보한 증거</div>
+    <div class="sheet-sub">방금 읽은 문장 중, 발언과 모순되는 것을 고르세요.</div>
+    <div class="ev-list" id="ev-list"></div>
+  </div>
+  <div id="objection-fx">
+    <svg class="speed" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice">
+      <g stroke="#143C7E" stroke-width="5" opacity=".85">
+        <line x1="200" y1="200" x2="200" y2="-60"/><line x1="200" y1="200" x2="330" y2="-40"/>
+        <line x1="200" y1="200" x2="460" y2="60"/><line x1="200" y1="200" x2="470" y2="200"/>
+        <line x1="200" y1="200" x2="460" y2="340"/><line x1="200" y1="200" x2="330" y2="440"/>
+        <line x1="200" y1="200" x2="200" y2="460"/><line x1="200" y1="200" x2="70" y2="440"/>
+        <line x1="200" y1="200" x2="-60" y2="340"/><line x1="200" y1="200" x2="-70" y2="200"/>
+        <line x1="200" y1="200" x2="-60" y2="60"/><line x1="200" y1="200" x2="70" y2="-40"/>
+      </g>
+    </svg>
+    <div class="word">이의 있음!</div>
+  </div>
+
+<script>
+/* ═══════════ 데이터 ═══════════ */
+const EVIDENCE = [
+  { text:"강원도는 9월 28일, 보증 이행 대신 시행사 GJC의 기업회생 신청 방침을 발표했다.", label:"기사 발췌 ①" },
+  { text:"신용등급 최상위(A1)였던 이 채권은 10월 5일 최종 부도 처리됐다.", label:"기사 발췌 ②" },
+  { text:"CP 금리는 연 5%를 돌파했고, ‘돈맥경화’라는 단어가 연일 경제지 1면을 장식했다.", label:"기사 발췌 ③" },
+];
+const STATEMENTS = [
+  { text:"그 채권은 원래 등급도 낮은 위험 상품이라, 위험 고지는 상품설명서로 충분했습니다!",
+    ev:1,
+    press:[
+      {sp:"me", t:"‘등급이 낮았다’…. 방금 그렇게 말씀하셨죠?"},
+      {sp:"witness", expr:"sweat", t:"그, 그럼요! 그러니 부도가 나도 이상할 게 없는 상품이었다니까요?"},
+    ],
+    rebut:[
+      {sp:"me", t:"방금 독자들이 읽은 기사입니다 — 이 채권의 등급은 ‘최상위 A1’. 낮기는커녕 가장 높았습니다!", fx:"shake"},
+      {sp:"witness", expr:"shock", t:"허업?! 기, 기사를 읽고 왔다고…?!"},
+      {sp:"judge", t:"증인, 등급을 거꾸로 기억하는 전문가도 있습니까.", fx:"gavel"},
+    ]},
+  { text:"9월 말까지는 그 어떤 위험 신호도 없었습니다. 저희가 무슨 수로 미리 알았겠어요?",
+    ev:0,
+    press:[
+      {sp:"me", t:"‘어떤 위험 신호도 없었다’ — 확신하십니까?"},
+      {sp:"witness", expr:"sweat", t:"무, 물론이죠! 9월은 아주 평화로운 달이었어요. 추석도 있었고…."},
+    ],
+    rebut:[
+      {sp:"me", t:"9월 28일, 강원도는 보증 이행 대신 ‘기업회생 신청’을 발표했습니다. 이보다 명확한 신호가 있습니까!", fx:"shake"},
+      {sp:"witness", expr:"shock", t:"끄윽…! 그, 그 날짜까지 기억하다니…!"},
+      {sp:"judge", t:"판매 전문가가 놓친 걸 독자가 짚는군요. 계속하세요.", fx:"gavel"},
+    ]},
+  { text:"시장 충격이요? 아주 잠깐의 해프닝이었죠. 언론조차 거의 다루지 않았으니까요.",
+    ev:2,
+    press:[
+      {sp:"me", t:"‘언론이 거의 다루지 않았다’…. 그 말에 책임지실 수 있습니까?"},
+      {sp:"witness", expr:"sweat", t:"저, 저는 신문을 매일 읽는 사람입니다? 못 봤으면 없는 거예요!"},
+    ],
+    rebut:[
+      {sp:"me", t:"‘돈맥경화’ — 연일 경제지 1면을 장식한 단어입니다. 방금 이 기사를 읽은 모두가 알고 있죠!", fx:"shake"},
+      {sp:"witness", expr:"shock", t:"으아아악! 1면… 1면은 원래 건너뛰는데…!"},
+      {sp:"judge", t:"…그만하면 됐습니다. 판결하겠습니다.", fx:"gavel"},
+    ]},
+];
+
+/* ═══════════ 상태 ═══════════ */
+let collected = new Set();
+let stmtIdx=0, trust=3, pressUsed=0;
+const usedEv=new Set();
+let entryPoint="end";
+
+/* ═══════════ 기사: 스크롤 증거 수집 ═══════════ */
+function collectEvidence(idx, el){
+  if(collected.has(idx)) return;
+  collected.add(idx);
+  el.classList.add("lit");
+  const badge=document.getElementById("ev-badge");
+  document.getElementById("ev-cnt").textContent=collected.size;
+  badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
+  const t=document.getElementById("collect-toast");
+  t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+  updateEndCta();
+}
+function checkEvidenceInView(){
+  if(collected.size>=EVIDENCE.length) return;
+  const box=document.getElementById("article-scroll").getBoundingClientRect();
+  document.querySelectorAll(".ev-sent").forEach(el=>{
+    const idx=+el.dataset.ev;
+    if(collected.has(idx)) return;
+    const r=el.getBoundingClientRect();
+    // 문장 전체가 읽기 영역 안으로 들어왔거나(하단 여백 40px), 이미 지나쳐 올라간 경우 수집
+    if(r.height>0 && r.bottom < box.bottom - 40) collectEvidence(idx, el);
+  });
+}
+document.getElementById("article-scroll").addEventListener("scroll", checkEvidenceInView, {passive:true});
+window.addEventListener("load", checkEvidenceInView);
+
+function updateEndCta(){
+  document.getElementById("ec-cnt").textContent=collected.size;
+  const evs=document.getElementById("ec-evs");
+  evs.innerHTML="";
+  [...collected].sort().forEach(i=>{
+    const d=document.createElement("div");
+    d.className="ec-ev"; d.textContent=EVIDENCE[i].text;
+    evs.appendChild(d);
+  });
+  document.getElementById("ec-btn").disabled = collected.size<3;
+}
+
+/* ═══════════ 트랜지션: 사건 파일 생성 ═══════════ */
+function startCasefile(from){
+  entryPoint=from;
+  // 인라인 훅으로 진입하면 아직 못 읽은 문장도 자동 수집 처리
+  document.querySelectorAll(".ev-sent").forEach(el=>{
+    const idx=+el.dataset.ev;
+    if(!collected.has(idx)){ collected.add(idx); el.classList.add("lit"); }
+  });
+  document.getElementById("ev-cnt").textContent=3;
+  updateEndCta();
+  const fx=document.getElementById("casefile-fx");
+  const list=document.getElementById("cf-list");
+  list.innerHTML="";
+  EVIDENCE.forEach(e=>{
+    const d=document.createElement("div");
+    d.className="cf-item"; d.textContent="🔑 "+e.text;
+    list.appendChild(d);
+  });
+  fx.classList.add("show");
+  setTimeout(()=>{ fx.classList.remove("show"); startCourt(); }, 2100);
+}
+
+/* ═══════════ 대화 엔진 ═══════════ */
+const CHAR_MAP={ witness:"ch-witness", judge:"ch-judge" };
+const NAME_MAP={ witness:["허풍선 (당시 판매 PB)","n-witness"], judge:["판사","n-judge"],
+  me:["나 (독자 변호인)","n-me"], sys:["상황","n-sys"] };
+let queue=[], onScriptDone=null, typing=false, typeTimer=null, fullText="";
+
+function playScript(lines,done){
+  queue=[...lines]; onScriptDone=done||null;
+  document.getElementById("dialog").classList.add("show");
+  document.getElementById("court-menu").classList.remove("show");
+  nextLine();
+}
+function nextLine(){
+  const l=queue.shift();
+  if(!l){
+    document.getElementById("dialog").classList.remove("show");
+    clearTalking();
+    const cb=onScriptDone; onScriptDone=null; if(cb) cb();
+    return;
+  }
+  renderLine(l);
+}
+function renderLine(l){
+  const [name,cls]=NAME_MAP[l.sp]||NAME_MAP.sys;
+  const nameEl=document.getElementById("dlg-name");
+  nameEl.textContent=name; nameEl.className=cls;
+  clearTalking();
+  const gid=CHAR_MAP[l.sp];
+  if(gid){ const g=document.getElementById(gid); if(g) g.classList.add("talking"); }
+  if(l.expr!==undefined && gid){ setExpr(gid,l.expr); }
+  else if(l.sp==="witness"){ setExpr("ch-witness","normal"); }
+  if(l.fx) runFx(l.fx);
+  fullText=l.t||"";
+  const txt=document.getElementById("dlg-text");
+  txt.textContent="";
+  document.getElementById("dlg-next").style.visibility="hidden";
+  typing=true; let i=0;
+  clearInterval(typeTimer);
+  typeTimer=setInterval(()=>{
+    i++; txt.textContent=fullText.slice(0,i);
+    if(i>=fullText.length) finishType();
+  },26);
+}
+function finishType(){
+  clearInterval(typeTimer); typing=false;
+  document.getElementById("dlg-text").textContent=fullText;
+  document.getElementById("dlg-next").style.visibility="visible";
+}
+function advance(){ if(typing){ finishType(); } else { nextLine(); } }
+function clearTalking(){
+  Object.values(CHAR_MAP).forEach(id=>{
+    const g=document.getElementById(id); if(g) g.classList.remove("talking");
+  });
+}
+function setExpr(gid,expr){
+  const g=document.getElementById(gid); if(!g) return;
+  g.classList.remove("expr-sweat","expr-shock");
+  if(expr==="sweat") g.classList.add("expr-sweat");
+  if(expr==="shock") g.classList.add("expr-shock");
+}
+function runFx(fx){
+  if(fx==="shake"){
+    const art=document.getElementById("court-art");
+    art.classList.remove("shake"); void art.offsetWidth; art.classList.add("shake");
+  }
+  if(fx==="gavel"){
+    const gv=document.getElementById("judge-gavel");
+    gv.classList.remove("gavel-bang"); void gv.getBBox; gv.classList.add("gavel-bang");
+  }
+}
+
+/* ═══════════ 법정 ═══════════ */
+function showScene(id){
+  document.querySelectorAll(".scene").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function startCourt(){
+  stmtIdx=0; trust=3; usedEv.clear(); pressUsed=0;
+  showScene("scn-court");
+  updateTrust();
+  playScript([
+    {sp:"sys", t:"독자 참여 재판 — 당신이 방금 읽은 기사가 증거입니다."},
+    {sp:"judge", t:"‘그날의 시장’ 발언 검증 재판을 시작합니다. 증인은 당시 판매 담당 PB.", fx:"gavel"},
+    {sp:"witness", t:"흥, 기사 좀 읽었다고 뭘 안다고 그러십니까? 뭐든 물어보시죠!"},
+  ], showStatement);
+}
+function showStatement(){
+  const st=STATEMENTS[stmtIdx];
+  document.getElementById("sb-tag").textContent=`발언 ${stmtIdx+1}/${STATEMENTS.length}`;
+  document.getElementById("sb-text").textContent="“"+st.text+"”";
+  document.getElementById("stmt-banner").classList.add("show");
+  document.getElementById("court-menu").classList.add("show");
+  setExpr("ch-witness","normal");
+}
+function hideStatementUI(){
+  document.getElementById("stmt-banner").classList.remove("show");
+  document.getElementById("court-menu").classList.remove("show");
+}
+function pressWitness(){
+  pressUsed++;
+  hideStatementUI();
+  playScript(STATEMENTS[stmtIdx].press, showStatement);
+}
+function updateTrust(){
+  const t=Math.max(0,Math.min(3,trust));
+  document.getElementById("trust-disp").textContent="⚖️".repeat(t)+"➖".repeat(3-t);
+}
+function openEvidence(){
+  const list=document.getElementById("ev-list");
+  list.innerHTML="";
+  EVIDENCE.forEach((e,i)=>{
+    const c=document.createElement("div");
+    c.className="ev-card"+(usedEv.has(i)?" used":"");
+    c.innerHTML=`<span class="eq-tag">${e.label}</span><div class="eq-text">“${e.text}”</div>`;
+    c.onclick=()=>presentEvidence(i);
+    list.appendChild(c);
+  });
+  document.getElementById("sheet-dim").classList.add("show");
+  document.getElementById("ev-sheet").classList.add("show");
+}
+function closeEvidence(){
+  document.getElementById("sheet-dim").classList.remove("show");
+  document.getElementById("ev-sheet").classList.remove("show");
+}
+function presentEvidence(i){
+  closeEvidence();
+  if(trust<=0 || stmtIdx>=STATEMENTS.length) return;
+  if(document.getElementById("dialog").classList.contains("show")) return;
+  hideStatementUI();
+  const st=STATEMENTS[stmtIdx];
+  if(i===st.ev){
+    usedEv.add(i);
+    const fx=document.getElementById("objection-fx");
+    fx.classList.add("show");
+    runFx("shake");
+    setTimeout(()=>{
+      fx.classList.remove("show");
+      playScript(st.rebut, afterRebut);
+    },1050);
+  }else{
+    trust--; updateTrust();
+    if(trust<=0){
+      playScript([
+        {sp:"judge", t:"변호인, 기사를 다시 읽고 오는 게 좋겠군요. 오늘은 여기까지.", fx:"gavel"},
+        {sp:"witness", t:"후훗~ 독서는 정독이 중요합니다?"},
+      ], ()=>showVerdict(false));
+      return;
+    }
+    playScript([
+      {sp:"judge", t:"그 문장이 이 발언과 무슨 상관입니까?", fx:"gavel"},
+      {sp:"me", t:"(기사에서 읽은 세 문장을 다시 떠올려 보자…. 기회는 "+trust+"번.)"},
+    ], showStatement);
+  }
+}
+function afterRebut(){
+  stmtIdx++;
+  if(stmtIdx>=STATEMENTS.length){
+    playScript([
+      {sp:"judge", t:"증인의 발언은 신빙성을 모두 잃었습니다. 기사를 읽은 독자의 승리입니다.", fx:"gavel"},
+    ], ()=>showVerdict(true));
+  }else{
+    playScript([
+      {sp:"witness", expr:"sweat", t:"(식은땀) 아직… 아직이야…!"},
+    ], showStatement);
+  }
+}
+
+/* ═══════════ 판결 ═══════════ */
+function showVerdict(win){
+  showScene("scn-verdict");
+  const paper=document.getElementById("verdict-paper");
+  const actions=document.getElementById("verdict-actions");
+  if(win){
+    paper.innerHTML=`
+      <div class="vp-court">독자 참여 재판 — 발언 검증</div>
+      <h2>판결문</h2>
+      <div class="vp-stamp">반박 성공</div>
+      <div class="vp-msg">허풍선 씨의 발언 3건은 모두 <b>기사에 기록된 팩트</b>와 모순됨이 입증되었다. 본 재판부는 다음과 같이 판시한다 — <b>“기사를 끝까지 읽은 독자가 가장 강한 변호인이다.”</b></div>`;
+    actions.innerHTML=`
+      <button class="navy-btn" onclick="backToArticle(true)">📰 기사로 돌아가기 — 관련 심층 기사 보기</button>`;
+  }else{
+    paper.innerHTML=`
+      <div class="vp-court">독자 참여 재판 — 발언 검증</div>
+      <h2>변론 종결</h2>
+      <div class="vp-stamp lose">기일 속행</div>
+      <div class="vp-msg">기회를 모두 소진했다. 증거는 이미 당신 손에 있다 — 기사 속 세 문장을 다시 읽으면 답이 보인다.</div>`;
+    actions.innerHTML=`
+      <button class="navy-btn" onclick="backToArticle(false)">📰 기사 다시 읽기 (형광펜 문장 확인)</button>
+      <button class="navy-btn" style="background:var(--pink);box-shadow:0 4px 0 #c9186f" onclick="startCourt()">⚖️ 바로 재도전</button>`;
+  }
+}
+function backToArticle(win){
+  showScene("scr-article");
+  const cta=document.getElementById("end-cta");
+  if(win){
+    cta.classList.add("finished");
+    document.getElementById("ec-btn").style.display="none";
+    document.getElementById("article-scroll").scrollTo({top:document.getElementById("end-cta").offsetTop-80, behavior:"smooth"});
+  }else{
+    document.getElementById("article-scroll").scrollTo({top:0, behavior:"smooth"});
+  }
+}
+</script>
+</body>
+</html>
