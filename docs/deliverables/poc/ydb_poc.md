@@ -133,3 +133,5 @@ pixel-factory (3459)      ─ 크롬 확장 → 한경 기사 원문 내 돌발 
 ```
 
 세 신규 프로젝트(Whistle, Tycoon, Pixel Factory) 모두 최종적으로 **한경 뉴스 원문 또는 Whistle 배틀룸**으로 트래픽을 모으는 구조로 설계되었으며, `.claude/launch.json`에 각각 독립 설정(포트 3457/3458/3459, autoPort)으로 등록되어 있다.
+
+## 뉴스 숏폼 메이커 주소 :https://tiny-tapioca-02ba67.netlify.app/
