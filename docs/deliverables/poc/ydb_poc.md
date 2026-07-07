@@ -137,7 +137,7 @@ pixel-factory (3459)      ─ 크롬 확장 → 한경 기사 원문 내 돌발 
 ## 뉴스 숏폼 메이커 주소 :https://tiny-tapioca-02ba67.netlify.app/
 
 
-## 기사 스크랩 기능##
+## 기사 스크랩 기능 확장프로그램 summary
 
 # ⛏️ Text Miner — 와르르 뉴스 스크랩
 
