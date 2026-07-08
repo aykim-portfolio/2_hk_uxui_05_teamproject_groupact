@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>정보 다이어트 — 포모도로 펫</title>
+<style>
+  :root {
+    --navy: #0b1f3a;
+    --navy-soft: #14294a;
+    --deep-green: #0f3d33;
+    --white: #ffffff;
+    --off-white: #f5f6f8;
+    --gold: #c9a15a;
+    --gold-soft: #e8d7b0;
+    --gray-line: #e2e4e8;
+    --gray-mid: #9aa3b2;
+    --text-main: #1b1f27;
+    --text-sub: #6b7280;
+    --green: #2f7d5c;
+    --green-soft: #e3f0e9;
+    --red: #a4433a;
+    --red-soft: #f7e8e6;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: #d9dce2;
+    font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, sans-serif;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  .app {
+    max-width: 430px;
+    min-width: 375px;
+    height: 100vh;
+    margin: 0 auto;
+    background: var(--off-white);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .screens { position: relative; flex: 1; overflow: hidden; }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: transform 0.38s cubic-bezier(.4,0,.2,1), opacity 0.28s ease;
+    padding-bottom: 28px;
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  .screen.active { opacity: 1; transform: translateX(0); }
+  .screen:not(.active) { pointer-events: none; }
+
+  /* ---------- Header ---------- */
+  .header {
+    padding: 18px 18px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+  .header h1 small { display: block; font-size: 11.5px; font-weight: 500; color: var(--text-sub); margin-top: 3px; letter-spacing: 0; }
+
+  .demo-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; color: var(--text-sub);
+    background: var(--white); border: 1px solid var(--gray-line);
+    padding: 6px 10px; border-radius: 20px;
+  }
+  .demo-toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-mid); transition: background .2s; }
+  .demo-toggle.on { color: var(--green); border-color: var(--green); }
+  .demo-toggle.on .dot { background: var(--green); }
+
+  /* ---------- Character card ---------- */
+  .pet-card {
+    margin: 12px 18px 0;
+    background: linear-gradient(180deg, #eef4ff 0%, #ffffff 70%);
+    border: 1px solid var(--gray-line);
+    border-radius: 20px;
+    padding: 18px 18px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pet-stage-label {
+    display: inline-block;
+    font-size: 11.5px; font-weight: 700;
+    color: var(--deep-green);
+    background: var(--green-soft);
+    padding: 4px 12px; border-radius: 20px;
+    margin-bottom: 4px;
+  }
+  .pet-name { font-size: 16px; font-weight: 800; margin-top: 6px; }
+
+  .pet-svg-wrap {
+    width: 190px; height: 190px;
+    margin: 4px auto 0;
+    transition: filter .6s ease;
+  }
+  .pet-svg-wrap svg { width: 100%; height: 100%; overflow: visible; }
+
+  /* 상태별 캐릭터 연출 */
+  .pet-svg-wrap.healthy .plant-body { animation: sway 3.2s ease-in-out infinite; transform-origin: 100px 150px; }
+  .pet-svg-wrap.tired   { filter: saturate(.65); }
+  .pet-svg-wrap.wilting { filter: saturate(.35) sepia(.25); }
+  .pet-svg-wrap.wilting .plant-body { transform: rotate(7deg); transform-origin: 100px 150px; }
+  .pet-svg-wrap.dead    { filter: grayscale(.9) brightness(.92); }
+  .pet-svg-wrap.dead .plant-body { transform: rotate(14deg); transform-origin: 100px 150px; }
+
+  @keyframes sway {
+    0%,100% { transform: rotate(-1.6deg); }
+    50%     { transform: rotate(1.6deg); }
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+  }
+  .pet-svg-wrap.hit { animation: shake .5s ease; }
+
+  .speech {
+    min-height: 20px;
+    font-size: 13px; color: var(--text-sub); font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* HP / 성장 게이지 */
+  .gauges { margin: 14px 4px 0; text-align: left; }
+  .gauge-row { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+  .gauge-label { width: 52px; font-size: 11.5px; font-weight: 700; color: var(--text-sub); flex-shrink: 0; }
+  .gauge-track { flex: 1; height: 10px; background: #edeff3; border-radius: 6px; overflow: hidden; }
+  .gauge-fill { height: 100%; border-radius: 6px; transition: width .6s cubic-bezier(.4,0,.2,1), background .4s; }
+  .gauge-fill.hp { background: var(--green); }
+  .gauge-fill.hp.low { background: #d08a3e; }
+  .gauge-fill.hp.critical { background: var(--red); }
+  .gauge-fill.growth { background: linear-gradient(90deg, var(--gold-soft), var(--gold)); }
+  .gauge-num { width: 58px; font-size: 11px; font-weight: 700; color: var(--text-main); text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  /* ---------- 통계 ---------- */
+  .stats-row { display: flex; gap: 10px; margin: 14px 18px 0; }
+  .stat {
+    flex: 1; background: var(--white); border: 1px solid var(--gray-line);
+    border-radius: var(--radius); padding: 12px 8px; text-align: center;
+  }
+  .stat b { display: block; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 10.5px; color: var(--text-sub); font-weight: 600; }
+
+  /* ---------- 세션 설정 ---------- */
+  .section-title {
+    font-size: 12.5px; font-weight: 700; color: var(--text-sub);
+    letter-spacing: 0.2px; margin: 22px 18px 10px;
+  }
+  .duration-chips { display: flex; gap: 10px; margin: 0 18px; }
+  .chip {
+    flex: 1; padding: 13px 0; border-radius: var(--radius);
+    background: var(--white); border: 1.5px solid var(--gray-line);
+    font-size: 14px; font-weight: 700; color: var(--text-sub);
+    transition: all .18s;
+  }
+  .chip small { display: block; font-size: 10px; font-weight: 600; margin-top: 3px; color: var(--gray-mid); }
+  .chip.selected { background: var(--navy); border-color: var(--navy); color: var(--white); }
+  .chip.selected small { color: var(--gold-soft); }
+
+  .start-btn {
+    display: block; width: calc(100% - 36px); margin: 18px auto 0;
+    padding: 16px 0; border-radius: var(--radius);
+    background: var(--deep-green); color: var(--white);
+    font-size: 15.5px; font-weight: 800; letter-spacing: -0.2px;
+    box-shadow: 0 6px 16px rgba(15,61,51,.25);
+    transition: transform .12s;
+  }
+  .start-btn:active { transform: scale(.97); }
+
+  .hint { margin: 12px 18px 0; font-size: 11.5px; color: var(--gray-mid); text-align: center; line-height: 1.6; }
+
+  /* ---------- 집중 화면 ---------- */
+  #screen-focus { background: var(--navy); color: var(--white); }
+
+  .focus-top { padding: 20px 18px 0; display: flex; justify-content: space-between; align-items: center; }
+  .focus-top .mode { font-size: 12px; font-weight: 700; color: var(--gold-soft); letter-spacing: 1px; }
+  .give-up { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.55); padding: 6px 10px; }
+
+  .timer-wrap { position: relative; width: 230px; height: 230px; margin: 18px auto 0; }
+  .timer-wrap svg { transform: rotate(-90deg); }
+  .timer-ring-bg { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 10; }
+  .timer-ring { fill: none; stroke: var(--gold); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+  .timer-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+  }
+  .timer-time { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+  .timer-sub { font-size: 12px; color: rgba(255,255,255,.6); font-weight: 600; }
+
+  .focus-pet {
+    width: 90px; height: 90px; margin: 14px auto 0;
+    transition: filter .6s;
+  }
+  .focus-pet svg { width: 100%; height: 100%; overflow: visible; }
+
+  .lives { text-align: center; margin-top: 10px; font-size: 13px; letter-spacing: 4px; }
+  .lives-label { display: block; font-size: 10.5px; color: rgba(255,255,255,.5); font-weight: 600; letter-spacing: .3px; margin-bottom: 5px; }
+
+  /* 유혹 구역 */
+  .temptation {
+    margin: 22px 18px 0;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px;
+    padding: 14px 16px 16px;
+  }
+  .temptation h3 { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.65); margin-bottom: 12px; }
+  .app-grid { display: flex; justify-content: space-between; }
+  .app-icon {
+    width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    position: relative; color: var(--white);
+  }
+  .app-icon .icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 25px;
+    transition: transform .15s;
+  }
+  .app-icon:active .icon { transform: scale(.92); }
+  .app-icon span { font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,.75); }
+  .app-icon .badge {
+    position: absolute; top: -5px; right: 2px;
+    min-width: 19px; height: 19px; padding: 0 5px;
+    background: #e5484d; border-radius: 10px;
+    font-size: 11px; font-weight: 800; line-height: 19px; text-align: center;
+    opacity: 0; transform: scale(.5); transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .app-icon .badge.show { opacity: 1; transform: scale(1); }
+  .app-icon.tempting .icon { animation: wiggle .6s ease infinite; }
+  @keyframes wiggle {
+    0%,100% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); }
+  }
+
+  /* 푸시 배너 */
+  .push-banner {
+    position: absolute; top: 14px; left: 14px; right: 14px;
+    background: rgba(255,255,255,.97); color: var(--text-main);
+    border-radius: 14px; padding: 12px 14px;
+    display: flex; gap: 10px; align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    transform: translateY(-120px); transition: transform .45s cubic-bezier(.34,1.3,.64,1);
+    z-index: 30; cursor: pointer;
+  }
+  .push-banner.show { transform: translateY(0); }
+  .push-banner .p-icon { font-size: 22px; }
+  .push-banner .p-body { flex: 1; min-width: 0; }
+  .push-banner .p-app { font-size: 10px; font-weight: 700; color: var(--text-sub); }
+  .push-banner .p-text { font-size: 12.5px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- 모달 ---------- */
+  .modal-dim {
+    position: absolute; inset: 0; background: rgba(11,31,58,.55);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
+    backdrop-filter: blur(2px);
+  }
+  .modal-dim.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: calc(100% - 60px); max-width: 340px;
+    background: var(--white); color: var(--text-main);
+    border-radius: 20px; padding: 26px 22px 20px; text-align: center;
+    transform: scale(.92); transition: transform .25s cubic-bezier(.34,1.4,.64,1);
+  }
+  .modal-dim.show .modal { transform: scale(1); }
+  .modal .m-emoji { font-size: 42px; }
+  .modal h2 { font-size: 17px; font-weight: 800; margin-top: 10px; letter-spacing: -0.3px; }
+  .modal p { font-size: 13px; color: var(--text-sub); margin-top: 8px; line-height: 1.65; }
+  .modal p b { color: var(--red); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .m-btn { flex: 1; padding: 13px 0; border-radius: 12px; font-size: 14px; font-weight: 700; }
+  .m-btn.stay { background: var(--deep-green); color: var(--white); }
+  .m-btn.open { background: var(--off-white); color: var(--text-sub); border: 1px solid var(--gray-line); }
+  .m-btn.solo { background: var(--navy); color: var(--white); }
+
+  /* 가짜 뉴스앱 오버레이 */
+  .fake-app {
+    position: absolute; inset: 0; background: var(--white); z-index: 60;
+    display: none; flex-direction: column; color: var(--text-main);
+  }
+  .fake-app.show { display: flex; }
+  .fake-head {
+    background: var(--navy); color: var(--white);
+    padding: 16px 18px; font-size: 15px; font-weight: 800;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .fake-head span { font-size: 11px; font-weight: 600; color: var(--gold-soft); }
+  .fake-body { flex: 1; padding: 16px 18px; overflow: hidden; }
+  .fake-item { padding: 13px 0; border-bottom: 1px solid var(--gray-line); }
+  .fake-item b { font-size: 14px; font-weight: 700; line-height: 1.5; display: block; }
+  .fake-item i { font-style: normal; font-size: 11px; color: var(--text-sub); }
+  .fake-item .down { color: #2864c8; font-weight: 700; }
+  .fake-item .up { color: var(--red); font-weight: 700; }
+  .fake-guilt {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(164,67,58,.96) 40%);
+    color: var(--white); text-align: center;
+    padding: 70px 24px 30px; font-size: 13.5px; font-weight: 600; line-height: 1.7;
+  }
+  .fake-guilt b { font-size: 16px; display: block; margin-bottom: 6px; }
+  .fake-close {
+    display: block; margin: 14px auto 0; padding: 11px 34px;
+    background: var(--white); color: var(--red);
+    border-radius: 24px; font-size: 13.5px; font-weight: 800;
+  }
+
+  /* ---------- 결과 화면 ---------- */
+  #screen-result { text-align: center; }
+  .result-inner { padding: 40px 24px 0; }
+  .result-emoji { font-size: 56px; }
+  .result-title { font-size: 21px; font-weight: 800; margin-top: 14px; letter-spacing: -0.4px; }
+  .result-desc { font-size: 13.5px; color: var(--text-sub); margin-top: 10px; line-height: 1.7; }
+  .result-rewards {
+    margin: 22px auto 0; max-width: 300px;
+    background: var(--white); border: 1px solid var(--gray-line);
+    border-radius: 16px; padding: 16px 20px;
+  }
+  .reward-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13.5px; }
+  .reward-row span { color: var(--text-sub); font-weight: 600; }
+  .reward-row b { font-weight: 800; }
+  .reward-row b.plus { color: var(--green); }
+  .reward-row b.minus { color: var(--red); }
+  .result-btn {
+    margin-top: 26px; padding: 15px 48px; border-radius: var(--radius);
+    background: var(--navy); color: var(--white); font-size: 15px; font-weight: 800;
+  }
+
+  .levelup-banner {
+    margin: 18px auto 0; max-width: 300px;
+    background: linear-gradient(135deg, var(--gold-soft), #f7ecd4);
+    border: 1px solid var(--gold);
+    border-radius: 16px; padding: 14px;
+    font-size: 13.5px; font-weight: 800; color: #7a5c22;
+    display: none;
+  }
+  .levelup-banner.show { display: block; animation: pop .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* 물방울 이펙트 */
+  .drop {
+    position: absolute; font-size: 22px; pointer-events: none; z-index: 40;
+    animation: fall 1.1s ease-in forwards;
+  }
+  @keyframes fall {
+    from { transform: translateY(-30px); opacity: 0; }
+    30% { opacity: 1; }
+    to { transform: translateY(90px); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 푸시 배너 (집중 중 유혹 알림) -->
+  <div class="push-banner" id="pushBanner">
+    <div class="p-icon" id="pushIcon">📰</div>
+    <div class="p-body">
+      <div class="p-app" id="pushApp">한경 뉴스 · 지금</div>
+      <div class="p-text" id="pushText">속보가 도착했어요</div>
+    </div>
+  </div>
+
+  <div class="screens">
+
+    <!-- ============ 홈 ============ -->
+    <div class="screen active" id="screen-home">
+      <div class="header">
+        <h1>정보 다이어트<small>뉴스를 참을수록 자라나는 나의 펫</small></h1>
+        <button class="demo-toggle" id="demoToggle"><span class="dot"></span>데모 배속</button>
+      </div>
+
+      <div class="pet-card">
+        <span class="pet-stage-label" id="stageLabel">Lv.1 새싹</span>
+        <div class="pet-svg-wrap healthy" id="petWrap"></div>
+        <div class="pet-name" id="petName">한경이</div>
+        <div class="speech" id="petSpeech">“오늘도 뉴스 없이 버텨보자!”</div>
+
+        <div class="gauges">
+          <div class="gauge-row">
+            <div class="gauge-label">체력</div>
+            <div class="gauge-track"><div class="gauge-fill hp" id="hpFill"></div></div>
+            <div class="gauge-num" id="hpNum">80/100</div>
+          </div>
+          <div class="gauge-row">
+            <div class="gauge-label">성장</div>
+            <div class="gauge-track"><div class="gauge-fill growth" id="growthFill"></div></div>
+            <div class="gauge-num" id="growthNum">0p</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat"><b id="statStreak">0</b><span>연속 성공 🔥</span></div>
+        <div class="stat"><b id="statMinutes">0분</b><span>총 절제 시간</span></div>
+        <div class="stat"><b id="statRate">-</b><span>절제 성공률</span></div>
+      </div>
+
+      <div class="section-title">집중 시간 선택</div>
+      <div class="duration-chips" id="durationChips">
+        <button class="chip" data-min="15">15분<small>가볍게</small></button>
+        <button class="chip selected" data-min="25">25분<small>뽀모도로</small></button>
+        <button class="chip" data-min="50">50분<small>딥워크</small></button>
+      </div>
+
+      <button class="start-btn" id="startBtn">🌱 정보 단식 시작하기</button>
+      <p class="hint">집중하는 동안 뉴스·증권 앱을 열면 펫의 체력이 깎여요.<br>끝까지 버티면 물을 주고 성장 포인트를 받아요.</p>
+    </div>
+
+    <!-- ============ 집중 ============ -->
+    <div class="screen" id="screen-focus">
+      <div class="focus-top">
+        <div class="mode">INFO FASTING</div>
+        <button class="give-up" id="giveUpBtn">포기하기</button>
+      </div>
+
+      <div class="timer-wrap">
+        <svg width="230" height="230" viewBox="0 0 230 230">
+          <circle class="timer-ring-bg" cx="115" cy="115" r="104"></circle>
+          <circle class="timer-ring" id="timerRing" cx="115" cy="115" r="104"></circle>
+        </svg>
+        <div class="timer-center">
+          <div class="timer-time" id="timerTime">25:00</div>
+          <div class="timer-sub" id="timerSub">뉴스 없는 시간</div>
+        </div>
+      </div>
+
+      <div class="focus-pet" id="focusPet"></div>
+
+      <div class="lives">
+        <span class="lives-label">남은 기회 — 3번 열면 세션 실패</span>
+        <span id="livesHearts">💚💚💚</span>
+      </div>
+
+      <div class="temptation">
+        <h3>😈 유혹의 서랍 — 정말 열어볼 건가요?</h3>
+        <div class="app-grid" id="appGrid">
+          <button class="app-icon" data-app="news">
+            <div class="icon" style="background:linear-gradient(135deg,#0b1f3a,#2c4a7c)">📰</div>
+            <span>한경뉴스</span><i class="badge"></i>
+          </button>
+          <button class="app-icon" data-app="stock">
+            <div class="icon" style="background:linear-gradient(135deg,#a4433a,#d0685e)">📈</div>
+            <span>증권플러스</span><i class="badge"></i>
+          </button>
+          <button class="app-icon" data-app="coin">
+            <div class="icon" style="background:linear-gradient(135deg,#c9a15a,#e0bc7d)">🪙</div>
+            <span>코인워치</span><i class="badge"></i>
+          </button>
+          <button class="app-icon" data-app="sns">
+            <div class="icon" style="background:linear-gradient(135deg,#0f3d33,#2a6b5b)">💬</div>
+            <span>주식갤러리</span><i class="badge"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 결과 ============ -->
+    <div class="screen" id="screen-result">
+      <div class="result-inner">
+        <div class="result-emoji" id="resultEmoji">💧</div>
+        <div class="result-title" id="resultTitle">정보 단식 성공!</div>
+        <p class="result-desc" id="resultDesc">한경이에게 물을 주었어요.</p>
+
+        <div class="levelup-banner" id="levelupBanner">🎉 레벨 업!</div>
+
+        <div class="result-rewards" id="resultRewards"></div>
+        <button class="result-btn" id="resultBtn">홈으로</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 앱 열기 확인 모달 -->
+  <div class="modal-dim" id="openModal">
+    <div class="modal">
+      <div class="m-emoji">🥀</div>
+      <h2 id="openModalTitle">지금 열면 한경이가 시들어요</h2>
+      <p>정말 확인해야 하는 정보인가요?<br>열면 <b>체력 -25</b>, 기회 1회가 사라져요.</p>
+      <div class="modal-btns">
+        <button class="m-btn open" id="confirmOpen">그래도 열기</button>
+        <button class="m-btn stay" id="cancelOpen">참는다 💪</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사망 모달 -->
+  <div class="modal-dim" id="deathModal">
+    <div class="modal">
+      <div class="m-emoji">🪦</div>
+      <h2>한경이가 시들어버렸어요…</h2>
+      <p>정보 과식으로 체력이 모두 소진됐어요.<br>씨앗부터 다시 키워볼까요?</p>
+      <div class="modal-btns">
+        <button class="m-btn solo" id="rebirthBtn" style="flex:1">새 씨앗 심기 🌰</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 가짜 뉴스앱 -->
+  <div class="fake-app" id="fakeApp">
+    <div class="fake-head" id="fakeHead">한경 뉴스 <span>LIVE</span></div>
+    <div class="fake-body" id="fakeBody"></div>
+    <div class="fake-guilt">
+      <b>🥀 한경이의 체력이 25 깎였어요</b>
+      지금 이 뉴스, 25분 뒤에 봐도 아무것도 달라지지 않아요.
+      <button class="fake-close" id="fakeClose">돌아가서 사과하기</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= 상태 ================= */
+const STAGES = [
+  { name: '씨앗',    minPt: 0,   label: 'Lv.0 씨앗' },
+  { name: '새싹',    minPt: 15,  label: 'Lv.1 새싹' },
+  { name: '어린나무', minPt: 60,  label: 'Lv.2 어린나무' },
+  { name: '꽃나무',   minPt: 150, label: 'Lv.3 꽃나무' },
+  { name: '황금나무', minPt: 300, label: 'Lv.4 황금나무' },
+];
+const MAX_PT = 300;
+
+const DEFAULT_STATE = {
+  hp: 80, growth: 15, streak: 0,
+  totalMin: 0, sessionsDone: 0, sessionsAll: 0,
+};
+
+let S = load();
+function load() {
+  try {
+    const raw = localStorage.getItem('infoDietPet');
+    if (raw) return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+  } catch (e) {}
+  return { ...DEFAULT_STATE };
+}
+function save() { localStorage.setItem('infoDietPet', JSON.stringify(S)); }
+
+function stageOf(pt) {
+  let s = 0;
+  STAGES.forEach((st, i) => { if (pt >= st.minPt) s = i; });
+  return s;
+}
+
+/* ================= 캐릭터 SVG ================= */
+function plantSVG(stage, mood) {
+  // mood: healthy | tired | wilting | dead
+  const eyes = mood === 'dead'
+    ? '<text x="86" y="176" font-size="11" text-anchor="middle">✕</text><text x="114" y="176" font-size="11" text-anchor="middle">✕</text>'
+    : mood === 'wilting'
+    ? '<path d="M82 172 q4 5 8 0" stroke="#5b4636" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M110 172 q4 5 8 0" stroke="#5b4636" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+    : '<circle cx="86" cy="173" r="3.4" fill="#5b4636"/><circle cx="114" cy="173" r="3.4" fill="#5b4636"/>';
+  const mouth = mood === 'healthy'
+    ? '<path d="M92 181 q8 7 16 0" stroke="#5b4636" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+    : mood === 'tired'
+    ? '<path d="M94 183 h12" stroke="#5b4636" stroke-width="2.4" stroke-linecap="round"/>'
+    : '<path d="M92 186 q8 -7 16 0" stroke="#5b4636" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+
+  const leafGreen = '#3f9464', leafDark = '#2f7d5c', stem = '#3c7d4f';
+  let plant = '';
+  if (stage === 0) {
+    plant = `<ellipse cx="100" cy="148" rx="16" ry="11" fill="#8a6b4a"/>
+             <path d="M100 141 q6 -12 0 -20 q-6 8 0 20" fill="${leafGreen}"/>`;
+  } else if (stage === 1) {
+    plant = `<path d="M100 150 V116" stroke="${stem}" stroke-width="5" stroke-linecap="round"/>
+             <path d="M100 122 q-24 -4 -28 -26 q24 2 28 26" fill="${leafGreen}"/>
+             <path d="M100 122 q24 -4 28 -26 q-24 2 -28 26" fill="${leafDark}"/>`;
+  } else if (stage === 2) {
+    plant = `<path d="M100 150 V92" stroke="${stem}" stroke-width="6" stroke-linecap="round"/>
+             <path d="M100 132 q-26 -2 -32 -24 q26 0 32 24" fill="${leafGreen}"/>
+             <path d="M100 118 q26 -2 32 -24 q-26 0 -32 24" fill="${leafDark}"/>
+             <path d="M100 100 q-20 -4 -24 -22 q22 2 24 22" fill="${leafDark}"/>
+             <circle cx="100" cy="88" r="9" fill="${leafGreen}"/>`;
+  } else if (stage === 3) {
+    plant = `<path d="M100 150 V84" stroke="${stem}" stroke-width="6" stroke-linecap="round"/>
+             <path d="M100 130 q-28 -2 -34 -26 q28 0 34 26" fill="${leafGreen}"/>
+             <path d="M100 114 q28 -2 34 -26 q-28 0 -34 26" fill="${leafDark}"/>
+             ${[0,60,120,180,240,300].map(a =>
+               `<ellipse cx="100" cy="66" rx="9" ry="14" fill="#e8a7b8" transform="rotate(${a} 100 78)"/>`).join('')}
+             <circle cx="100" cy="78" r="10" fill="#c9a15a"/>`;
+  } else {
+    plant = `<path d="M100 150 V78" stroke="#7a5c3a" stroke-width="9" stroke-linecap="round"/>
+             <circle cx="100" cy="62" r="34" fill="${leafDark}"/>
+             <circle cx="74" cy="80" r="22" fill="${leafGreen}"/>
+             <circle cx="126" cy="80" r="22" fill="${leafGreen}"/>
+             <circle cx="84" cy="56" r="5" fill="#c9a15a"/>
+             <circle cx="114" cy="46" r="5" fill="#c9a15a"/>
+             <circle cx="122" cy="70" r="5" fill="#c9a15a"/>
+             <circle cx="90" cy="74" r="5" fill="#e8d7b0"/>`;
+  }
+
+  return `<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+    <g class="plant-body">${plant}</g>
+    <path d="M68 152 h64 l-7 44 q-1 8 -9 8 h-32 q-8 0 -9 -8 z" fill="#d0685e"/>
+    <rect x="63" y="148" width="74" height="12" rx="6" fill="#a4433a"/>
+    <g class="pot-face">${eyes}${mouth}</g>
+  </svg>`;
+}
+
+function moodOf() {
+  if (S.hp <= 0) return 'dead';
+  if (S.hp <= 25) return 'wilting';
+  if (S.hp <= 55) return 'tired';
+  return 'healthy';
+}
+
+const SPEECHES = {
+  healthy: ['"오늘도 뉴스 없이 버텨보자!"', '"물 한 방울이 시세보다 달콤해."', '"시장은 도망가지 않아, 나만 자라면 돼."'],
+  tired:   ['"조금… 목이 말라…"', '"아까 그 알림, 안 봐도 됐잖아…"'],
+  wilting: ['"뉴스를 너무 많이 먹었어… 어지러워…"', '"제발… 이번엔 끝까지 버텨줘…"'],
+  dead:    ['"…"'],
+};
+
+/* ================= 홈 렌더 ================= */
+const petWrap = document.getElementById('petWrap');
+const focusPet = document.getElementById('focusPet');
+
+function renderHome() {
+  const stage = stageOf(S.growth);
+  const mood = moodOf();
+
+  document.getElementById('stageLabel').textContent = STAGES[stage].label;
+  petWrap.innerHTML = plantSVG(stage, mood);
+  petWrap.className = 'pet-svg-wrap ' + mood;
+
+  const sp = SPEECHES[mood];
+  document.getElementById('petSpeech').textContent = sp[Math.floor(Math.random() * sp.length)];
+
+  const hpFill = document.getElementById('hpFill');
+  hpFill.style.width = Math.max(0, S.hp) + '%';
+  hpFill.classList.toggle('low', S.hp <= 55 && S.hp > 25);
+  hpFill.classList.toggle('critical', S.hp <= 25);
+  document.getElementById('hpNum').textContent = Math.max(0, S.hp) + '/100';
+
+  const nextStage = STAGES[Math.min(stage + 1, STAGES.length - 1)];
+  document.getElementById('growthFill').style.width = Math.min(100, S.growth / MAX_PT * 100) + '%';
+  document.getElementById('growthNum').textContent =
+    stage === STAGES.length - 1 ? 'MAX' : S.growth + '/' + nextStage.minPt + 'p';
+
+  document.getElementById('statStreak').textContent = S.streak;
+  document.getElementById('statMinutes').textContent =
+    S.totalMin >= 60 ? (S.totalMin / 60).toFixed(1) + '시간' : S.totalMin + '분';
+  document.getElementById('statRate').textContent =
+    S.sessionsAll ? Math.round(S.sessionsDone / S.sessionsAll * 100) + '%' : '-';
+}
+
+/* ================= 화면 전환 ================= */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+}
+
+/* ================= 데모 배속 ================= */
+let demoMode = true; // 프로토타입 기본값: 1분 = 1초
+const demoToggle = document.getElementById('demoToggle');
+function renderDemo() { demoToggle.classList.toggle('on', demoMode); }
+demoToggle.addEventListener('click', () => { demoMode = !demoMode; renderDemo(); });
+
+/* ================= 세션 ================= */
+let sel = 25;
+document.getElementById('durationChips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  sel = +chip.dataset.min;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('selected', c === chip));
+});
+
+let session = null; // { totalSec, leftSec, opens, timer }
+const RING_LEN = 2 * Math.PI * 104;
+const timerRing = document.getElementById('timerRing');
+timerRing.style.strokeDasharray = RING_LEN;
+
+function fmt(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (S.hp <= 0) { showDeath(); return; }
+  startSession(sel);
+});
+
+function startSession(min) {
+  session = { totalSec: min * 60, leftSec: min * 60, opens: 0, min };
+  S.sessionsAll++; save();
+  renderFocus();
+  show('screen-focus');
+  clearInterval(session.timer);
+  const tickMs = demoMode ? 1000 / 60 : 1000; // 데모: 1분=1초
+  session.timer = setInterval(tick, tickMs);
+  scheduleTemptations();
+}
+
+function renderFocus() {
+  document.getElementById('timerTime').textContent = fmt(session.leftSec);
+  timerRing.style.strokeDashoffset = RING_LEN * (1 - session.leftSec / session.totalSec);
+  document.getElementById('livesHearts').textContent =
+    '💚'.repeat(3 - session.opens) + '🥀'.repeat(session.opens);
+  const stage = stageOf(S.growth);
+  focusPet.innerHTML = plantSVG(stage, moodOf());
+  focusPet.className = 'focus-pet pet-svg-wrap ' + moodOf();
+}
+
+function tick() {
+  if (!session) return;
+  session.leftSec--;
+  document.getElementById('timerTime').textContent = fmt(Math.max(0, session.leftSec));
+  timerRing.style.strokeDashoffset = RING_LEN * (1 - Math.max(0, session.leftSec) / session.totalSec);
+  if (session.leftSec <= 0) endSession(true);
+}
+
+/* --------- 유혹 연출 (알림 배지 + 푸시) --------- */
+const PUSHES = [
+  { app: 'news',  icon: '📰', name: '한경 뉴스',   text: '[속보] 코스피 장중 2% 급락… 무슨 일이?' },
+  { app: 'stock', icon: '📈', name: '증권플러스', text: '보유종목 삼성전자 -3.2% ▼ 지금 확인하세요' },
+  { app: 'coin',  icon: '🪙', name: '코인워치',   text: '비트코인 1시간 만에 5% 변동! 알림 3건' },
+  { app: 'sns',   icon: '💬', name: '주식갤러리', text: '"지금 안 사면 후회" 실시간 인기글 🔥' },
+  { app: 'news',  icon: '📰', name: '한경 뉴스',   text: '연준 금리 발표 10분 전 — 라이브 시작' },
+];
+let temptTimers = [];
+
+function scheduleTemptations() {
+  clearTemptations();
+  // 세션 중 3~4회, 시간 비례로 유혹 발생
+  const realDur = demoMode ? session.totalSec * 1000 / 60 : session.totalSec * 1000;
+  const count = 4;
+  for (let i = 1; i <= count; i++) {
+    const at = realDur * (i / (count + 1)) * (0.8 + Math.random() * 0.4);
+    temptTimers.push(setTimeout(fireTemptation, at));
+  }
+}
+function clearTemptations() {
+  temptTimers.forEach(clearTimeout); temptTimers = [];
+  hidePush();
+  document.querySelectorAll('.app-icon').forEach(a => {
+    a.classList.remove('tempting');
+    const b = a.querySelector('.badge'); b.classList.remove('show'); b.textContent = '';
+  });
+}
+
+const pushBanner = document.getElementById('pushBanner');
+let pushHideTimer = null;
+function fireTemptation() {
+  if (!session) return;
+  const p = PUSHES[Math.floor(Math.random() * PUSHES.length)];
+  // 배지 증가 + 아이콘 흔들기
+  const iconBtn = document.querySelector('.app-icon[data-app="' + p.app + '"]');
+  const badge = iconBtn.querySelector('.badge');
+  badge.textContent = (+badge.textContent || 0) + 1;
+  badge.classList.add('show');
+  iconBtn.classList.add('tempting');
+  setTimeout(() => iconBtn.classList.remove('tempting'), 2500);
+  // 푸시 배너
+  document.getElementById('pushIcon').textContent = p.icon;
+  document.getElementById('pushApp').textContent = p.name + ' · 지금';
+  document.getElementById('pushText').textContent = p.text;
+  pushBanner.dataset.app = p.app;
+  pushBanner.classList.add('show');
+  clearTimeout(pushHideTimer);
+  pushHideTimer = setTimeout(hidePush, 4500);
+}
+function hidePush() { pushBanner.classList.remove('show'); }
+
+/* --------- 앱 열기 (패널티) --------- */
+let pendingApp = null;
+const openModal = document.getElementById('openModal');
+
+document.getElementById('appGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.app-icon');
+  if (!btn || !session) return;
+  askOpen(btn.dataset.app);
+});
+pushBanner.addEventListener('click', () => {
+  if (!session) return;
+  hidePush();
+  askOpen(pushBanner.dataset.app || 'news');
+});
+
+const APP_NAMES = { news: '한경 뉴스', stock: '증권플러스', coin: '코인워치', sns: '주식갤러리' };
+function askOpen(app) {
+  pendingApp = app;
+  document.getElementById('openModalTitle').textContent =
+    APP_NAMES[app] + ' — 지금 열면 시들어요';
+  openModal.classList.add('show');
+}
+document.getElementById('cancelOpen').addEventListener('click', () => {
+  openModal.classList.remove('show');
+  // 참았을 때 소소한 보상 연출
+  spawnDrops(focusPet, 1);
+});
+document.getElementById('confirmOpen').addEventListener('click', () => {
+  openModal.classList.remove('show');
+  openFakeApp(pendingApp);
+});
+
+/* 가짜 앱 화면 */
+const FAKE_FEEDS = {
+  news: [
+    ['[속보] 코스피, 외국인 매도세에 장중 2% 급락', '3분 전 · 증권'],
+    ['연준 의장 "금리 인하 서두르지 않겠다" 발언', '12분 전 · 국제'],
+    ['[단독] 반도체 업계, 하반기 감산 검토', '30분 전 · 산업'],
+  ],
+  stock: [
+    ['삼성전자 <span class="down">-3.2%</span> · 내 평가손익 -412,000원', '실시간'],
+    ['SK하이닉스 <span class="down">-1.8%</span> · 거래량 급증', '실시간'],
+    ['에코프로 <span class="up">+5.4%</span> · 상한가 근접', '실시간'],
+  ],
+  coin: [
+    ['BTC <span class="down">-4.7%</span> ₩128,400,000', '실시간'],
+    ['ETH <span class="down">-6.1%</span> · 청산 급증 경보', '실시간'],
+    ['김치프리미엄 2.1% → 3.8% 급등', '실시간'],
+  ],
+  sns: [
+    ['"지금이 바닥이다 vs 아직 멀었다" 논쟁 🔥', '댓글 482'],
+    ['오늘 -8% 인증… 나만 물린 거 아니지?', '댓글 291'],
+    ['[정보] 내일 발표될 지표 총정리', '댓글 127'],
+  ],
+};
+const fakeApp = document.getElementById('fakeApp');
+function openFakeApp(app) {
+  document.getElementById('fakeHead').innerHTML = APP_NAMES[app] + ' <span>LIVE</span>';
+  document.getElementById('fakeBody').innerHTML = FAKE_FEEDS[app]
+    .map(([t, m]) => `<div class="fake-item"><b>${t}</b><i>${m}</i></div>`).join('');
+  fakeApp.classList.add('show');
+}
+document.getElementById('fakeClose').addEventListener('click', () => {
+  fakeApp.classList.remove('show');
+  applyPenalty();
+});
+
+function applyPenalty() {
+  if (!session) return;
+  session.opens++;
+  S.hp = Math.max(0, S.hp - 25);
+  save();
+  renderFocus();
+  focusPet.classList.add('hit');
+  setTimeout(() => focusPet.classList.remove('hit'), 550);
+
+  if (S.hp <= 0) { endSession(false); showDeath(); return; }
+  if (session.opens >= 3) endSession(false);
+}
+
+/* --------- 세션 종료 --------- */
+document.getElementById('giveUpBtn').addEventListener('click', () => endSession(false, true));
+
+function endSession(success, gaveUp) {
+  if (!session) return;
+  clearInterval(session.timer);
+  clearTemptations();
+  const min = session.min, opens = session.opens;
+  const prevStage = stageOf(S.growth);
+  session = null;
+
+  const rewards = [];
+  if (success) {
+    const pt = min;
+    const hpGain = Math.min(15, 100 - S.hp);
+    S.growth = Math.min(MAX_PT, S.growth + pt);
+    S.hp = Math.min(100, S.hp + 15);
+    S.streak++; S.sessionsDone++; S.totalMin += min;
+    rewards.push(['성장 포인트', '+' + pt + 'p', 'plus']);
+    rewards.push(['체력 회복', '+' + hpGain, 'plus']);
+    rewards.push(['연속 성공', S.streak + '회 🔥', 'plus']);
+    if (opens > 0) rewards.push(['앱 열람', opens + '회 (-' + opens * 25 + ' 체력)', 'minus']);
+  } else {
+    S.streak = 0;
+    rewards.push(['성장 포인트', '+0p', 'minus']);
+    if (opens > 0) rewards.push(['앱 열람', opens + '회 (-' + opens * 25 + ' 체력)', 'minus']);
+    rewards.push(['연속 성공', '리셋 😢', 'minus']);
+  }
+  save();
+
+  const newStage = stageOf(S.growth);
+  const emoji = document.getElementById('resultEmoji');
+  const title = document.getElementById('resultTitle');
+  const desc = document.getElementById('resultDesc');
+
+  if (success) {
+    emoji.textContent = '💧';
+    title.textContent = min + '분 정보 단식 성공!';
+    desc.textContent = opens === 0
+      ? '단 한 번도 열지 않았어요. 한경이가 쑥쑥 자라요!'
+      : '완주했지만 ' + opens + '번 흔들렸어요. 다음엔 무열람에 도전!';
+  } else if (gaveUp) {
+    emoji.textContent = '🏳️';
+    title.textContent = '세션을 포기했어요';
+    desc.textContent = '괜찮아요. 다음 세션에서 다시 시작하면 돼요.';
+  } else {
+    emoji.textContent = '🥀';
+    title.textContent = '정보 과식으로 실패…';
+    desc.textContent = '앱을 3번 열어 세션이 중단됐어요. 한경이가 축 처졌어요.';
+  }
+
+  const banner = document.getElementById('levelupBanner');
+  if (success && newStage > prevStage) {
+    banner.textContent = '🎉 레벨 업! ' + STAGES[prevStage].name + ' → ' + STAGES[newStage].name;
+    banner.classList.add('show');
+  } else banner.classList.remove('show');
+
+  document.getElementById('resultRewards').innerHTML = rewards
+    .map(([k, v, c]) => `<div class="reward-row"><span>${k}</span><b class="${c}">${v}</b></div>`).join('');
+
+  show('screen-result');
+  if (success) setTimeout(() => spawnDrops(document.getElementById('resultEmoji'), 5), 400);
+}
+
+document.getElementById('resultBtn').addEventListener('click', () => {
+  renderHome(); show('screen-home');
+});
+
+/* --------- 사망/부활 --------- */
+const deathModal = document.getElementById('deathModal');
+function showDeath() { renderHome(); deathModal.classList.add('show'); }
+document.getElementById('rebirthBtn').addEventListener('click', () => {
+  S = { ...DEFAULT_STATE, sessionsAll: S.sessionsAll, sessionsDone: S.sessionsDone, totalMin: S.totalMin, growth: 0 };
+  save();
+  deathModal.classList.remove('show');
+  renderHome(); show('screen-home');
+});
+
+/* --------- 물방울 이펙트 --------- */
+function spawnDrops(target, n) {
+  const rect = target.getBoundingClientRect();
+  const appRect = document.getElementById('app').getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'drop';
+    d.textContent = '💧';
+    d.style.left = (rect.left - appRect.left + rect.width * (0.2 + Math.random() * 0.6)) + 'px';
+    d.style.top = (rect.top - appRect.top - 10) + 'px';
+    d.style.animationDelay = (i * 0.12) + 's';
+    document.getElementById('app').appendChild(d);
+    setTimeout(() => d.remove(), 1600 + i * 120);
+  }
+}
+
+/* ================= 초기화 ================= */
+renderDemo();
+renderHome();
+</script>
+</body>
+</html>
