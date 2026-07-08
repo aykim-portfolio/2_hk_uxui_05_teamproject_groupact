@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>뉴몽 — 뉴스 먹는 3D 펫</title>
+<style>
+  :root {
+    --cream: #fff8f0;
+    --pink: #ffb7c5;
+    --pink-deep: #f2879e;
+    --mint: #9fe3c8;
+    --mint-deep: #4db894;
+    --lavender: #cabdf5;
+    --sun: #ffd98a;
+    --text-main: #4a3f4d;
+    --text-sub: #9a8fa0;
+    --white: #ffffff;
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: #e8dff0;
+    font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, sans-serif;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+  .app {
+    max-width: 430px;
+    min-width: 375px;
+    height: 100vh;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #bfe6f5 0%, #ffe9ef 60%, #fff3e4 100%);
+    touch-action: none;
+  }
+  #stage3d { position: absolute; inset: 0; }
+  #stage3d canvas { display: block; }
+
+  /* ---------- 상단 상태 UI ---------- */
+  .hud-top {
+    position: absolute; top: 14px; left: 14px; right: 14px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .hud-card {
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: 0 6px 20px rgba(160,120,150,.18);
+    pointer-events: auto;
+  }
+  .hud-row1 { display: flex; align-items: center; justify-content: space-between; }
+  .pet-title { display: flex; align-items: center; gap: 8px; }
+  .pet-title .stage-badge {
+    font-size: 10.5px; font-weight: 800; color: #fff;
+    background: linear-gradient(135deg, var(--pink-deep), var(--lavender));
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .pet-title b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+
+  .demo-toggle {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 700; color: var(--text-sub);
+    background: var(--white); border: 1.5px solid #eee2ea;
+    padding: 5px 9px; border-radius: 20px;
+  }
+  .demo-toggle .dot { width: 7px; height: 7px; border-radius: 50%; background: #cfc4d4; transition: background .2s; }
+  .demo-toggle.on { color: var(--mint-deep); border-color: var(--mint); }
+  .demo-toggle.on .dot { background: var(--mint-deep); }
+
+  .gauge-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+  .gauge-emoji { font-size: 13px; width: 18px; text-align: center; }
+  .gauge-label { width: 40px; font-size: 11px; font-weight: 800; color: var(--text-sub); }
+  .gauge-track { flex: 1; height: 12px; background: #f1e7ee; border-radius: 8px; overflow: hidden; }
+  .gauge-fill { height: 100%; border-radius: 8px; transition: width .5s cubic-bezier(.4,0,.2,1), background .4s; }
+  .gauge-fill.hp { background: linear-gradient(90deg, #ffd0da, var(--pink-deep)); }
+  .gauge-fill.hp.low { background: linear-gradient(90deg, #ffe3b3, #f0a75a); }
+  .gauge-fill.hp.critical { background: linear-gradient(90deg, #d8d2dd, #a99fb3); }
+  .gauge-fill.growth { background: linear-gradient(90deg, #c8f0de, var(--mint-deep)); }
+  .gauge-num { width: 52px; font-size: 10.5px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .hud-stats {
+    display: flex; gap: 6px; pointer-events: auto;
+  }
+  .hud-stat {
+    flex: 1; background: rgba(255,255,255,.72); backdrop-filter: blur(8px);
+    border-radius: 14px; padding: 8px 4px; text-align: center;
+    box-shadow: 0 4px 14px rgba(160,120,150,.12);
+  }
+  .hud-stat b { display: block; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .hud-stat span { font-size: 9.5px; color: var(--text-sub); font-weight: 700; }
+
+  /* ---------- 말풍선 ---------- */
+  .speech {
+    position: absolute; left: 50%; top: 33%; transform: translateX(-50%);
+    background: rgba(255,255,255,.95);
+    border-radius: 16px; padding: 9px 15px;
+    font-size: 12.5px; font-weight: 700; color: var(--text-main);
+    box-shadow: 0 6px 18px rgba(160,120,150,.22);
+    white-space: nowrap; z-index: 9;
+    opacity: 0; transition: opacity .4s, top .4s;
+    pointer-events: none;
+  }
+  .speech.show { opacity: 1; }
+  .speech::after {
+    content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+    border: 8px solid transparent; border-top-color: rgba(255,255,255,.95); border-bottom: none;
+  }
+
+  /* ---------- 하단: 기사 배달함 ---------- */
+  .feed-fab {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    z-index: 10;
+    background: linear-gradient(135deg, var(--pink-deep), #ff9db4);
+    color: #fff; font-size: 14.5px; font-weight: 800;
+    padding: 15px 30px; border-radius: 30px;
+    box-shadow: 0 10px 26px rgba(242,135,158,.45);
+    display: flex; align-items: center; gap: 8px;
+    transition: transform .15s;
+  }
+  .feed-fab:active { transform: translateX(-50%) scale(.94); }
+  .feed-fab .fab-badge {
+    background: #fff; color: var(--pink-deep);
+    min-width: 22px; height: 22px; border-radius: 12px;
+    font-size: 12px; line-height: 22px; text-align: center; padding: 0 6px;
+  }
+
+  .sheet-dim {
+    position: absolute; inset: 0; background: rgba(74,63,77,.35); z-index: 20;
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .sheet-dim.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 21;
+    background: var(--cream);
+    border-radius: 26px 26px 0 0;
+    padding: 10px 16px 20px;
+    max-height: 62%;
+    display: flex; flex-direction: column;
+    transform: translateY(105%); transition: transform .38s cubic-bezier(.32,.9,.35,1);
+  }
+  .sheet.show { transform: translateY(0); }
+  .sheet-handle { width: 42px; height: 5px; border-radius: 3px; background: #e5d8e2; margin: 4px auto 10px; }
+  .sheet h2 { font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .sheet h2 small { font-size: 11px; color: var(--text-sub); font-weight: 600; }
+
+  .cat-chips { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; padding-bottom: 2px; }
+  .cat-chips::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 700;
+    padding: 7px 13px; border-radius: 18px;
+    background: #fff; border: 1.5px solid #f0e3ec; color: var(--text-sub);
+  }
+  .cat-chip.selected { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+
+  .article-list { margin-top: 10px; overflow-y: auto; flex: 1; }
+  .article-card {
+    width: 100%; text-align: left;
+    background: #fff; border-radius: 16px;
+    padding: 13px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 11px;
+    box-shadow: 0 3px 10px rgba(160,120,150,.08);
+    transition: transform .12s;
+  }
+  .article-card:active { transform: scale(.98); }
+  .article-card .a-emoji {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 21px;
+  }
+  .article-card .a-body { flex: 1; min-width: 0; }
+  .article-card .a-cat { font-size: 10px; font-weight: 800; }
+  .article-card .a-title { font-size: 12.5px; font-weight: 700; margin-top: 3px; line-height: 1.45; }
+  .article-card .a-feed { font-size: 18px; flex-shrink: 0; }
+  .article-empty { text-align: center; padding: 30px 0 20px; font-size: 12.5px; color: var(--text-sub); font-weight: 600; line-height: 1.7; }
+  .refresh-btn {
+    margin: 4px auto 0; display: block;
+    font-size: 12.5px; font-weight: 800; color: var(--mint-deep);
+    background: #eafaf2; padding: 11px 22px; border-radius: 22px;
+  }
+
+  /* ---------- 기사 읽기 모달 ---------- */
+  .modal-dim {
+    position: absolute; inset: 0; background: rgba(74,63,77,.45); z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+    backdrop-filter: blur(2px);
+  }
+  .modal-dim.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: calc(100% - 52px); max-width: 350px;
+    background: #fff; border-radius: 22px; padding: 22px 20px 18px;
+    transform: scale(.92) translateY(10px); transition: transform .28s cubic-bezier(.34,1.4,.64,1);
+    max-height: 74vh; overflow-y: auto;
+  }
+  .modal-dim.show .modal { transform: scale(1) translateY(0); }
+  .read-cat { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 4px 11px; border-radius: 14px; }
+  .read-title { font-size: 16.5px; font-weight: 800; line-height: 1.45; margin-top: 10px; letter-spacing: -0.3px; }
+  .read-body { font-size: 12.5px; color: #6f6376; line-height: 1.8; margin-top: 12px; }
+  .read-body p + p { margin-top: 8px; }
+  .read-nutri {
+    margin-top: 14px; background: var(--cream); border-radius: 14px;
+    padding: 11px 13px; font-size: 11.5px; font-weight: 700; color: var(--text-sub);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .read-nutri b { color: var(--mint-deep); font-size: 12.5px; }
+  .feed-btn {
+    display: block; width: 100%; margin-top: 14px;
+    background: linear-gradient(135deg, var(--pink-deep), #ff9db4); color: #fff;
+    font-size: 14.5px; font-weight: 800; padding: 14px 0; border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(242,135,158,.35);
+  }
+  .later-btn { display: block; margin: 10px auto 0; font-size: 12px; font-weight: 700; color: var(--text-sub); padding: 4px 10px; }
+
+  /* ---------- 레벨업 & 잠듦 오버레이 ---------- */
+  .event-overlay {
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(74,63,77,.4); backdrop-filter: blur(3px);
+    opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .event-overlay.show { opacity: 1; pointer-events: auto; }
+  .event-card {
+    width: calc(100% - 70px); max-width: 320px;
+    background: #fff; border-radius: 24px; padding: 28px 22px 22px; text-align: center;
+    transform: scale(.85); transition: transform .35s cubic-bezier(.34,1.5,.64,1);
+  }
+  .event-overlay.show .event-card { transform: scale(1); }
+  .event-emoji { font-size: 52px; }
+  .event-title { font-size: 18px; font-weight: 800; margin-top: 12px; letter-spacing: -0.4px; }
+  .event-desc { font-size: 12.5px; color: var(--text-sub); line-height: 1.7; margin-top: 8px; font-weight: 600; }
+  .event-btn {
+    margin-top: 18px; padding: 13px 40px; border-radius: 16px;
+    background: var(--text-main); color: #fff; font-size: 14px; font-weight: 800;
+  }
+  .event-btn.pink { background: linear-gradient(135deg, var(--pink-deep), #ff9db4); }
+
+  /* 먹이기 토스트 */
+  .toast {
+    position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(16px);
+    background: rgba(74,63,77,.88); color: #fff;
+    font-size: 12.5px; font-weight: 700; padding: 10px 18px; border-radius: 22px;
+    z-index: 15; opacity: 0; transition: all .35s; pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div id="stage3d"></div>
+
+  <!-- 상단 HUD -->
+  <div class="hud-top">
+    <div class="hud-card">
+      <div class="hud-row1">
+        <div class="pet-title">
+          <span class="stage-badge" id="stageBadge">알</span>
+          <b id="petName">뉴몽</b>
+        </div>
+        <button class="demo-toggle on" id="demoToggle"><span class="dot"></span>데모 배속</button>
+      </div>
+      <div class="gauge-row">
+        <span class="gauge-emoji">🍚</span><span class="gauge-label">포만감</span>
+        <div class="gauge-track"><div class="gauge-fill hp" id="hpFill"></div></div>
+        <span class="gauge-num" id="hpNum">70</span>
+      </div>
+      <div class="gauge-row">
+        <span class="gauge-emoji">✨</span><span class="gauge-label">성장</span>
+        <div class="gauge-track"><div class="gauge-fill growth" id="growthFill"></div></div>
+        <span class="gauge-num" id="growthNum">0p</span>
+      </div>
+    </div>
+    <div class="hud-stats">
+      <div class="hud-stat"><b id="statEaten">0</b><span>먹은 기사 🍽️</span></div>
+      <div class="hud-stat"><b id="statVariety">0/6</b><span>영양 밸런스</span></div>
+      <div class="hud-stat"><b id="statBest">-</b><span>최애 카테고리</span></div>
+    </div>
+  </div>
+
+  <!-- 말풍선 -->
+  <div class="speech" id="speech">배고파요… 뉴스 주세요 🥺</div>
+
+  <!-- 토스트 -->
+  <div class="toast" id="toast">냠냠! 포만감 +18</div>
+
+  <!-- 기사 배달함 버튼 -->
+  <button class="feed-fab" id="feedFab">📬 뉴스 배달함 <span class="fab-badge" id="fabBadge">6</span></button>
+
+  <!-- 배달함 시트 -->
+  <div class="sheet-dim" id="sheetDim"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <h2>📬 오늘의 뉴스 배달함 <small>골고루 먹여야 잘 자라요</small></h2>
+    <div class="cat-chips" id="catChips"></div>
+    <div class="article-list" id="articleList"></div>
+    <button class="refresh-btn" id="refreshBtn">새 기사 배달받기 🚚</button>
+  </div>
+
+  <!-- 기사 읽기 모달 -->
+  <div class="modal-dim" id="readModal">
+    <div class="modal">
+      <span class="read-cat" id="readCat">증권</span>
+      <div class="read-title" id="readTitle"></div>
+      <div class="read-body" id="readBody"></div>
+      <div class="read-nutri">
+        <span>이 기사의 영양가</span>
+        <b id="readNutri">포만감 +18 · 성장 +6p</b>
+      </div>
+      <button class="feed-btn" id="feedBtn">뉴몽에게 먹이기 🍽️</button>
+      <button class="later-btn" id="laterBtn">나중에 읽기</button>
+    </div>
+  </div>
+
+  <!-- 레벨업 오버레이 -->
+  <div class="event-overlay" id="levelOverlay">
+    <div class="event-card">
+      <div class="event-emoji" id="levelEmoji">🎉</div>
+      <div class="event-title" id="levelTitle">뉴몽이 진화했어요!</div>
+      <div class="event-desc" id="levelDesc">알 → 아기 뉴몽</div>
+      <button class="event-btn pink" id="levelBtn">신난다! ✨</button>
+    </div>
+  </div>
+
+  <!-- 잠듦 오버레이 -->
+  <div class="event-overlay" id="sleepOverlay">
+    <div class="event-card">
+      <div class="event-emoji">💤</div>
+      <div class="event-title">뉴몽이 굶어서 잠들었어요…</div>
+      <div class="event-desc">오랫동안 뉴스를 먹지 못했어요.<br>따끈한 기사 하나를 먹여서 깨워주세요!</div>
+      <button class="event-btn" id="sleepFeedBtn">뉴스 먹여서 깨우기 📬</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ================= 게임 상태 ================= */
+const STAGES = [
+  { key: '알',      minPt: 0,   badge: '알 🥚' },
+  { key: '아기 뉴몽', minPt: 12,  badge: 'Lv.1 아기 뉴몽' },
+  { key: '뉴몽',     minPt: 48,  badge: 'Lv.2 뉴몽' },
+  { key: '왕뉴몽',   minPt: 120, badge: 'Lv.3 왕뉴몽' },
+];
+const MAX_PT = 120;
+
+const CATS = [
+  { key: '증권',   emoji: '📈', color: '#f2879e', bg: '#ffe9ee' },
+  { key: '경제',   emoji: '💰', color: '#e0a13e', bg: '#fff3dd' },
+  { key: '부동산', emoji: '🏠', color: '#4db894', bg: '#e6f8f0' },
+  { key: '국제',   emoji: '🌍', color: '#5f9bd8', bg: '#e8f2fc' },
+  { key: '테크',   emoji: '🤖', color: '#9b7fe8', bg: '#f0ebfd' },
+  { key: '생활',   emoji: '☕', color: '#d88a6a', bg: '#fdeee6' },
+];
+
+const HEADLINES = {
+  '증권': [
+    ['코스피, 외국인 순매수에 사흘째 상승 마감', '외국인 투자자가 사흘 연속 순매수를 이어가며 코스피가 상승 마감했다.', '증권가에서는 반도체 업황 회복 기대가 지수를 끌어올렸다고 분석했다.'],
+    ['"배당 늘린다"…주주환원 확대 나선 상장사들', '주요 상장사들이 잇따라 배당 확대와 자사주 소각 계획을 발표하고 있다.', '전문가들은 밸류업 흐름이 하반기에도 이어질 것으로 내다봤다.'],
+    ['개미들이 담은 이번 주 TOP5 종목은?', '이번 주 개인 투자자 순매수 상위 종목이 공개됐다.', '반도체와 2차전지 종목에 매수세가 집중된 것으로 나타났다.'],
+  ],
+  '경제': [
+    ['한은 "물가 둔화 흐름 뚜렷…금리 인하 여지 확대"', '한국은행이 소비자물가 상승률 둔화가 뚜렷해졌다고 진단했다.', '시장에서는 연내 기준금리 인하 기대가 커지고 있다.'],
+    ['수출 9개월 연속 플러스…반도체가 이끌었다', '이달 수출이 전년 대비 두 자릿수 증가하며 9개월 연속 플러스를 기록했다.', '반도체 수출이 전체 증가세를 견인한 것으로 나타났다.'],
+    ['"점심값이 무서워요" 직장인 런치플레이션 실태', '외식 물가 상승으로 직장인 평균 점심값이 처음으로 1만원을 넘어섰다.', '구내식당과 편의점 도시락으로 눈을 돌리는 직장인이 늘고 있다.'],
+  ],
+  '부동산': [
+    ['서울 아파트 전세가율 다시 상승…"갭투자 주의보"', '서울 아파트 전세가율이 다시 오르며 갭투자 움직임이 관측되고 있다.', '전문가들은 입주 물량이 적은 지역 중심의 상승이라고 분석했다.'],
+    ['청약 경쟁률 세 자릿수…분양시장 온기 도나', '수도권 주요 단지 청약 경쟁률이 세 자릿수를 기록했다.', '분양가 상한제 단지를 중심으로 수요가 몰리는 모습이다.'],
+  ],
+  '국제': [
+    ['美 연준 "인플레 진전 확인"…9월 인하 시사', '미국 연방준비제도가 물가 지표 개선을 확인했다며 금리 인하 가능성을 시사했다.', '글로벌 증시는 일제히 환호하며 상승세를 보였다.'],
+    ['엔화 급반등에 엔테크족 "지금이라도 팔까"', '엔화 가치가 급반등하면서 엔화 예금 투자자들의 셈법이 복잡해졌다.', '전문가들은 분할 매도 전략을 권했다.'],
+  ],
+  '테크': [
+    ['AI 반도체 전쟁 2라운드…HBM4 선점 경쟁', '차세대 고대역폭메모리 HBM4를 둘러싼 반도체 업계 경쟁이 본격화됐다.', '국내 기업들은 양산 시점을 앞당기며 주도권 확보에 나섰다.'],
+    ['"AI 비서가 회의록 써준다" 사무실 풍경 바꾼 생성AI', '생성형 AI 도입으로 회의록 작성과 보고서 초안 업무가 자동화되고 있다.', '기업들은 AI 활용 교육을 확대하는 추세다.'],
+  ],
+  '생활': [
+    ['"커피값 아껴 주식 산다" 2030 짠테크 열풍', '고물가 시대 2030 세대 사이에서 절약과 투자를 병행하는 짠테크가 유행이다.', '앱테크와 소액 투자 서비스 이용자가 크게 늘었다.'],
+    ['주 4일제 실험한 회사들, 1년 후 어떻게 됐나', '주 4일 근무제를 도입한 기업들의 1년 성적표가 공개됐다.', '생산성은 유지되고 이직률은 낮아졌다는 결과가 나왔다.'],
+  ],
+};
+
+const DEFAULT_STATE = { hp: 70, growth: 0, eaten: 0, catCount: {}, lastCat: null };
+let S = load();
+function load() {
+  try { const r = localStorage.getItem('newsPet3d'); if (r) return { ...DEFAULT_STATE, ...JSON.parse(r) }; } catch (e) {}
+  return { ...DEFAULT_STATE, catCount: {} };
+}
+function save() { localStorage.setItem('newsPet3d', JSON.stringify(S)); }
+function stageOf(pt) { let s = 0; STAGES.forEach((st, i) => { if (pt >= st.minPt) s = i; }); return s; }
+
+/* ================= 3D 씬 ================= */
+const container = document.getElementById('stage3d');
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xffe9ef, 14, 30);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+camera.position.set(0, 3.4, 8.4);
+camera.lookAt(0, 1.15, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+function resize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+addEventListener('resize', resize);
+
+/* 조명 */
+scene.add(new THREE.AmbientLight(0xfff2f6, 1.15));
+const sun = new THREE.DirectionalLight(0xfff0d8, 1.6);
+sun.position.set(4, 8, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -6; sun.shadow.camera.right = 6;
+sun.shadow.camera.top = 6; sun.shadow.camera.bottom = -6;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0xffd9c4, 0.5));
+
+const M = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0, ...opts });
+
+/* 회전 가능한 월드 그룹 */
+const world = new THREE.Group();
+scene.add(world);
+
+/* ---------- 떠있는 섬 ---------- */
+const island = new THREE.Group();
+world.add(island);
+
+const grass = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 2.85, 0.55, 40), M(0xa8e6b7));
+grass.position.y = -0.28; grass.receiveShadow = true;
+island.add(grass);
+const dirt = new THREE.Mesh(new THREE.CylinderGeometry(2.85, 1.4, 1.5, 40), M(0xc99a72));
+dirt.position.y = -1.3;
+island.add(dirt);
+const dirtTip = new THREE.Mesh(new THREE.ConeGeometry(1.4, 1.2, 40), M(0xb9875f));
+dirtTip.rotation.x = Math.PI; dirtTip.position.y = -2.62;
+island.add(dirtTip);
+
+/* 꼬마 나무 */
+function tree(x, z, s = 1) {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.09 * s, 0.12 * s, 0.5 * s, 8), M(0xa2765a));
+  trunk.position.y = 0.25 * s; trunk.castShadow = true;
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.42 * s, 16, 12), M(0x7fd6a8));
+  crown.position.y = 0.72 * s; crown.scale.y = 0.9; crown.castShadow = true;
+  const crown2 = new THREE.Mesh(new THREE.SphereGeometry(0.26 * s, 14, 10), M(0x9fe3c8));
+  crown2.position.set(0.22 * s, 0.92 * s, 0.05); crown2.castShadow = true;
+  g.add(trunk, crown, crown2);
+  g.position.set(x, 0, z);
+  island.add(g);
+}
+tree(-2.0, -0.9, 1.15);
+tree(1.9, -1.5, 0.85);
+
+/* 버섯 */
+function mushroom(x, z, s = 1) {
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.22 * s, 10), M(0xfff4e6));
+  stem.position.y = 0.11 * s;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17 * s, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), M(0xff9db4));
+  cap.position.y = 0.2 * s; cap.castShadow = true;
+  g.add(stem, cap);
+  for (let i = 0; i < 3; i++) {
+    const spot = new THREE.Mesh(new THREE.SphereGeometry(0.03 * s, 8, 6), M(0xffffff));
+    const a = i * 2.1 + 0.4;
+    spot.position.set(Math.cos(a) * 0.1 * s, 0.28 * s, Math.sin(a) * 0.1 * s);
+    g.add(spot);
+  }
+  g.position.set(x, 0, z);
+  island.add(g);
+}
+mushroom(2.2, 0.6, 1.1);
+mushroom(-1.6, 1.3, 0.85);
+
+/* 뉴스 우편함 */
+const mailbox = new THREE.Group();
+{
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.75, 10), M(0xa2765a));
+  pole.position.y = 0.37;
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.38, 0.36), M(0xf2879e));
+  box.position.y = 0.9; box.castShadow = true;
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.56, 16, 1, false, 0, Math.PI), M(0xd96a85));
+  roof.rotation.z = Math.PI / 2; roof.position.y = 1.09;
+  const flag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.05), M(0xffd98a));
+  flag.position.set(0.3, 1.12, 0);
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.2), M(0xfff8f0));
+  slot.position.set(0.285, 0.9, 0);
+  mailbox.add(pole, box, roof, flag, slot);
+  mailbox.position.set(-1.7, 0, 1.1);
+  mailbox.rotation.y = 0.5;
+  island.add(mailbox);
+}
+
+/* 구름 */
+const clouds = [];
+function cloud(x, y, z, s) {
+  const g = new THREE.Group();
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, transparent: true, opacity: 0.92 });
+  [[0, 0, 0, 0.5], [0.45, 0.05, 0, 0.36], [-0.42, 0.02, 0.05, 0.33], [0.1, 0.22, -0.05, 0.3]].forEach(([px, py, pz, r]) => {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(r * s, 12, 10), m);
+    b.position.set(px * s, py * s, pz * s);
+    g.add(b);
+  });
+  g.position.set(x, y, z);
+  g.userData.baseY = y;
+  g.userData.speed = 0.15 + Math.random() * 0.25;
+  world.add(g); clouds.push(g);
+}
+cloud(-3.6, 2.9, -2.5, 1.1);
+cloud(3.4, 3.6, -3.0, 0.85);
+cloud(2.6, 1.4, 2.2, 0.6);
+cloud(-3.2, 0.2, 2.0, 0.7);
+
+/* ---------- 뉴몽 캐릭터 ---------- */
+let pet = null;          // 현재 캐릭터 그룹
+let petParts = {};       // 애니메이션용 부위 참조
+const PET_Y = 0.95;
+
+function buildPet(stage) {
+  if (pet) { world.remove(pet); }
+  pet = new THREE.Group();
+  petParts = {};
+  const g = pet;
+
+  const bodyColor = stage === 0 ? 0xfff6e8 : stage === 1 ? 0xffd9e3 : stage === 2 ? 0xffc9d8 : 0xffc0d2;
+
+  if (stage === 0) {
+    /* 알: 점박이 알 + 빼꼼 눈 */
+    const egg = new THREE.Mesh(new THREE.SphereGeometry(0.72, 24, 20), M(bodyColor));
+    egg.scale.set(1, 1.22, 1); egg.castShadow = true;
+    g.add(egg);
+    petParts.body = egg;
+    [[0.3, 0.4, 0.5, 0xffd98a], [-0.38, 0.1, 0.5, 0x9fe3c8], [0.1, -0.35, 0.62, 0xcabdf5], [-0.2, 0.55, 0.42, 0xff9db4]].forEach(([x, y, z, c]) => {
+      const spot = new THREE.Mesh(new THREE.CircleGeometry(0.09, 12), M(c));
+      spot.position.set(x, y, z);
+      spot.lookAt(spot.position.clone().multiplyScalar(2));
+      egg.add(spot);
+    });
+    addFace(egg, 0.72, { eyeY: 0.18, scale: 0.8 });
+  } else {
+    /* 몸통: 몽글몽글 블롭 */
+    const size = stage === 1 ? 0.62 : stage === 2 ? 0.78 : 0.92;
+    const body = new THREE.Mesh(new THREE.SphereGeometry(size, 28, 22), M(bodyColor));
+    body.scale.set(1, 0.94, 0.97); body.castShadow = true;
+    g.add(body);
+    petParts.body = body;
+
+    /* 배 */
+    const belly = new THREE.Mesh(new THREE.CircleGeometry(size * 0.52, 20), M(0xfff6ee));
+    belly.position.set(0, -size * 0.12, size * 0.86);
+    belly.scale.y = 1.15;
+    body.add(belly);
+
+    addFace(body, size, { eyeY: size * 0.3, scale: 1 });
+
+    /* 더듬이 (새싹 안테나) */
+    const antenna = new THREE.Group();
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.035, 0.3, 8), M(0x4db894));
+    stem.position.y = 0.15;
+    antenna.add(stem);
+    if (stage >= 3) {
+      const star = starMesh(0.14, 0xffd98a);
+      star.position.y = 0.38;
+      antenna.add(star);
+      petParts.antennaTip = star;
+    } else {
+      const leafL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), M(0x7fd6a8));
+      leafL.scale.set(1.4, 0.55, 0.7); leafL.position.set(-0.1, 0.32, 0); leafL.rotation.z = 0.5;
+      const leafR = leafL.clone(); leafR.position.x = 0.1; leafR.rotation.z = -0.5;
+      antenna.add(leafL, leafR);
+      petParts.antennaTip = antenna;
+    }
+    antenna.position.y = size * 0.92;
+    body.add(antenna);
+    petParts.antenna = antenna;
+
+    /* 귀 (아기부터) */
+    const earMat = M(bodyColor);
+    const earL = new THREE.Mesh(new THREE.SphereGeometry(size * 0.28, 14, 12), earMat);
+    earL.scale.set(0.7, 1.15, 0.55);
+    earL.position.set(-size * 0.72, size * 0.62, 0);
+    earL.rotation.z = 0.45;
+    const earR = earL.clone(); earR.position.x = size * 0.72; earR.rotation.z = -0.45;
+    body.add(earL, earR);
+    const earInL = new THREE.Mesh(new THREE.SphereGeometry(size * 0.13, 10, 8), M(0xffaec2));
+    earInL.scale.set(0.7, 1.1, 0.4); earInL.position.set(-size * 0.7, size * 0.64, size * 0.14); earInL.rotation.z = 0.45;
+    const earInR = earInL.clone(); earInR.position.x = size * 0.7; earInR.rotation.z = -0.45;
+    body.add(earInL, earInR);
+
+    /* 날개 (뉴몽부터) */
+    if (stage >= 2) {
+      const wingMat = new THREE.MeshStandardMaterial({ color: 0xfff2d9, roughness: 0.7, transparent: true, opacity: 0.95 });
+      const wingL = new THREE.Group();
+      [[0, 0, 0.16], [0.02, -0.14, 0.12], [0.03, -0.26, 0.08]].forEach(([x, y, r]) => {
+        const f = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), wingMat);
+        f.scale.set(0.35, 1, 0.8); f.position.set(x, y, 0);
+        wingL.add(f);
+      });
+      wingL.position.set(-size * 1.02, size * 0.1, -size * 0.25);
+      wingL.rotation.z = 0.7;
+      const wingR = wingL.clone(); wingR.position.x = size * 1.02; wingR.rotation.z = -0.7;
+      body.add(wingL, wingR);
+      petParts.wings = [wingL, wingR];
+    }
+
+    /* 왕관 (왕뉴몽) */
+    if (stage >= 3) {
+      const crown = new THREE.Group();
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.27, 0.13, 16), M(0xffc94d, { roughness: 0.4, metalness: 0.3 }));
+      crown.add(band);
+      for (let i = 0; i < 4; i++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 8), M(0xffc94d, { roughness: 0.4, metalness: 0.3 }));
+        const a = (i / 4) * Math.PI * 2;
+        spike.position.set(Math.cos(a) * 0.24, 0.12, Math.sin(a) * 0.24);
+        crown.add(spike);
+      }
+      crown.position.set(size * 0.42, size * 0.86, 0);
+      crown.rotation.z = -0.28;
+      body.add(crown);
+    }
+
+    /* 발 */
+    const footL = new THREE.Mesh(new THREE.SphereGeometry(size * 0.2, 12, 10), M(bodyColor));
+    footL.scale.set(1, 0.55, 1.1); footL.position.set(-size * 0.4, -size * 0.88, size * 0.12);
+    const footR = footL.clone(); footR.position.x = size * 0.4;
+    g.add(footL, footR);
+  }
+
+  pet.position.set(0.4, PET_Y, 0.6);
+  world.add(pet);
+  return pet;
+}
+
+/* 얼굴 (눈 + 볼 + 입) */
+function addFace(body, size, { eyeY, scale }) {
+  const s = scale;
+  const eyeWhiteMat = M(0xffffff, { roughness: 0.35 });
+  const pupilMat = M(0x4a3f4d, { roughness: 0.3 });
+
+  const eyes = new THREE.Group();
+  [-1, 1].forEach(side => {
+    const eg = new THREE.Group();
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.145 * s, 14, 12), eyeWhiteMat);
+    white.scale.set(1, 1.25, 0.55);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.085 * s, 12, 10), pupilMat);
+    pupil.scale.set(1, 1.3, 0.5); pupil.position.z = 0.055 * s;
+    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.032 * s, 8, 6), M(0xffffff, { roughness: 0.2 }));
+    glint.position.set(0.035 * s, 0.05 * s, 0.1 * s);
+    eg.add(white, pupil, glint);
+    eg.position.set(side * size * 0.34, eyeY, size * 0.82);
+    eyes.add(eg);
+  });
+  body.add(eyes);
+
+  /* 볼 */
+  const cheekMat = new THREE.MeshStandardMaterial({ color: 0xff9db4, roughness: 1, transparent: true, opacity: 0.75 });
+  [-1, 1].forEach(side => {
+    const cheek = new THREE.Mesh(new THREE.CircleGeometry(0.085 * s, 12), cheekMat);
+    cheek.position.set(side * size * 0.55, eyeY - size * 0.28, size * 0.78);
+    cheek.lookAt(cheek.position.clone().add(new THREE.Vector3(side * 0.3, 0, 1)));
+    body.add(cheek);
+  });
+
+  /* 입 */
+  const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.075 * s, 12, 10), M(0xd96a85, { roughness: 0.6 }));
+  mouth.scale.set(1.15, 0.7, 0.4);
+  mouth.position.set(0, eyeY - size * 0.33, size * 0.93);
+  body.add(mouth);
+
+  petParts.eyes = eyes;
+  petParts.mouth = mouth;
+}
+
+function starMesh(r, color) {
+  const shape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.45;
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const x = Math.cos(a) * rad, y = Math.sin(a) * rad;
+    i === 0 ? shape.moveTo(x, y) : shape.lineTo(x, y);
+  }
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: r * 0.35, bevelEnabled: false });
+  geo.center();
+  return new THREE.Mesh(geo, M(color, { roughness: 0.4, metalness: 0.2 }));
+}
+
+/* ---------- 파티클 (하트/Zzz/반짝이) ---------- */
+function makeTextSprite(text, size = 64, color = '#ff7fa0') {
+  const c = document.createElement('canvas');
+  c.width = c.height = size * 2;
+  const ctx = c.getContext('2d');
+  ctx.font = (size * 1.4) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(text, size, size + size * 0.08);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  return new THREE.Sprite(mat);
+}
+
+const particles = [];
+function spawnParticle(text, pos, opts = {}) {
+  const sp = makeTextSprite(text, 64, opts.color || '#ff7fa0');
+  sp.scale.setScalar(opts.scale || 0.45);
+  sp.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.7, 0.2, (Math.random() - 0.5) * 0.4));
+  sp.userData = { life: 0, dur: opts.dur || 1.4, rise: opts.rise || 1.1 };
+  world.add(sp); particles.push(sp);
+}
+function burstHearts(n = 5, symbol = '💗') {
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => pet && spawnParticle(symbol, pet.position.clone().add(new THREE.Vector3(0, 0.6, 0))), i * 130);
+  }
+}
+
+/* ---------- 트윈 시스템 ---------- */
+const tweens = [];
+function tween(dur, fn, ease = t => 1 - Math.pow(1 - t, 3), done) {
+  tweens.push({ t: 0, dur, fn, ease, done });
+}
+
+/* 냠냠 애니메이션: 우편함에서 신문이 날아와서 냠 */
+function eatAnimation(onArrive) {
+  const paper = new THREE.Group();
+  const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.3), M(0xffffff, { roughness: 0.6 }));
+  paper.add(sheet);
+  for (let i = 0; i < 3; i++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.035, 0.028), M(0xc9bcd1));
+    line.position.set(0, 0.005, -0.09 + i * 0.09);
+    paper.add(line);
+  }
+  const from = mailbox.position.clone().add(new THREE.Vector3(0, 1.15, 0));
+  const to = pet.position.clone().add(new THREE.Vector3(0, 0.1, 0.5));
+  paper.position.copy(from);
+  world.add(paper);
+
+  tween(0.9, t => {
+    paper.position.lerpVectors(from, to, t);
+    paper.position.y += Math.sin(t * Math.PI) * 1.3;
+    paper.rotation.y = t * 7;
+    paper.rotation.z = Math.sin(t * 9) * 0.3;
+    if (t > 0.82) paper.scale.setScalar(Math.max(0.01, 1 - (t - 0.82) / 0.18));
+  }, t => t, () => {
+    world.remove(paper);
+    /* 냠냠 스쿼시 */
+    const base = pet.scale.clone();
+    tween(0.55, t => {
+      const s = Math.sin(t * Math.PI * 3) * 0.14 * (1 - t);
+      pet.scale.set(base.x + s, base.y - s, base.z + s);
+    }, t => t, () => pet.scale.copy(base));
+    burstHearts(5);
+    if (onArrive) onArrive();
+  });
+
+  /* 우편함 깃발 딸깍 */
+  const flagObj = mailbox.children[3];
+  tween(0.6, t => { flagObj.rotation.z = Math.sin(t * Math.PI) * -1.1; });
+}
+
+/* 레벨업 뿅 */
+function levelUpAnimation() {
+  const base = new THREE.Vector3(1, 1, 1);
+  tween(0.8, t => {
+    const s = 1 + Math.sin(t * Math.PI) * 0.35;
+    pet.scale.set(base.x * s, base.y * s, base.z * s);
+  }, t => t, () => pet.scale.copy(base));
+  for (let i = 0; i < 10; i++) {
+    setTimeout(() => pet && spawnParticle(['✨', '⭐', '💛'][i % 3], pet.position.clone().add(new THREE.Vector3(0, 0.4, 0)), { scale: 0.5, dur: 1.7, rise: 1.5 }), i * 90);
+  }
+}
+
+/* ---------- 드래그 회전 ---------- */
+let dragging = false, lastX = 0, worldRotY = 0, rotVel = 0;
+container.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX; lastX = e.clientX;
+  rotVel = dx * 0.005;
+  worldRotY += rotVel;
+});
+addEventListener('pointerup', () => dragging = false);
+
+/* 쓰다듬기 (탭) */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downAt = 0;
+container.addEventListener('pointerdown', () => downAt = Date.now());
+container.addEventListener('pointerup', e => {
+  if (Date.now() - downAt > 220) return; // 드래그와 구분
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  if (pet && raycaster.intersectObject(pet, true).length) {
+    petThePet();
+  }
+});
+function petThePet() {
+  if (S.hp <= 0) return;
+  const base = pet.scale.clone();
+  tween(0.4, t => {
+    const s = Math.sin(t * Math.PI) * 0.1;
+    pet.scale.set(base.x + s, base.y - s * 0.6, base.z + s);
+  }, t => t, () => pet.scale.copy(base));
+  burstHearts(3, '💕');
+  say(pickSpeech('pet'));
+}
+
+/* ---------- 렌더 루프 ---------- */
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  /* 관성 회전 */
+  if (!dragging) { worldRotY += rotVel; rotVel *= 0.93; }
+  world.rotation.y = worldRotY;
+
+  /* 섬 둥실 */
+  island.position.y = Math.sin(t * 0.7) * 0.07;
+
+  /* 뉴몽 상태별 모션 */
+  if (pet) {
+    const mood = moodOf();
+    if (mood === 'sleep') {
+      pet.position.y = PET_Y - 0.25 + island.position.y;
+      pet.rotation.z = 0.5;
+      if (Math.floor(t * 2) % 4 === 0 && Math.random() < 0.02)
+        spawnParticle('💤', pet.position.clone().add(new THREE.Vector3(0.3, 0.5, 0)), { color: '#8fa6c8', dur: 2 });
+    } else if (mood === 'wilt') {
+      pet.rotation.z = Math.sin(t * 0.8) * 0.04 + 0.18;
+      pet.position.y = PET_Y - 0.12 + island.position.y + Math.sin(t * 1.2) * 0.02;
+    } else {
+      pet.rotation.z = Math.sin(t * 1.4) * 0.03;
+      pet.position.y = PET_Y + island.position.y + Math.sin(t * 1.8) * 0.07;
+      if (petParts.antenna) petParts.antenna.rotation.z = Math.sin(t * 2.2) * 0.15;
+      if (petParts.wings) {
+        petParts.wings[0].rotation.z = 0.7 + Math.sin(t * 6) * 0.18;
+        petParts.wings[1].rotation.z = -0.7 - Math.sin(t * 6) * 0.18;
+      }
+    }
+    /* 배고픔에 따른 색 바램 */
+    const grayness = mood === 'sleep' ? 0.75 : mood === 'wilt' ? 0.45 : mood === 'hungry' ? 0.2 : 0;
+    if (petParts.body) {
+      const c = petParts.body.material.color;
+      const target = new THREE.Color(0xffd9e3).lerp(new THREE.Color(0xbdb3c0), grayness);
+      c.lerp(target, 0.06);
+    }
+    /* 눈 (졸림/감김) */
+    if (petParts.eyes) {
+      const lid = mood === 'sleep' ? 0.12 : mood === 'wilt' ? 0.55 : 1;
+      petParts.eyes.children.forEach(eg => { eg.scale.y += (lid - eg.scale.y) * 0.1; });
+    }
+  }
+
+  /* 구름 */
+  clouds.forEach((c, i) => {
+    c.position.y = c.userData.baseY + Math.sin(t * c.userData.speed + i * 2) * 0.15;
+    c.rotation.y = t * 0.03 * (i % 2 ? 1 : -1);
+  });
+
+  /* 파티클 */
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.userData.life += dt;
+    const k = p.userData.life / p.userData.dur;
+    if (k >= 1) { world.remove(p); particles.splice(i, 1); continue; }
+    p.position.y += dt * p.userData.rise;
+    p.material.opacity = 1 - k * k;
+  }
+
+  /* 트윈 */
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    tw.t += dt;
+    const k = Math.min(1, tw.t / tw.dur);
+    tw.fn(tw.ease(k));
+    if (k >= 1) { tweens.splice(i, 1); if (tw.done) tw.done(); }
+  }
+
+  renderer.render(scene, camera);
+}
+
+/* ================= 게임 로직 ================= */
+function moodOf() {
+  if (S.hp <= 0) return 'sleep';
+  if (S.hp <= 25) return 'wilt';
+  if (S.hp <= 50) return 'hungry';
+  return 'happy';
+}
+
+const SPEECH = {
+  happy:  ['오늘 뉴스 맛있었어요! 😋', '경제 기사가 제일 고소해요~', '더 크고 싶어요, 뉴스 주세요!'],
+  hungry: ['배가 살짝 고파요… 🥺', '뉴스 냄새가 나는 것 같은데…', '기사 하나만 먹으면 힘날 것 같아요'],
+  wilt:   ['너무 배고파요… 어지러워… 😵', '뉴스… 뉴스를 먹어야 해요…', '이러다 잠들어버릴지도 몰라요…'],
+  sleep:  ['💤 …'],
+  eat:    ['냠냠! 맛있다!! 😋', '오독오독… 고소한 정보의 맛!', '헤헤, 배가 든든해요!'],
+  pet:    ['히히, 간지러워요! 💕', '조아요 조아~', '더 쓰다듬어 주세요!'],
+  bonus:  ['골고루 먹으니까 힘이 솟아요! 💪', '영양 만점! 쑥쑥 클게요!'],
+};
+function pickSpeech(key) { const a = SPEECH[key]; return a[Math.floor(Math.random() * a.length)]; }
+
+let speechTimer = null;
+const speechEl = document.getElementById('speech');
+function say(text, dur = 2600) {
+  speechEl.textContent = text;
+  speechEl.classList.add('show');
+  clearTimeout(speechTimer);
+  speechTimer = setTimeout(() => speechEl.classList.remove('show'), dur);
+}
+
+/* ---------- HUD ---------- */
+function renderHUD() {
+  const stage = stageOf(S.growth);
+  document.getElementById('stageBadge').textContent = STAGES[stage].badge;
+
+  const hpFill = document.getElementById('hpFill');
+  const hp = Math.max(0, Math.round(S.hp));
+  hpFill.style.width = hp + '%';
+  hpFill.classList.toggle('low', hp <= 50 && hp > 25);
+  hpFill.classList.toggle('critical', hp <= 25);
+  document.getElementById('hpNum').textContent = hp;
+
+  const next = STAGES[Math.min(stage + 1, STAGES.length - 1)];
+  document.getElementById('growthFill').style.width = Math.min(100, S.growth / MAX_PT * 100) + '%';
+  document.getElementById('growthNum').textContent = stage === STAGES.length - 1 ? 'MAX' : S.growth + '/' + next.minPt + 'p';
+
+  document.getElementById('statEaten').textContent = S.eaten;
+  const variety = Object.keys(S.catCount).length;
+  document.getElementById('statVariety').textContent = variety + '/6';
+  let best = '-', bestN = 0;
+  for (const [k, v] of Object.entries(S.catCount)) if (v > bestN) { best = k; bestN = v; }
+  document.getElementById('statBest').textContent = best === '-' ? '-' : CATS.find(c => c.key === best).emoji + ' ' + best;
+}
+
+/* ---------- 배고픔 감소 ---------- */
+let demoMode = true;
+const demoToggle = document.getElementById('demoToggle');
+demoToggle.addEventListener('click', () => {
+  demoMode = !demoMode;
+  demoToggle.classList.toggle('on', demoMode);
+});
+
+let wasAsleep = false;
+setInterval(() => {
+  if (S.hp > 0) {
+    S.hp = Math.max(0, S.hp - (demoMode ? 1 : 0.02));
+    if (S.hp <= 0 && !wasAsleep) {
+      wasAsleep = true;
+      document.getElementById('sleepOverlay').classList.add('show');
+    }
+    save(); renderHUD();
+  }
+}, 1000);
+
+/* 기분 멘트 주기적으로 */
+setInterval(() => {
+  if (document.querySelector('.modal-dim.show, .event-overlay.show, .sheet.show')) return;
+  const m = moodOf();
+  if (m !== 'sleep' && Math.random() < 0.55) say(pickSpeech(m));
+}, 6000);
+
+/* ---------- 뉴스 배달함 ---------- */
+let articles = [];
+let articleSeq = 0;
+function dealArticles() {
+  articles = [];
+  const catsShuffled = [...CATS].sort(() => Math.random() - 0.5);
+  catsShuffled.forEach(cat => {
+    const pool = HEADLINES[cat.key];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    articles.push({ id: ++articleSeq, cat: cat.key, title: pick[0], body: [pick[1], pick[2]].filter(Boolean) });
+  });
+  renderArticles();
+}
+
+let filterCat = '전체';
+function renderCatChips() {
+  const el = document.getElementById('catChips');
+  el.innerHTML = ['전체', ...CATS.map(c => c.key)].map(k => {
+    const c = CATS.find(x => x.key === k);
+    return `<button class="cat-chip ${k === filterCat ? 'selected' : ''}" data-cat="${k}">${c ? c.emoji + ' ' : ''}${k}</button>`;
+  }).join('');
+}
+document.getElementById('catChips').addEventListener('click', e => {
+  const chip = e.target.closest('.cat-chip');
+  if (!chip) return;
+  filterCat = chip.dataset.cat;
+  renderCatChips(); renderArticles();
+});
+
+function renderArticles() {
+  const list = document.getElementById('articleList');
+  const shown = articles.filter(a => filterCat === '전체' || a.cat === filterCat);
+  document.getElementById('fabBadge').textContent = articles.length;
+  if (!shown.length) {
+    list.innerHTML = '<div class="article-empty">배달함이 비었어요 📭<br>새 기사를 배달받아 보세요!</div>';
+    return;
+  }
+  list.innerHTML = shown.map(a => {
+    const c = CATS.find(x => x.key === a.cat);
+    return `<button class="article-card" data-id="${a.id}">
+      <div class="a-emoji" style="background:${c.bg}">${c.emoji}</div>
+      <div class="a-body">
+        <div class="a-cat" style="color:${c.color}">${a.cat}</div>
+        <div class="a-title">${a.title}</div>
+      </div>
+      <div class="a-feed">🍽️</div>
+    </button>`;
+  }).join('');
+}
+
+/* 시트 열고 닫기 */
+const sheet = document.getElementById('sheet');
+const sheetDim = document.getElementById('sheetDim');
+function openSheet() { sheet.classList.add('show'); sheetDim.classList.add('show'); }
+function closeSheet() { sheet.classList.remove('show'); sheetDim.classList.remove('show'); }
+document.getElementById('feedFab').addEventListener('click', openSheet);
+sheetDim.addEventListener('click', closeSheet);
+document.getElementById('refreshBtn').addEventListener('click', () => { dealArticles(); });
+
+/* ---------- 기사 읽기 → 먹이기 ---------- */
+let readingArticle = null;
+const readModal = document.getElementById('readModal');
+
+document.getElementById('articleList').addEventListener('click', e => {
+  const card = e.target.closest('.article-card');
+  if (!card) return;
+  readingArticle = articles.find(a => a.id === +card.dataset.id);
+  if (!readingArticle) return;
+  const c = CATS.find(x => x.key === readingArticle.cat);
+  const catEl = document.getElementById('readCat');
+  catEl.textContent = c.emoji + ' ' + readingArticle.cat;
+  catEl.style.background = c.bg; catEl.style.color = c.color;
+  document.getElementById('readTitle').textContent = readingArticle.title;
+  document.getElementById('readBody').innerHTML = readingArticle.body.map(p => `<p>${p}</p>`).join('');
+  const bonus = S.lastCat && S.lastCat !== readingArticle.cat;
+  document.getElementById('readNutri').textContent = '포만감 +18 · 성장 +6p' + (bonus ? ' · 균형 보너스 +3p' : '');
+  readModal.classList.add('show');
+});
+document.getElementById('laterBtn').addEventListener('click', () => { readModal.classList.remove('show'); });
+
+document.getElementById('feedBtn').addEventListener('click', () => {
+  if (!readingArticle) return;
+  const art = readingArticle;
+  readingArticle = null;
+  readModal.classList.remove('show');
+  closeSheet();
+  feed(art);
+});
+
+function feed(art) {
+  articles = articles.filter(a => a.id !== art.id);
+  renderArticles();
+
+  const prevStage = stageOf(S.growth);
+  const bonus = S.lastCat && S.lastCat !== art.cat ? 3 : 0;
+
+  eatAnimation(() => {
+    const wasSleeping = S.hp <= 0;
+    S.hp = Math.min(100, S.hp + 18 + (wasSleeping ? 22 : 0));
+    S.growth = Math.min(MAX_PT, S.growth + 6 + bonus);
+    S.eaten++;
+    S.catCount[art.cat] = (S.catCount[art.cat] || 0) + 1;
+    S.lastCat = art.cat;
+    save(); renderHUD();
+
+    if (wasSleeping) { wasAsleep = false; say('하암… 잘 잤다! 뉴스 냄새에 깼어요! 😋'); }
+    else say(bonus ? pickSpeech('bonus') : pickSpeech('eat'));
+
+    showToast(`냠냠! 포만감 +18 · 성장 +${6 + bonus}p ${bonus ? '(균형 보너스!)' : ''}`);
+
+    const newStage = stageOf(S.growth);
+    if (newStage > prevStage) {
+      setTimeout(() => {
+        buildPet(newStage);
+        levelUpAnimation();
+        document.getElementById('levelEmoji').textContent = newStage === 1 ? '🐣' : newStage === 2 ? '🧚' : '👑';
+        document.getElementById('levelTitle').textContent =
+          newStage === 1 ? '알을 깨고 태어났어요!' : '뉴몽이 진화했어요!';
+        document.getElementById('levelDesc').textContent = STAGES[prevStage].key + ' → ' + STAGES[newStage].key;
+        document.getElementById('levelOverlay').classList.add('show');
+        renderHUD();
+      }, 1200);
+    }
+  });
+}
+
+let toastTimer = null;
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+document.getElementById('levelBtn').addEventListener('click', () => {
+  document.getElementById('levelOverlay').classList.remove('show');
+});
+document.getElementById('sleepFeedBtn').addEventListener('click', () => {
+  document.getElementById('sleepOverlay').classList.remove('show');
+  openSheet();
+});
+
+/* ================= 시작 ================= */
+window.__game = {
+  get S() { return S; },
+  capture(w = 420) {
+    renderer.render(scene, camera);
+    const src = renderer.domElement;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = Math.round(w * src.height / src.width);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.6);
+  },
+  feedFirst() {
+    if (articles.length) {
+      const c = CATS.find(x => x.key === articles[0].cat);
+      feed(articles[0]);
+      return c.key;
+    }
+    return null;
+  },
+};
+buildPet(stageOf(S.growth));
+renderCatChips();
+dealArticles();
+renderHUD();
+resize();
+animate();
+setTimeout(() => say(S.hp > 50 ? '안녕하세요! 뉴스 먹는 뉴몽이에요 🍽️' : pickSpeech(moodOf())), 800);
+</script>
+</body>
+</html>
