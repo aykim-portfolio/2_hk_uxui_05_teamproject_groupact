@@ -40,33 +40,36 @@ graph TD
     classDef premium fill:#ffebe6,stroke:#ff4d4d,stroke-width:1px;
 
     %% 흐름 시작
-    Start([사용자 앱 진입]) :::startEnd --> Home[뉴스 홈 피드 확인] :::action
+    Start([사용자 앱 진입]) --> Home[뉴스 홈 피드 확인]
 
     %% Flow A: 일반 뉴스 탐색
-    Home --> TopTab[상단 카테고리 탭 스와이프/클릭<br>테크, 금융, 집코노미 등] :::action
-    TopTab --> ArticleList[기사 리스트 탐색] :::action
-    ArticleList --> ClickArticle{기사 클릭} :::decision
+    Home --> TopTab["상단 카테고리 탭 스와이프/클릭<br/>테크, 금융, 집코노미 등"]
+    TopTab --> ArticleList[기사 리스트 탐색]
+    ArticleList --> ClickArticle{기사 클릭}
 
     %% Flow B: 프리미엄 구독 유도
-    ClickArticle -->|일반 뉴스 기사| DetailPage[기사 상세 페이지 소비] :::action
-    DetailPage --> Reaction[하단 좋아요/싫어요/후속기사 반응] :::action
+    ClickArticle -->|일반 뉴스 기사| DetailPage[기사 상세 페이지 소비]
+    DetailPage --> Reaction[하단 좋아요/싫어요/후속기사 반응]
     Reaction --> Home
 
-    ClickArticle -->|PREMIUM 배지 기사| Paywall[유료 벽 Paywall 조우<br>본문 일부 제한] :::premium
-    Paywall --> SubscriptionBottomSheet[구독 상품 팝업 노출<br>월간/1년 이용권] :::premium
-    SubscriptionBottomSheet --> ClickSubscribe{구독 여부 결정} :::decision
-    ClickSubscribe -->|구독하기 클릭| Payment[결제 프로세스 진입] :::action
+    ClickArticle -->|PREMIUM 배지 기사| Paywall["유료 벽 Paywall 조우<br/>본문 일부 제한"]
+    Paywall --> SubscriptionBottomSheet["구독 상품 팝업 노출<br/>월간/1년 이용권"]
+    SubscriptionBottomSheet --> ClickSubscribe{구독 여부 결정}
+    ClickSubscribe -->|구독하기 클릭| Payment[결제 프로세스 진입]
     ClickSubscribe -->|이탈| Home
 
     %% Flow C: 전체 메뉴 탐색
-    Home --> ClickHamburger[좌상단 전체 메뉴 ☰ 클릭] :::action
-    ClickHamburger --> MenuScroll[전체 서비스 라인업 스크롤 탐색] :::action
-    MenuScroll --> SelectChannel{이동할 채널 선택} :::decision
-    SelectChannel -->|전문 채널/콘텐츠 클릭| ChannelPage[해당 전문 서비스 페이지로 점프] :::action
+    Home --> ClickHamburger[좌상단 전체 메뉴 클릭]
+    ClickHamburger --> MenuScroll[전체 서비스 라인업 스크롤 탐색]
+    MenuScroll --> SelectChannel{이동할 채널 선택}
+    SelectChannel -->|전문 채널/콘텐츠 클릭| ChannelPage[해당 전문 서비스 페이지로 점프]
     SelectChannel -->|닫기| Home
 
     %% 스타일 적용
     class Start,Payment,ChannelPage startEnd;
+    class Home,TopTab,ArticleList,DetailPage,Reaction,ClickHamburger,MenuScroll action;
+    class ClickArticle,ClickSubscribe,SelectChannel decision;
+    class Paywall,SubscriptionBottomSheet premium;
 ```
 
 ## 3. 기획/UX 관점의 핵심 요약
