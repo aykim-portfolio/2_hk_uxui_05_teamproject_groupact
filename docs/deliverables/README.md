@@ -6,3 +6,4 @@
 
 | 스프린트 | 산출물 | 링크 | 날짜 |
 | -------- | ------ | ---- | ---- |
+| Sprint1 | 진입경로 User Flow 분석 (네이버/LLM/구글/유튜브) | [entry-path-flow-analysis.md](entry-path-flow-analysis.md) | 2026.07.06 |
