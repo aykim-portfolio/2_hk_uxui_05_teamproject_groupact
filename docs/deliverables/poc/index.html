@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>뉴스 숏폼 메이커</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Inter:wght@400;500;800&display=swap" rel="stylesheet" />
+  
+  <style>
+    /* ===== Egile Design System (design.md) 적용 ===== */
+    :root {
+      /* Semantic Tokens */
+      --bg-surface: #ffffff;
+      --bg-subtle: #f9fafb;
+      --bg-muted: #f2f4f6;
+      --bg-brand: #e8f3ff;
+      --bg-secondary: #eef2ff;
+
+      --text-primary: #191f28;
+      --text-secondary: #4e5968;
+      --text-tertiary: #8b95a1;
+      --text-disabled: #9ca3af;
+      --text-inverse: #ffffff;
+      --text-brand: #143c7e;
+      --text-link: #3182f6;
+
+      --border-default: #e5e8eb;
+      --border-hover: #d1d5db;
+      --border-brand: #143c7e;
+      --border-error: #ef4444;
+
+      --brand-primary: #143c7e;
+      --brand-primary-hover: #0e2856;
+      --brand-secondary: #3182f6;
+      --brand-tertiary: #10b981;
+
+      --status-error: #ef4444;
+      --status-error-bg: #fff1f2;
+      --status-success: #16a34a;
+      --status-success-bg: #f0fdf4;
+      --status-info: #3182f6;
+      --status-info-bg: #e8f3ff;
+
+      /* 다크 슬라이드 전용 (예외 허용) */
+      --indigo-100: #312e81;
+      --indigo-50: #818cf8;
+      --indigo-40: #a5b4fc;
+      --indigo-30: #c7d2fe;
+
+      /* Gradients */
+      --gradient-primary: linear-gradient(135deg, #3182f6, #6366f1);
+      --gradient-dark-hero: linear-gradient(135deg, #1e1b4b, #2a2a6a);
+      --gradient-surface-light: linear-gradient(180deg, #f9fafb, #f0f2f5);
+
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-full: 9999px;
+
+      /* Elevation */
+      --elevation-1: 0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04);
+      --elevation-2: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --elevation-brand-glow: 0 4px 20px rgba(49,130,246,0.30);
+
+      /* Fonts */
+      --font-primary: "Pretendard", "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      --font-caption: "Noto Sans KR", var(--font-primary);
+      --font-data: "Inter", var(--font-primary);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-primary);
+      background: var(--gradient-surface-light);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ===== 헤더: Gradient/Dark-Hero (표지 슬라이드 스타일) ===== */
+    header {
+      background: var(--gradient-dark-hero);
+      text-align: center;
+      padding: 56px 24px 48px;
+      margin-bottom: 32px;
+    }
+    .kicker {
+      display: inline-block;
+      font-family: var(--font-caption);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--indigo-40);
+      background: rgba(165, 180, 252, 0.12);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      margin-bottom: 16px;
+    }
+    header h1 {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-inverse);
+      margin-bottom: 12px;
+    }
+    header p {
+      color: var(--indigo-30);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* ===== 카드: Elevation/2 + radius/lg ===== */
+    .card {
+      max-width: 860px;
+      margin: 0 auto 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--elevation-2);
+      padding: 32px;
+    }
+    .card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 24px 0 12px;
+    }
+    .card h2:first-child { margin-top: 0; }
+    .card h2 small {
+      font-family: var(--font-caption);
+      color: var(--text-tertiary);
+      font-weight: 400;
+      font-size: 12px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ===== 입력 ===== */
+    .url-row { display: flex; gap: 12px; }
+    #url-input {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-default);
+      background: var(--bg-surface);
+      box-shadow: var(--elevation-1);
+      color: var(--text-primary);
+      font-size: 16px;
+      font-family: var(--font-primary);
+    }
+    #url-input::placeholder { color: var(--text-disabled); }
+    #url-input:hover { border-color: var(--border-hover); }
+    #url-input:focus { outline: none; border-color: var(--border-brand); box-shadow: 0 0 0 3px rgba(20,60,126,0.12); }
+
+    /* ===== 버튼 ===== */
+    button {
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font-primary);
+      padding: 12px 20px;
+      color: var(--text-primary);
+      background: var(--bg-muted);
+      transition: background .15s, box-shadow .15s, filter .15s;
+    }
+    button:hover { background: #e5e8eb; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.primary {
+      background: var(--gradient-primary);
+      color: var(--text-inverse);
+      box-shadow: var(--elevation-brand-glow);
+    }
+    button.primary:hover { filter: brightness(1.08); }
+    button.big { width: 100%; padding: 16px; font-size: 17px; border-radius: var(--radius-lg); }
+
+    /* ===== 상태 표시 ===== */
+    .status {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: var(--status-info-bg);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-brand);
+    }
+    .status.error { background: var(--status-error-bg); color: var(--status-error); }
+
+    /* ===== 기사 메타 ===== */
+    .article-meta { display: flex; gap: 8px; margin-bottom: 12px; }
+    .badge {
+      font-family: var(--font-caption);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      background: var(--bg-brand);
+      color: var(--text-brand);
+    }
+    .badge.ai { background: var(--status-success-bg); color: var(--status-success); }
+
+    #article-title {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .summary { color: var(--text-secondary); font-size: 16px; line-height: 1.6; }
+    .hashtags { color: var(--text-link); font-size: 13px; margin-top: 8px; font-weight: 500; }
+
+    /* ===== 장면 편집 ===== */
+    .scene {
+      display: flex;
+      gap: 16px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .scene-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: var(--radius-full);
+      background: var(--brand-primary);
+      color: var(--text-inverse);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-data);
+      font-weight: 800; font-size: 14px;
+    }
+    .scene-body { flex: 1; min-width: 0; }
+    .scene-body textarea {
+      width: 100%;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      box-shadow: var(--elevation-1);
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      font-family: var(--font-primary);
+      resize: vertical;
+      min-height: 52px;
+    }
+    .scene-body textarea:focus { outline: none; border-color: var(--border-brand); }
+
+    .img-picker {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .img-option {
+      flex-shrink: 0;
+      width: 72px; height: 96px;
+      border-radius: var(--radius-md);
+      border: 2px solid transparent;
+      object-fit: cover;
+      cursor: pointer;
+      background: var(--bg-muted);
+    }
+    .img-option.card-opt {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-caption);
+      font-size: 11px; color: var(--text-tertiary); text-align: center;
+      border: 2px dashed var(--border-hover);
+      background: var(--bg-subtle);
+      white-space: pre-line;
+    }
+    .img-option.selected {
+      border-color: var(--brand-secondary);
+      box-shadow: 0 0 0 3px rgba(49,130,246,0.20);
+    }
+    .gen-btn {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: #4f46e5;
+    }
+    .gen-btn:hover { background: #e0e7ff; }
+
+    .actions { margin-top: 24px; }
+
+    /* ===== 미리보기 ===== */
+    .preview-wrap { display: flex; gap: 24px; flex-wrap: wrap; }
+    #preview-canvas {
+      width: 270px;
+      height: 480px;
+      border-radius: var(--radius-xl);
+      background: #000;
+      border: 1px solid var(--border-default);
+      box-shadow: var(--elevation-2);
+    }
+    .preview-controls { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 12px; }
+    .hint {
+      font-family: var(--font-caption);
+      color: var(--text-tertiary);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 640px) {
+      .url-row { flex-direction: column; }
+      header h1 { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="kicker">NEWS SHORTFORM MAKER</span>
+    <h1>뉴스 숏폼 메이커</h1>
+    <p>기사 링크를 붙여넣으면 제목·내용을 분석해 세로형 숏폼 영상을 만들어 드립니다</p>
+  </header>
+
+  <section class="card" id="step-url">
+    <div class="url-row">
+      <input id="url-input" type="url" placeholder="뉴스 기사 URL을 붙여넣으세요 (https://…)" />
+      <button id="analyze-btn" class="primary">분석하기</button>
+    </div>
+    <div id="analyze-status" class="status hidden"></div>
+  </section>
+
+  <section class="card hidden" id="step-edit">
+    <h2>1. 분석 결과</h2>
+    <div class="article-meta">
+      <span class="badge" id="meta-source"></span>
+      <span class="badge ai" id="meta-ai"></span>
+    </div>
+    <h3 id="article-title"></h3>
+    <p id="article-summary" class="summary"></p>
+    <p id="article-hashtags" class="hashtags"></p>
+
+    <h2>2. 장면 편집 <small>(자막을 수정하고 각 장면의 이미지를 고르세요)</small></h2>
+    <div id="scene-list"></div>
+
+    <div class="actions">
+      <button id="render-btn" class="primary big">🎬 숏폼 미리보기 생성</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="step-preview">
+    <h2>3. 미리보기 & 내보내기</h2>
+    <div class="preview-wrap">
+      <canvas id="preview-canvas" width="1080" height="1920"></canvas>
+      <div class="preview-controls">
+        <button id="play-btn" class="primary">▶ 재생</button>
+        <button id="export-btn" class="primary">⬇ 영상 파일 저장 (WebM)</button>
+        <div id="export-status" class="status hidden"></div>
+        <p class="hint">
+          저장된 WebM 파일은 유튜브 쇼츠·인스타 릴스에 바로 업로드할 수 있습니다.<br/>
+          MP4가 필요하면 저장 후 변환 도구(예: ffmpeg)를 사용하세요.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /* ===== 뉴스 숏폼 메이커 프론트엔드 ===== */
+    const $ = (id) => document.getElementById(id);
+
+    const W = 1080, H = 1920;
+    const TITLE_DUR = 3.2, SCENE_DUR = 4.2, OUTRO_DUR = 2.4;
+
+    let article = null;          
+    let scenes = [];             
+    let loadedImages = {};       
+    let playing = false;
+
+    /* ---------- 1. 기사 분석 ---------- */
+    $("analyze-btn").addEventListener("click", analyze);
+    $("url-input").addEventListener("keydown", (e) => { if (e.key === "Enter") analyze(); });
+
+    async function analyze() {
+      const url = $("url-input").value.trim();
+      const status = $("analyze-status");
+      if (!url) return showStatus(status, "URL을 입력해주세요.", true);
+
+      $("analyze-btn").disabled = true;
+      showStatus(status, "⏳ 기사를 불러와 AI가 분석하는 중입니다… (최대 1분)");
+      $("step-edit").classList.add("hidden");
+      $("step-preview").classList.add("hidden");
+
+      try {
+        const r = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "분석 실패");
+
+        article = data;
+        scenes = data.script.scenes.map((s, i) => ({
+          caption: s.caption,
+          imagePrompt: s.image_prompt || "",
+          imageUrl: data.images[i % Math.max(data.images.length, 1)] || null,
+        }));
+        if (!data.images.length) scenes.forEach((s) => (s.imageUrl = null));
+
+        renderEditUI();
+        status.classList.add("hidden");
+        $("step-edit").classList.remove("hidden");
+        $("step-edit").scrollIntoView({ behavior: "smooth" });
+      } catch (e) {
+        showStatus(status, "❌ " + e.message, true);
+      } finally {
+        $("analyze-btn").disabled = false;
+      }
+    }
+
+    function showStatus(el, msg, isError = false) {
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      el.classList.toggle("error", isError);
+    }
+
+    /* ---------- 2. 장면 편집 UI ---------- */
+    function renderEditUI() {
+      $("meta-source").textContent = article.source;
+      $("meta-ai").textContent = article.usedAI ? "🤖 Claude AI 대본" : "⚙️ 자동 요약 대본";
+      $("article-title").textContent = article.title;
+      $("article-summary").textContent = article.script.summary;
+      $("article-hashtags").textContent = (article.script.hashtags || []).join(" ");
+
+      const list = $("scene-list");
+      list.innerHTML = "";
+      scenes.forEach((scene, idx) => {
+        const div = document.createElement("div");
+        div.className = "scene";
+        div.innerHTML = `
+          <div class="scene-num">${idx + 1}</div>
+          <div class="scene-body">
+            <textarea data-idx="${idx}">${escapeHtml(scene.caption)}</textarea>
+            <div class="img-picker" data-idx="${idx}"></div>
+            ${scene.imagePrompt ? `<button class="gen-btn" data-idx="${idx}">✨ AI 이미지 생성 (선택)</button>` : ""}
+          </div>`;
+        list.appendChild(div);
+        buildImagePicker(div.querySelector(".img-picker"), idx);
+      });
+
+      list.querySelectorAll("textarea").forEach((t) =>
+        t.addEventListener("input", (e) => (scenes[+e.target.dataset.idx].caption = e.target.value))
+      );
+      list.querySelectorAll(".gen-btn").forEach((b) =>
+        b.addEventListener("click", () => generateAIImage(+b.dataset.idx, b))
+      );
+    }
+
+    function buildImagePicker(container, idx) {
+      container.innerHTML = "";
+      const cardOpt = document.createElement("div");
+      cardOpt.className = "img-option card-opt" + (scenes[idx].imageUrl === null ? " selected" : "");
+      cardOpt.textContent = "디자인\n카드";
+      cardOpt.addEventListener("click", () => {
+        scenes[idx].imageUrl = null;
+        refreshPicker(container, idx);
+      });
+      container.appendChild(cardOpt);
+
+      const options = [...article.images, ...(scenes[idx].aiImages || [])];
+      options.forEach((url) => {
+        const img = document.createElement("img");
+        img.className = "img-option" + (scenes[idx].imageUrl === url ? " selected" : "");
+        img.src = url.startsWith("data:") ? url : "/api/proxy?url=" + encodeURIComponent(url);
+        img.loading = "lazy";
+        img.addEventListener("error", () => img.remove());
+        img.addEventListener("click", () => {
+          scenes[idx].imageUrl = url;
+          refreshPicker(container, idx);
+        });
+        container.appendChild(img);
+      });
+    }
+
+    function refreshPicker(container, idx) {
+      buildImagePicker(container, idx);
+    }
+
+    async function generateAIImage(idx, btn) {
+      btn.disabled = true;
+      btn.textContent = "⏳ 생성 중…";
+      try {
+        const r = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: scenes[idx].imagePrompt }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        const dataUrl = "data:image/png;base64," + data.b64;
+        scenes[idx].aiImages = [...(scenes[idx].aiImages || []), dataUrl];
+        scenes[idx].imageUrl = dataUrl;
+        refreshPicker(btn.parentElement.querySelector(".img-picker"), idx);
+        btn.textContent = "✨ AI 이미지 생성 (선택)";
+      } catch (e) {
+        alert(e.message);
+        btn.textContent = "✨ AI 이미지 생성 (선택)";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    /* ---------- 3. 렌더링 엔진 ---------- */
+    $("render-btn").addEventListener("click", async () => {
+      $("render-btn").disabled = true;
+      $("render-btn").textContent = "🖼 이미지 로딩 중…";
+      await preloadImages();
+      $("render-btn").disabled = false;
+      $("render-btn").textContent = "🎬 숏폼 미리보기 생성";
+      $("step-preview").classList.remove("hidden");
+      $("step-preview").scrollIntoView({ behavior: "smooth" });
+      drawFrame(getCtx(), 0.01); 
+    });
+
+    function getCtx() {
+      return $("preview-canvas").getContext("2d");
+    }
+
+    async function preloadImages() {
+      const urls = [...new Set(scenes.map((s) => s.imageUrl).filter(Boolean))];
+      await Promise.all(
+        urls.map(
+          (url) =>
+            new Promise((resolve) => {
+              if (loadedImages[url]) return resolve();
+              const img = new Image();
+              img.onload = () => { loadedImages[url] = img; resolve(); };
+              img.onerror = () => resolve(); 
+              img.src = url.startsWith("data:") ? url : "/api/proxy?url=" + encodeURIComponent(url);
+            })
+        )
+      );
+    }
+
+    function totalDuration() {
+      return TITLE_DUR + scenes.length * SCENE_DUR + OUTRO_DUR;
+    }
+
+    function drawFrame(ctx, t) {
+      if (t < TITLE_DUR) {
+        drawTitleScene(ctx, t / TITLE_DUR);
+      } else if (t < TITLE_DUR + scenes.length * SCENE_DUR) {
+        const st = t - TITLE_DUR;
+        const idx = Math.min(Math.floor(st / SCENE_DUR), scenes.length - 1);
+        drawContentScene(ctx, idx, (st - idx * SCENE_DUR) / SCENE_DUR);
+      } else {
+        const ot = (t - TITLE_DUR - scenes.length * SCENE_DUR) / OUTRO_DUR;
+        drawOutroScene(ctx, Math.min(ot, 1));
+      }
+      drawProgress(ctx, t);
+    }
+
+    const TONE_COLORS = {
+      breaking: ["#f59e0b", "#ef4444"],   
+      economy: ["#312e81", "#1e40af"],    
+      tech: ["#3182f6", "#6366f1"],       
+      society: ["#1e1b4b", "#2a2a6a"],    
+      culture: ["#6366f1", "#1e1b4b"],    
+      sports: ["#10b981", "#3182f6"],     
+    };
+
+    const DS = {
+      fontStack: '"Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif',
+      captionBar: "rgba(30, 27, 75, 0.72)",   
+      hookGradient: ["#3182f6", "#6366f1"],   
+      chipBg: "rgba(49, 46, 129, 0.75)",      
+      chipText: "#c7d2fe",                    
+      progressTrack: "rgba(199, 210, 254, 0.25)",
+      progressFill: "#a5b4fc",                
+      watermark: "rgba(165, 180, 252, 0.14)",
+      hashtag: "#a5b4fc",
+    };
+
+    function bgGradient(ctx, seed = 0) {
+      const tone = (article?.script?.tone) || "society";
+      const [c1, c2] = TONE_COLORS[tone] || TONE_COLORS.society;
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, c1);
+      g.addColorStop(1, c2);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < 5; i++) {
+        const r = 180 + ((seed * 97 + i * 211) % 260);
+        ctx.beginPath();
+        ctx.arc(((seed * 331 + i * 577) % W), ((seed * 733 + i * 419) % H), r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawImageKenBurns(ctx, img, p, dir = 0) {
+      const zoom = 1.06 + 0.10 * p;
+      const scale = Math.max(W / img.width, H / img.height) * zoom;
+      const dw = img.width * scale, dh = img.height * scale;
+      const panX = (dir % 2 === 0 ? 1 : -1) * (dw - W) * 0.18 * p;
+      ctx.drawImage(img, (W - dw) / 2 + panX, (H - dh) / 2, dw, dh);
+    }
+
+    function overlay(ctx, strength = 0.55) {
+      const g = ctx.createLinearGradient(0, H * 0.35, 0, H);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, `rgba(0,0,0,${strength + 0.3})`);
+      ctx.fillStyle = `rgba(0,0,0,${strength * 0.35})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function wrapText(ctx, text, maxWidth) {
+      const lines = [];
+      let line = "";
+      for (const ch of text) {
+        if (ch === "\n") { lines.push(line); line = ""; continue; }
+        const test = line + ch;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = ch === " " ? "" : ch;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function easeOut(x) { return 1 - Math.pow(1 - x, 3); }
+
+    function fitCaptionLines(ctx, text, maxWidth, startSize, minSize, maxLines) {
+      let size = startSize;
+      let lines = [];
+      while (size >= minSize) {
+        ctx.font = `800 ${size}px ${DS.fontStack}`;
+        lines = wrapText(ctx, text, maxWidth);
+        if (lines.length <= maxLines) break;
+        size -= 4;
+      }
+      return { size, lines };
+    }
+
+    function drawCaption(ctx, text, p, opts = {}) {
+      const { y = H * 0.78, size = 72, minSize = 34, maxLines = 6, color = "#ffffff", align = "center" } = opts;
+      const appear = easeOut(Math.min(p / 0.18, 1)); 
+      ctx.save();
+      ctx.globalAlpha = appear;
+      const fit = fitCaptionLines(ctx, text, W - 160, size, minSize, maxLines);
+      const lines = fit.lines;
+      ctx.font = `800 ${fit.size}px ${DS.fontStack}`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "top";
+      const lh = fit.size * 1.4; 
+      const startY = y - (lines.length * lh) / 2 + (1 - appear) * 40;
+      lines.forEach((ln, i) => {
+        const ly = startY + i * lh;
+        const tw = ctx.measureText(ln).width;
+        ctx.fillStyle = DS.captionBar;
+        roundRect(ctx, W / 2 - tw / 2 - 28, ly - 14, tw + 56, lh, 18);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.fillText(ln, W / 2, ly);
+      });
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawSourceChip(ctx) {
+      const text = article.source.toUpperCase();
+      ctx.save();
+      ctx.font = `700 34px "Inter", ${DS.fontStack}`;
+      const tw = ctx.measureText(text).width;
+      ctx.fillStyle = DS.chipBg;
+      roundRect(ctx, W / 2 - tw / 2 - 24, 150, tw + 48, 60, 30);
+      ctx.fill();
+      ctx.fillStyle = DS.chipText;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, W / 2, 182);
+      ctx.restore();
+    }
+
+    function drawTitleScene(ctx, p) {
+      const img = scenes[0] && loadedImages[scenes[0].imageUrl];
+      if (img) { drawImageKenBurns(ctx, img, p, 0); overlay(ctx, 0.7); }
+      else bgGradient(ctx, 1);
+
+      drawSourceChip(ctx);
+
+      ctx.save();
+      const appear = easeOut(Math.min(p / 0.25, 1));
+      ctx.globalAlpha = appear;
+      ctx.font = `900 60px ${DS.fontStack}`;
+      ctx.textAlign = "center";
+      const hook = article.script.hook;
+      const hw = Math.min(ctx.measureText(hook).width + 80, W - 120);
+      const hg = ctx.createLinearGradient(W / 2 - hw / 2, 0, W / 2 + hw / 2, 100);
+      hg.addColorStop(0, DS.hookGradient[0]);
+      hg.addColorStop(1, DS.hookGradient[1]);
+      ctx.fillStyle = hg;
+      roundRect(ctx, W / 2 - hw / 2, H * 0.34 - 50, hw, 100, 20);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.textBaseline = "middle";
+      ctx.fillText(hook, W / 2, H * 0.34 + 4, W - 200);
+      ctx.restore();
+
+      drawCaption(ctx, article.title, p, { y: H * 0.58, size: 60, minSize: 32, maxLines: 5 });
+    }
+
+    function drawContentScene(ctx, idx, p) {
+      const scene = scenes[idx];
+      const img = loadedImages[scene.imageUrl];
+      if (img) { drawImageKenBurns(ctx, img, p, idx); overlay(ctx); }
+      else bgGradient(ctx, idx + 2);
+
+      ctx.save();
+      ctx.font = `900 200px "Inter", sans-serif`;
+      ctx.fillStyle = DS.watermark;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText(String(idx + 1).padStart(2, "0"), 60, 240);
+      ctx.restore();
+
+      drawCaption(ctx, scene.caption, p, {
+        y: img ? H * 0.78 : H * 0.5,
+        size: img ? 60 : 68,
+        minSize: 32,
+        maxLines: img ? 6 : 7,
+      });
+    }
+
+    function drawOutroScene(ctx, p) {
+      bgGradient(ctx, 99);
+      overlay(ctx, 0.25);
+      drawSourceChip(ctx);
+      drawCaption(ctx, article.script.summary, p, { y: H * 0.42, size: 50, minSize: 28, maxLines: 8 });
+      ctx.save();
+      ctx.globalAlpha = easeOut(Math.min(p / 0.3, 1));
+      ctx.font = `700 46px ${DS.fontStack}`;
+      ctx.fillStyle = DS.hashtag;
+      ctx.textAlign = "center";
+      ctx.fillText((article.script.hashtags || []).slice(0, 4).join("  "), W / 2, H * 0.68, W - 160);
+      ctx.restore();
+    }
+
+    function drawProgress(ctx, t) {
+      const total = totalDuration();
+      ctx.save();
+      ctx.fillStyle = DS.progressTrack;
+      ctx.fillRect(60, 80, W - 120, 12);
+      ctx.fillStyle = DS.progressFill;
+      ctx.fillRect(60, 80, (W - 120) * Math.min(t / total, 1), 12);
+      ctx.restore();
+    }
+
+    /* ---------- 4. 재생 ---------- */
+    $("play-btn").addEventListener("click", () => {
+      if (playing) return;
+      playing = true;
+      const ctx = getCtx();
+      const start = performance.now();
+      const total = totalDuration();
+      (function loop(now) {
+        const t = (now - start) / 1000;
+        drawFrame(ctx, Math.min(t, total - 0.01));
+        if (t < total && playing) requestAnimationFrame(loop);
+        else playing = false;
+      })(start);
+    });
+
+    /* ---------- 5. 영상 내보내기 ---------- */
+    $("export-btn").addEventListener("click", async () => {
+      const btn = $("export-btn");
+      const status = $("export-status");
+      btn.disabled = true;
+      playing = false;
+
+      const canvas = $("preview-canvas");
+      const ctx = canvas.getContext("2d");
+      const total = totalDuration();
+
+      const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((m) =>
+        MediaRecorder.isTypeSupported(m)
+      );
+      if (!mime) {
+        showStatus(status, "❌ 이 브라우저는 영상 녹화를 지원하지 않습니다. Chrome/Edge를 사용해주세요.", true);
+        btn.disabled = false;
+        return;
+      }
+
+      showStatus(status, `🎥 영상 렌더링 중… (약 ${Math.ceil(total)}초 소요)`);
+
+      const stream = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+      const chunks = [];
+      recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+
+      const done = new Promise((resolve) => (recorder.onstop = resolve));
+      recorder.start(250);
+
+      const start = performance.now();
+      await new Promise((resolve) => {
+        (function tick() {
+          const t = (performance.now() - start) / 1000;
+          drawFrame(ctx, Math.min(t, total - 0.01));
+          if (t >= total) return resolve();
+          setTimeout(tick, 1000 / 30);
+        })();
+      });
+
+      recorder.stop();
+      await done;
+
+      const blob = new Blob(chunks, { type: "video/webm" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `shortform_${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      showStatus(status, `✅ 완료! ${(blob.size / 1024 / 1024).toFixed(1)}MB 영상이 다운로드되었습니다.`);
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>
