@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국경제 | 내 지갑 번역기 PoC</title>
+<style>
+  :root{
+    --navy:#1e2f6f; --red:#d0332f; --ink:#111827; --sub:#6b7280; --line:#e5e7eb;
+    --up:#d0332f; --down:#1a56db; --amber:#b45309; --gray:#9ca3af;
+    --wallet:#0f766e; --wallet-bg:#f0fdfa; --wallet-line:#99f6e4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",-apple-system,sans-serif; color:var(--ink); background:#fff;}
+  button{font-family:inherit; cursor:pointer;}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 20px;}
+
+  /* ── 헤더 ─────────────────────────── */
+  .util{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#374151; padding:10px 0;}
+  .util .links a{margin-left:18px; text-decoration:none; color:#374151;}
+  .util .links a.prem{font-weight:700;}
+  .logo-row{display:flex; justify-content:space-between; align-items:center; padding:6px 0 18px;}
+  .logo-side{width:260px; display:flex; gap:18px; align-items:center; font-size:12px; font-weight:800; color:#111;}
+  .logo-side .tv{background:#111; color:#fff; padding:2px 6px; border-radius:3px; font-size:11px;}
+  .logo{font-family:"Nanum Myeongjo","Batang",serif; font-size:44px; font-weight:800; color:var(--navy); letter-spacing:2px; text-align:center; text-decoration:none;}
+  .logo-side.right{justify-content:flex-end; font-weight:400; color:#374151;}
+  nav.gnb{border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  nav.gnb .wrap{display:flex; align-items:center; gap:26px; height:52px; font-size:15.5px; font-weight:700;}
+  nav.gnb a{text-decoration:none; color:var(--ink); white-space:nowrap;}
+  nav.gnb a.pill{border:2px solid var(--red); color:var(--red); border-radius:999px; padding:5px 14px; font-size:14.5px;}
+  nav.gnb .spacer{flex:1;}
+  nav.gnb .search{font-size:18px; background:none; border:none;}
+
+  /* ── 시세 티커 ─────────────────────── */
+  .ticker{border-bottom:1px solid var(--line); background:#fff;}
+  .ticker .wrap{display:flex; gap:26px; align-items:center; height:42px; font-size:13px; overflow-x:auto; white-space:nowrap;}
+  .ticker b{font-weight:700; color:#111;}
+  .t-up{color:var(--up); font-weight:600;}
+  .t-down{color:var(--down); font-weight:600;}
+  .ticker .fx{margin-left:auto; color:#111;}
+
+  /* ── 지갑 번역기 인트로 배너 ─────────── */
+  .wallet-banner{background:linear-gradient(90deg,#0f766e,#134e4a); color:#fff; }
+  .wallet-banner .wrap{display:flex; align-items:center; gap:16px; padding:13px 20px;}
+  .wallet-banner .emoji{font-size:26px;}
+  .wallet-banner h3{font-size:16px; margin-bottom:2px;}
+  .wallet-banner p{font-size:12.5px; opacity:.85;}
+  .wallet-banner button.start{margin-left:auto; background:#fff; color:#0f766e; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:800; flex-shrink:0;}
+  .wallet-banner button.dismiss{background:none; border:none; color:#fff; opacity:.6; font-size:16px;}
+
+  /* ── 지갑 프로필 바 (활성 후) ────────── */
+  .wallet-bar{display:none; background:var(--wallet-bg); border-bottom:1px solid var(--wallet-line); position:sticky; top:0; z-index:50;}
+  .wallet-bar .wrap{display:flex; align-items:center; gap:10px; padding:9px 20px; flex-wrap:wrap;}
+  .wallet-bar .title{font-size:13.5px; font-weight:800; color:var(--wallet);}
+  .wallet-bar .chip{background:#fff; border:1px solid var(--wallet-line); color:#115e59; border-radius:999px; padding:4px 12px; font-size:12.5px; font-weight:600;}
+  .wallet-bar .actions{margin-left:auto; display:flex; gap:8px;}
+  .wallet-bar .actions button{background:none; border:1px solid #ccece8; color:#0f766e; border-radius:6px; padding:4px 10px; font-size:12px;}
+  body.wallet-on .wallet-bar{display:block;}
+  body.wallet-on .wallet-banner{display:none;}
+
+  /* ── 방송 기사 모아보기: 배너/바 (별도 기능) ── */
+  .tv-banner{background:linear-gradient(90deg,#7f1d1d,#991b1b); color:#fff;}
+  .tv-banner .wrap{display:flex; align-items:center; gap:16px; padding:13px 20px;}
+  .tv-banner .emoji{font-size:26px;}
+  .tv-banner h3{font-size:16px; margin-bottom:2px;}
+  .tv-banner p{font-size:12.5px; opacity:.85;}
+  .tv-banner button.start{margin-left:auto; background:#fff; color:#991b1b; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:800; flex-shrink:0; cursor:pointer;}
+  .tv-banner button.dismiss{background:none; border:none; color:#fff; opacity:.6; font-size:16px; cursor:pointer;}
+  .tv-bar{display:none; background:#fff5f5; border-bottom:1px solid #fecaca;}
+  .tv-bar .wrap{display:flex; align-items:center; gap:10px; padding:9px 20px; flex-wrap:wrap;}
+  .tv-bar .title{font-size:13.5px; font-weight:800; color:#991b1b;}
+  .tv-bar .chip{background:#fff; border:1px solid #fecaca; color:#991b1b; border-radius:999px; padding:4px 12px; font-size:12.5px; font-weight:600;}
+  .tv-bar .actions{margin-left:auto; display:flex; gap:8px;}
+  .tv-bar .actions button{background:none; border:1px solid #fecaca; color:#991b1b; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;}
+  body.tv-on .tv-bar{display:block;}
+  body.tv-on .tv-banner{display:none;}
+  #tvOnboard .chips button.sel{border-color:#dc2626; background:#fff5f5; color:#b91c1c; font-weight:700;}
+  #tvOnboard .m-go{background:#dc2626;}
+  #tvOnboard .m-go:disabled{background:#d1d5db;}
+
+  /* ── 메인 그리드 ───────────────────── */
+  main .wrap{display:grid; grid-template-columns:300px 1fr 320px; gap:28px; padding-top:24px; padding-bottom:36px;}
+  .headline-list article{padding:16px 0; border-bottom:1px solid var(--line);}
+  .headline-list article:first-child{padding-top:0;}
+  .thumb{width:100%; aspect-ratio:16/10; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:34px; margin-bottom:10px; color:#fff;}
+  .headline-list h4, .side h4{font-size:15.5px; line-height:1.45; font-weight:700;}
+  .hero{position:relative;}
+  .hero .hero-img{aspect-ratio:16/10.5; border-radius:8px; background:linear-gradient(160deg,#20315f,#0e1a3a); display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; color:#fff;}
+  .hero .hero-scene{flex:1; display:flex; align-items:center; justify-content:center; font-size:70px;}
+  .hero .hero-caption{background:linear-gradient(transparent, rgba(5,10,30,.92)); padding:70px 26px 24px;}
+  .hero .hero-caption h2{font-size:24px; line-height:1.4; margin-bottom:8px;}
+  .hero .hero-caption p{font-size:14.5px; opacity:.85;}
+  .side article{display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); align-items:flex-start; flex-direction:column;}
+  .side article:first-child{padding-top:0;}
+  .side .row{display:flex; gap:12px; width:100%;}
+  .side .sthumb{width:110px; aspect-ratio:16/11; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:26px; color:#fff;}
+  .side h4{font-size:14px; flex:1;}
+
+  /* ── 내 지갑 영향 카드 ─────────────── */
+  .impact-slot{width:100%;}
+  .impact{display:none; margin-top:10px; background:var(--wallet-bg); border:1px solid var(--wallet-line); border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.55;}
+  body.wallet-on .impact.has{display:block;}
+  .impact .head{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+  .impact .head .label{font-weight:800; color:var(--wallet); font-size:12px;}
+  .impact .item{display:flex; gap:7px; margin-top:5px;}
+  .impact .item .tag{font-weight:700; white-space:nowrap; color:#115e59;}
+  .impact .item .txt{color:#134e4a;}
+  .lv{font-size:10.5px; font-weight:800; border-radius:4px; padding:1.5px 6px; margin-left:auto; white-space:nowrap; align-self:flex-start;}
+  .lv3{background:#fee2e2; color:#b91c1c;}
+  .lv2{background:#fef3c7; color:#b45309;}
+  .lv1{background:#f3f4f6; color:#6b7280;}
+  .dir-up{color:var(--up);} .dir-down{color:var(--down);}
+  .impact-none{display:none; margin-top:8px; font-size:11.5px; color:var(--gray);}
+  body.wallet-on .impact-none.show{display:block;}
+  .impact.loading .body{display:none;}
+  .skeleton{display:none; height:12px; border-radius:4px; background:linear-gradient(90deg,#e6f5f2 25%,#d2ece7 50%,#e6f5f2 75%); background-size:200% 100%; margin-top:6px;}
+  .impact.loading .skeleton{display:block; animation:sk 1.1s 3;}
+  @keyframes sk{from{background-position:200% 0;} to{background-position:-200% 0;}}
+
+  /* ── 사이드 브리핑 카드 ─────────────── */
+  .briefing{display:none; border:1px solid var(--wallet-line); background:var(--wallet-bg); border-radius:10px; padding:16px; margin-bottom:18px;}
+  body.wallet-on .briefing{display:block;}
+  .briefing h3{font-size:15px; color:#134e4a; margin-bottom:4px;}
+  .briefing .meta{font-size:12px; color:#0f766e; margin-bottom:10px;}
+  .briefing .b-item{background:#fff; border:1px solid var(--wallet-line); border-radius:8px; padding:9px 11px; margin-top:8px; font-size:12.5px; line-height:1.5;}
+  .briefing .b-item .b-title{font-weight:700; color:#111827; display:flex; gap:6px; align-items:flex-start;}
+  .briefing .b-item .b-txt{color:#134e4a; margin-top:3px;}
+
+  /* ── 유튜브 연동: 방송 배지 + 모아보기 ── */
+  .onair{display:none; margin-top:8px; margin-right:6px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:11px; font-weight:700; border-radius:5px; padding:3px 8px;}
+  body.tv-on .onair{display:inline-block;}
+  .tvbox{display:none; border:1px solid #fecaca; background:#fff5f5; border-radius:10px; padding:16px; margin-bottom:18px;}
+  body.tv-on .tvbox.has{display:block;}
+  .tvbox h3{font-size:15px; color:#7f1d1d; margin-bottom:10px;}
+  .tv-prog{background:#fff; border:1px solid #fecaca; border-radius:8px; padding:11px 12px; margin-top:8px;}
+  .tv-prog:first-of-type{margin-top:0;}
+  .tv-head{display:flex; align-items:center; gap:7px; margin-bottom:7px; flex-wrap:wrap;}
+  .tv-name{font-size:13px; font-weight:800; color:#111827;}
+  .tv-host{font-size:11.5px; color:#991b1b; background:#fef2f2; border-radius:4px; padding:2px 6px;}
+  .tv-replay{margin-left:auto; font-size:11.5px; color:#dc2626; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .tv-art{display:block; width:100%; text-align:left; background:none; border:none; border-top:1px dashed #fecaca; padding:7px 2px 6px; font-size:12.5px; color:#374151; line-height:1.45;}
+  .tv-art:hover{color:#b91c1c;}
+  .tv-none{font-size:12px; color:#9ca3af;}
+  .tv-collect{font-size:11.5px; color:#b91c1c; font-weight:700; cursor:pointer; margin-left:auto; white-space:nowrap;}
+  .tv-collect ~ .tv-replay{margin-left:0;}
+  .onair[data-openprog]{cursor:pointer;}
+
+  /* ── 오늘 방송 기사 모아보기: 전용 풀스크린 뷰 ── */
+  .tvcol{position:fixed; inset:0; background:#f9fafb; z-index:95; display:none; overflow-y:auto;}
+  .tvcol.open{display:block;}
+  .tvcol-head{background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; padding:26px 20px 22px;}
+  .tvcol-wrap{max-width:720px; margin:0 auto;}
+  .tvcol-close{background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; margin-bottom:14px;}
+  .tvcol-title{font-size:26px; font-weight:900;}
+  .tvcol-meta{font-size:13px; opacity:.92; margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .tvcol-body{padding:20px 20px 60px;}
+  .tvcol-video{background:#111; color:#fff; border-radius:10px; padding:38px 20px; text-align:center; font-size:14px; font-weight:700; margin-bottom:22px; cursor:pointer;}
+  .tvcol-sub{font-size:15px; color:#374151; margin-bottom:12px;}
+  .tvcol-card{display:flex; gap:14px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:12px;}
+  .tvcol-num{width:26px; height:26px; border-radius:50%; background:#fef2f2; color:#b91c1c; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .tvcol-cont{flex:1;}
+  .tvcol-cont h4{font-size:15.5px; margin-bottom:6px; line-height:1.45;}
+  .tvcol-cont p{font-size:13px; color:var(--sub); line-height:1.6; margin-bottom:8px;}
+  .tvcol-go{background:none; border:1px solid #fecaca; color:#b91c1c; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;}
+
+  /* ── 게이미피케이션: XP 위젯 / 토스트 / 퀴즈 / 읽음 ── */
+  .xp-widget{position:fixed; bottom:12px; right:12px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; width:225px; box-shadow:0 6px 22px rgba(0,0,0,.14); z-index:98; font-size:12px;}
+  .xp-top{display:flex; align-items:center; gap:7px; margin-bottom:7px;}
+  .xp-emoji{font-size:21px;}
+  .xp-name{font-weight:800; font-size:13px;}
+  .xp-lv{color:var(--sub); font-size:10.5px;}
+  .xp-streak{margin-left:auto; background:#fff7ed; color:#c2410c; font-weight:700; border-radius:5px; padding:2px 6px; font-size:10.5px;}
+  .xp-bar{height:8px; background:#f3f4f6; border-radius:4px; overflow:hidden;}
+  .xp-fill{height:100%; background:linear-gradient(90deg,#0f766e,#14b8a6); border-radius:4px; transition:width .6s;}
+  .xp-sub{margin-top:5px; color:var(--sub); font-size:10.5px;}
+  .xp-missions{margin-top:9px; border-top:1px dashed var(--line); padding-top:8px;}
+  .xp-missions .m-title{font-weight:800; font-size:11px; color:#374151; margin-bottom:5px;}
+  .xp-mission{display:flex; gap:6px; align-items:center; padding:2.5px 0; color:#6b7280;}
+  .xp-mission.done{color:#0f766e; font-weight:700;}
+  .xp-mission .mk{width:15px;}
+  .toast-wrap{position:fixed; bottom:230px; right:12px; z-index:99; display:flex; flex-direction:column; gap:6px; align-items:flex-end;}
+  .toast{background:#111827; color:#fff; border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.25); animation:toastIn .25s, toastOut .4s 2.4s forwards;}
+  @keyframes toastIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+  @keyframes toastOut{to{opacity:0; transform:translateY(-8px);}}
+  .tvcol-progress{margin-bottom:14px;}
+  .tvcol-progress .p-txt{font-size:12px; color:#374151; font-weight:700; margin-bottom:5px;}
+  .tvcol-progress .p-bar{height:9px; background:#f3f4f6; border-radius:5px; overflow:hidden;}
+  .tvcol-progress .p-fill{height:100%; background:linear-gradient(90deg,#dc2626,#f87171); border-radius:5px; transition:width .5s;}
+  .tvcol-card.read{border-color:#bbf7d0; background:#f0fdf4;}
+  .read-chip{display:inline-block; background:#dcfce7; color:#15803d; font-size:10.5px; font-weight:800; border-radius:4px; padding:2px 7px; margin-left:6px; vertical-align:2px;}
+  .quiz-card{background:#fffbeb; border:2px solid #fde68a; border-radius:12px; padding:18px; margin-top:20px;}
+  .quiz-title{font-size:14.5px; font-weight:900; color:#92400e; margin-bottom:8px;}
+  .quiz-done-chip{background:#dcfce7; color:#15803d; font-size:10.5px; font-weight:800; border-radius:4px; padding:2px 7px; margin-left:6px;}
+  .quiz-q{font-size:13.5px; color:#1f2937; margin-bottom:10px; line-height:1.5;}
+  .quiz-opt{display:block; width:100%; text-align:left; background:#fff; border:1.5px solid var(--line); border-radius:8px; padding:10px 13px; font-size:13px; margin-bottom:7px; cursor:pointer;}
+  .quiz-opt:hover{border-color:#f59e0b;}
+  .quiz-opt.correct{border-color:#16a34a; background:#f0fdf4; font-weight:800; color:#15803d;}
+  .quiz-opt.wrong{border-color:#dc2626; background:#fef2f2; color:#b91c1c;}
+  .quiz-opt:disabled{cursor:default; opacity:.85;}
+  .quiz-exp{font-size:12px; color:#92400e; margin-top:6px; line-height:1.5;}
+
+  /* ── 하단 배너 ─────────────────────── */
+  .prem-banner{border:1px solid #eadfc8; background:linear-gradient(90deg,#fdf8ee,#f9efdc); margin:10px auto 40px;}
+  .prem-banner .wrap{display:flex; align-items:center; gap:24px; padding:22px 30px;}
+  .prem-banner .brand{font-size:24px; font-weight:900; letter-spacing:1px;}
+  .prem-banner .brand sup{color:var(--red);}
+  .prem-banner .copy b{font-size:16px;}
+  .prem-banner .copy p{font-size:12.5px; color:var(--sub); margin-top:3px;}
+  .prem-banner button{margin-left:auto; background:var(--red); color:#fff; border:none; border-radius:6px; padding:11px 26px; font-size:14px; font-weight:700;}
+
+  /* ── 온보딩 모달 ───────────────────── */
+  .backdrop{position:fixed; inset:0; background:rgba(10,20,30,.55); display:none; align-items:center; justify-content:center; z-index:100;}
+  .backdrop.open{display:flex;}
+  .modal{background:#fff; width:560px; max-width:92vw; max-height:88vh; overflow-y:auto; border-radius:16px; padding:30px 32px;}
+  .modal .m-emoji{font-size:34px;}
+  .modal h2{font-size:21px; margin:8px 0 6px;}
+  .modal .m-sub{font-size:13.5px; color:var(--sub); line-height:1.6; margin-bottom:20px;}
+  .grp{margin-bottom:18px;}
+  .grp .g-title{font-size:13px; font-weight:800; color:#374151; margin-bottom:9px;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chips button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:9px 15px; font-size:13.5px; color:#374151;}
+  .chips button.sel{border-color:var(--wallet); background:var(--wallet-bg); color:var(--wallet); font-weight:700;}
+  .modal .m-foot{margin-top:24px;}
+  .modal .m-go{width:100%; background:var(--wallet); color:#fff; border:none; border-radius:10px; padding:14px; font-size:15px; font-weight:800;}
+  .modal .m-go:disabled{background:#d1d5db;}
+  .modal .m-privacy{text-align:center; font-size:11.5px; color:var(--gray); margin-top:10px;}
+
+  /* ── 미리보기 오버레이 (Before/After) ── */
+  .pv-modal{width:720px;}
+  .pv-compare{display:grid; grid-template-columns:1fr 34px 1fr; gap:10px; align-items:stretch; margin:6px 0 16px;}
+  .pv-arrow{display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--wallet); font-weight:800;}
+  .pv-col{display:flex; flex-direction:column;}
+  .pv-label{font-size:11.5px; font-weight:800; margin-bottom:7px; color:var(--sub); display:flex; align-items:center; gap:5px;}
+  .pv-label.after{color:var(--wallet);}
+  .pv-card{border:1px solid var(--line); border-radius:10px; padding:14px; flex:1; background:#fff;}
+  .pv-card.on{border-color:var(--wallet-line); box-shadow:0 2px 10px rgba(15,118,110,.08);}
+  .pv-card h5{font-size:14px; line-height:1.45; margin-bottom:7px;}
+  .pv-card .pv-body{font-size:12px; color:var(--sub); line-height:1.6;}
+  .pv-card .impact{display:block; margin-top:10px;}
+  .pv-tags-title{font-size:12.5px; font-weight:800; color:#374151; margin-bottom:8px;}
+  .pv-tags{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:18px;}
+  .pv-tags button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 13px; font-size:12.5px; color:#374151;}
+  .pv-tags button.sel{border-color:var(--wallet); background:var(--wallet-bg); color:var(--wallet); font-weight:700;}
+  @media (max-width:760px){ .pv-compare{grid-template-columns:1fr;} .pv-arrow{transform:rotate(90deg); padding:2px 0;} }
+  /* 방송 모아보기 프리뷰 전용 */
+  .pv-card .onair{display:inline-block;}
+  .pv-card .tv-prog{margin-top:0; border-color:#fecaca;}
+  #tvPvTags button.sel{border-color:#dc2626; background:#fff5f5; color:#b91c1c; font-weight:700;}
+  #tvPreviewOv .m-go{background:#dc2626;}
+
+  .poc-note{position:fixed; bottom:12px; left:12px; background:#111; color:#9ca3af; font-size:10.5px; padding:4px 9px; border-radius:5px; opacity:.75; z-index:99;}
+  @media (max-width:1000px){ main .wrap{grid-template-columns:1fr;} .logo-side{display:none;} }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="wrap util">
+    <span>2026.07.06</span>
+    <span class="links"><a href="#">신문 구독</a><a href="#" class="prem">한경 프리미엄9 구독</a><a href="#">로그인</a></span>
+  </div>
+  <div class="wrap logo-row">
+    <div class="logo-side"><span>📖</span><span class="tv">한경 tv</span><span>WSJ</span><span>KED<br>GLOBAL</span></div>
+    <a class="logo" href="#">한국경제</a>
+    <div class="logo-side right">한경 프리미엄9 구독하기</div>
+  </div>
+  <nav class="gnb">
+    <div class="wrap">
+      <a href="#" class="pill">한경 프리미엄9</a>
+      <a href="#">경제</a><a href="#">산업</a><a href="#">코리아마켓</a><a href="#">글로벌마켓</a>
+      <a href="#">집코노미</a><a href="#">국제</a><a href="#">유통</a><a href="#">오피니언</a>
+      <a href="#">전문채널</a><a href="#">☰ 전체메뉴</a>
+      <span class="spacer"></span>
+      <button class="search">🔍</button>
+    </div>
+  </nav>
+  <div class="ticker">
+    <div class="wrap">
+      <span><b>코스피</b> 8,252.65 <span class="t-down">▼ -0.42%</span></span>
+      <span><b>반도체</b> 12,626.22 <span class="t-down">▼ -5.44%</span></span>
+      <span><b>독일</b> 25,779.31 <span class="t-up">▲ +0.78%</span></span>
+      <span><b>영국</b> 652.77 <span class="t-up">▲ +0.68%</span></span>
+      <span><b>프랑스</b> 8,508.07 <span class="t-up">▲ +0.39%</span></span>
+      <span><b>NIKKEI 225</b> 69,744.07 <span class="t-up">▲ +1.47%</span></span>
+      <span class="fx">환율 USD/KRW <b>1,532.64</b></span>
+    </div>
+  </div>
+</header>
+
+<!-- 내 지갑 번역기: 최초 진입 배너 -->
+<div class="wallet-banner" id="walletBanner">
+  <div class="wrap">
+    <span class="emoji">💰</span>
+    <div>
+      <h3>내 지갑 번역기 <span style="font-size:10.5px; background:rgba(255,255,255,.2); border-radius:4px; padding:2px 6px; vertical-align:2px;">BETA</span></h3>
+      <p>어려운 경제뉴스, 이제 "내 돈에 미치는 영향"으로 읽으세요. 내 상황만 알려주면 모든 기사에 한 줄 번역이 붙습니다.</p>
+    </div>
+    <button class="start" id="startBtn">30초 만에 시작하기</button>
+    <button class="start" id="pvBtn" style="background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.55);">어떻게 보이나요?</button>
+    <button class="dismiss" id="bannerDismiss" title="닫기">✕</button>
+  </div>
+</div>
+
+<!-- 방송 기사 모아보기: 최초 진입 배너 (별도 기능) -->
+<div class="tv-banner" id="tvBanner">
+  <div class="wrap">
+    <span class="emoji">📺</span>
+    <div>
+      <h3>오늘 방송 기사 모아보기 <span style="font-size:10.5px; background:rgba(255,255,255,.2); border-radius:4px; padding:2px 6px; vertical-align:2px;">BETA</span></h3>
+      <p>즐겨보는 한경 유튜브 프로그램을 고르면, 오늘 아침 방송에서 다룬 기사를 한자리에 모아드려요.</p>
+    </div>
+    <button class="start" id="tvStartBtn">프로그램 선택하기</button>
+    <button class="start" id="tvPvBtn" style="background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.55);">어떻게 보이나요?</button>
+    <button class="dismiss" id="tvBannerDismiss" title="닫기">✕</button>
+  </div>
+</div>
+
+<!-- 방송 기사 모아보기: 활성화 후 바 -->
+<div class="tv-bar" id="tvBar">
+  <div class="wrap">
+    <span class="title">📺 방송 기사 모아보기 ON</span>
+    <span id="tvChipArea"></span>
+    <span class="actions">
+      <button id="tvEditBtn">프로그램 수정</button>
+      <button id="tvOffBtn">끄기</button>
+    </span>
+  </div>
+</div>
+
+<!-- 내 지갑 번역기: 활성화 후 프로필 바 -->
+<div class="wallet-bar" id="walletBar">
+  <div class="wrap">
+    <span class="title">💰 내 지갑 번역기 ON</span>
+    <span id="chipArea"></span>
+    <span class="actions">
+      <button id="editBtn">내 상황 수정</button>
+      <button id="offBtn">끄기</button>
+    </span>
+  </div>
+</div>
+
+<!-- 메인 -->
+<main>
+  <div class="wrap">
+    <!-- 좌측 헤드라인 -->
+    <section class="headline-list">
+      <article data-news="baseball">
+        <div class="thumb" style="background:linear-gradient(140deg,#8a9bb0,#5c6b7d);">🤝</div>
+        <h4>배재고 야구부, 광주제일고 찾아 사과…"인성 중요성 깨달아"</h4>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="dxunion">
+        <h4>"성과급 격차 못참아"…삼성전자 DX노조, 대규모 집회 예고</h4>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="rally">
+        <h4>증시는 역대급 랠리…기업 자금조달은 전년대비 '반토막'</h4>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="supply">
+        <h4>내년 서울 입주물량 1.3만가구…1990년 이후 최저</h4>
+        <div class="impact-slot"></div>
+      </article>
+    </section>
+
+    <!-- 중앙 히어로 -->
+    <section class="hero" data-news="cluster">
+      <div class="hero-img">
+        <div class="hero-scene">🏛️</div>
+        <div class="hero-caption">
+          <h2>靑 "호남 반도체 클러스터 광주 군공항 부지에 조성"</h2>
+          <p>李 대통령, 메가프로젝트 점검 회의 매달 직접 주재키로</p>
+        </div>
+      </div>
+      <div class="impact-slot"></div>
+    </section>
+
+    <!-- 우측 사이드 -->
+    <aside class="side">
+      <!-- 오늘의 내 지갑 브리핑 (활성화 후) -->
+      <div class="briefing" id="briefing"></div>
+
+      <!-- 오늘 방송 기사 모아보기 (유튜브 프로그램 선택 시) -->
+      <div class="tvbox" id="tvbox"></div>
+
+      <article data-news="kospi">
+        <div class="row">
+          <div class="sthumb" style="background:linear-gradient(140deg,#27406e,#152444);">📉</div>
+          <h4>코스피, 외인·기관 '팔자'에 하락…8000선은 사수</h4>
+        </div>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="sds">
+        <div class="row">
+          <div class="sthumb" style="background:linear-gradient(140deg,#5b7fa6,#33506e);">🏢</div>
+          <h4>걷잡을 수 없는 성과급 개편 갈등…삼성SDS도 첫 노조 출범</h4>
+        </div>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="crime">
+        <div class="row">
+          <div class="sthumb" style="background:linear-gradient(140deg,#6e7b8a,#3f4a56);">🚔</div>
+          <h4>'장윤기 차량 케이블 타이 인멸'…수사팀장, 범죄 조력자로</h4>
+        </div>
+        <div class="impact-slot"></div>
+      </article>
+      <article data-news="axsummit">
+        <div class="row">
+          <div class="sthumb" style="background:linear-gradient(140deg,#3d2a6e,#1c1140);">🎤</div>
+          <h4>'2026 한경 AX 서밋' 첫 개최…최신 트렌드·우수사례 한자리에</h4>
+        </div>
+        <div class="impact-slot"></div>
+      </article>
+    </aside>
+  </div>
+</main>
+
+<!-- 하단 프리미엄 배너 -->
+<div class="prem-banner">
+  <div class="wrap">
+    <span class="brand">한경PREMIUM<sup>9</sup></span>
+    <span class="copy"><b>돈버는 프로들이 선택하는 초격차 플랫폼</b><p>AI를 넘어서는 성공투자</p></span>
+    <button>구독하기</button>
+  </div>
+</div>
+
+<!-- 온보딩 모달 -->
+<div class="backdrop" id="onboard">
+  <div class="modal">
+    <div class="m-emoji">💰</div>
+    <h2>내 상황을 알려주세요</h2>
+    <p class="m-sub">선택한 정보를 바탕으로 AI가 모든 뉴스에 <b>"이 뉴스가 내 지갑에 미치는 영향"</b>을 한 줄로 붙여드려요. 여러 개 선택할 수 있어요.</p>
+
+    <div class="grp">
+      <div class="g-title">🏠 주거 상황</div>
+      <div class="chips" data-grp>
+        <button data-tag="jeonse">전세대출 보유</button>
+        <button data-tag="mortgage">주택담보대출 보유</button>
+        <button data-tag="wolse">월세 거주</button>
+        <button data-tag="homeowner">자가 보유 (대출 없음)</button>
+        <button data-tag="cheongyak">무주택 · 청약 준비 중</button>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="g-title">📈 투자 상황</div>
+      <div class="chips" data-grp>
+        <button data-tag="samsung">삼성전자 주주</button>
+        <button data-tag="kstock">국내주식 투자</button>
+        <button data-tag="usstock">미국주식 투자</button>
+        <button data-tag="coin">코인·가상자산</button>
+        <button data-tag="gold">달러·금 (안전자산)</button>
+        <button data-tag="pension">연금·ISA 운용</button>
+        <button data-tag="savings">예·적금 위주</button>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="g-title">💼 하는 일</div>
+      <div class="chips" data-grp>
+        <button data-tag="worker">직장인</button>
+        <button data-tag="self">자영업자</button>
+        <button data-tag="freelance">프리랜서</button>
+        <button data-tag="student">취준생 · 학생</button>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="g-title">🎯 재테크 목표</div>
+      <div class="chips" data-grp>
+        <button data-tag="goal_house">내 집 마련</button>
+        <button data-tag="goal_seed">종잣돈 모으기</button>
+        <button data-tag="goal_retire">노후 대비</button>
+        <button data-tag="goal_side">부수입 만들기</button>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="m-go" id="goBtn" disabled>내 지갑 번역 시작하기</button>
+      <p class="m-privacy">🔒 선택 정보는 이 기기(브라우저)에만 저장되며 서버로 전송되지 않아요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 방송 기사 모아보기: 프로그램 선택 모달 (별도 기능) -->
+<div class="backdrop" id="tvOnboard">
+  <div class="modal">
+    <div class="m-emoji">📺</div>
+    <h2>즐겨보는 프로그램을 골라주세요</h2>
+    <p class="m-sub">선택한 프로그램이 <b>오늘 방송에서 다룬 기사</b>를 모아서 보여드리고, 기사마다 방송 배지를 붙여드려요.</p>
+
+    <div class="grp">
+      <div class="g-title">📺 한경 유튜브 프로그램</div>
+      <div class="chips" data-grp>
+        <button data-prog="morning">🌅 모닝루틴 · 임현우 기자</button>
+        <button data-prog="wsnow">🗽 월스트리트나우</button>
+        <button data-prog="jip">🏘️ 집코노미TV</button>
+        <button data-prog="ju">📊 주코노미TV</button>
+      </div>
+    </div>
+
+    <div class="m-foot">
+      <button class="m-go" id="tvGoBtn" disabled>방송 기사 모아보기 시작</button>
+      <p class="m-privacy">🔒 선택 정보는 이 기기(브라우저)에만 저장되며 서버로 전송되지 않아요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 방송 모아보기 미리보기 오버레이 -->
+<div class="backdrop" id="tvPreviewOv">
+  <div class="modal pv-modal">
+    <div class="m-emoji">👀</div>
+    <h2>프로그램을 고르면 이렇게 모아드려요</h2>
+    <p class="m-sub">아래에서 <b>프로그램</b>을 눌러보세요 — 오늘 방송에서 다룬 기사에 배지가 붙고, 사이드바에 모아보기가 생겨요.</p>
+
+    <div class="pv-tags-title">즐겨보는 프로그램 (눌러서 바꿔보기)</div>
+    <div class="pv-tags" id="tvPvTags"></div>
+
+    <div class="pv-compare">
+      <div class="pv-col">
+        <div class="pv-label">📰 기사에는 방송 배지가 붙고</div>
+        <div class="pv-card on" id="tvPvArticle"></div>
+      </div>
+      <div class="pv-arrow">＋</div>
+      <div class="pv-col">
+        <div class="pv-label after" style="color:#b91c1c;">🗂️ 사이드바엔 오늘 방송 기사가 모여요</div>
+        <div class="pv-card on" id="tvPvBox" style="background:#fff5f5;"></div>
+      </div>
+    </div>
+
+    <div class="m-foot" style="margin-top:4px;">
+      <button class="m-go" id="tvPvGo">좋아요, 프로그램 선택하러 가기</button>
+      <p class="m-privacy">미리보기 예시입니다 · 실제로는 매일 아침 방송과 자동으로 연결돼요</p>
+    </div>
+  </div>
+</div>
+
+<!-- 미리보기 오버레이: 적용 후 기사가 어떻게 보이는지 Before/After -->
+<div class="backdrop" id="previewOv">
+  <div class="modal pv-modal">
+    <div class="m-emoji">👀</div>
+    <h2>켜면 기사가 이렇게 바뀌어요</h2>
+    <p class="m-sub">아래에서 <b>내 상황</b>을 눌러보세요 — 같은 기사여도 사람마다 다른 번역이 붙어요.</p>
+
+    <div class="pv-tags-title">내 상황 (눌러서 바꿔보기)</div>
+    <div class="pv-tags" id="pvTags"></div>
+
+    <div class="pv-compare">
+      <div class="pv-col">
+        <div class="pv-label">📄 지금의 기사</div>
+        <div class="pv-card">
+          <h5>내년 서울 입주물량 1.3만가구…1990년 이후 최저</h5>
+          <p class="pv-body">내년 서울 아파트 입주 예정 물량이 1만3천여 가구로 집계돼 1990년 이후 가장 적은 수준으로 나타났다. 정비사업 지연과 착공 감소가 겹치며…</p>
+        </div>
+      </div>
+      <div class="pv-arrow">➜</div>
+      <div class="pv-col">
+        <div class="pv-label after">💰 내 지갑 번역기 ON</div>
+        <div class="pv-card on">
+          <h5>내년 서울 입주물량 1.3만가구…1990년 이후 최저</h5>
+          <p class="pv-body">내년 서울 아파트 입주 예정 물량이 1만3천여 가구로 집계돼 1990년 이후 가장 적은 수준으로 나타났다…</p>
+          <div id="pvImpact"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-foot" style="margin-top:4px;">
+      <button class="m-go" id="pvGo">좋아요, 내 상황 선택하러 가기</button>
+      <p class="m-privacy">미리보기 예시 기사입니다 · 실제로는 모든 기사에 적용돼요</p>
+    </div>
+  </div>
+</div>
+
+<!-- 오늘 방송 기사 모아보기: 전용 뷰 (JS로 렌더링) -->
+<div class="tvcol" id="tvCollection"></div>
+
+<!-- 게이미피케이션: 경제 레벨 위젯 + 토스트 -->
+<div class="xp-widget" id="xpWidget"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<span class="poc-note">PoC · 내 지갑 번역기 — 실제 서비스 아님</span>
+
+<script>
+/* ─────────────────────────────────────────────
+   프로필 태그 정의
+───────────────────────────────────────────── */
+const TAGS = {
+  jeonse:   {label:'전세대출',        emoji:'🏠'},
+  mortgage: {label:'주택담보대출',     emoji:'🏦'},
+  wolse:    {label:'월세 거주',       emoji:'🏘️'},
+  homeowner:{label:'자가 보유',       emoji:'🔑'},
+  cheongyak:{label:'무주택·청약 준비', emoji:'📋'},
+  samsung:  {label:'삼성전자 주주',    emoji:'📱'},
+  kstock:   {label:'국내주식 투자',    emoji:'📈'},
+  usstock:  {label:'미국주식 투자',    emoji:'🌎'},
+  coin:     {label:'코인·가상자산',   emoji:'🪙'},
+  gold:     {label:'달러·금 자산',    emoji:'🥇'},
+  pension:  {label:'연금·ISA',       emoji:'📊'},
+  savings:  {label:'예·적금 위주',    emoji:'💵'},
+  worker:   {label:'직장인',          emoji:'💼'},
+  self:     {label:'자영업자',        emoji:'🏪'},
+  freelance:{label:'프리랜서',        emoji:'🧑‍💻'},
+  student:  {label:'취준생·학생',     emoji:'🎓'},
+  goal_house: {label:'내 집 마련',    emoji:'🏡'},
+  goal_seed:  {label:'종잣돈 모으기',  emoji:'🌱'},
+  goal_retire:{label:'노후 대비',     emoji:'🌅'},
+  goal_side:  {label:'부수입 만들기',  emoji:'💡'},
+};
+
+/* ─────────────────────────────────────────────
+   뉴스별 × 태그별 영향 데이터 (실서비스에선 LLM이 생성)
+   lv: 3=영향 커요 / 2=체크해 보세요 / 1=참고
+   dir: up(호재)=▲빨강 / down(부담)=▼파랑 / flat=─
+───────────────────────────────────────────── */
+const IMPACTS = {
+  cluster: {
+    title:'靑 "호남 반도체 클러스터 광주 군공항 부지에 조성"',
+    summary:'정부가 호남 반도체 클러스터를 광주 군공항 부지에 조성하기로 했다. 李 대통령은 메가프로젝트 점검 회의를 매달 직접 주재하기로 했다.',
+    map:{
+      samsung:{lv:2, dir:'up',   text:'정부 주도 반도체 인프라 투자는 삼성전자에 중장기 호재예요. 다만 부지 조성 단계라 단기 주가 영향은 제한적이에요.'},
+      kstock: {lv:2, dir:'up',   text:'반도체 장비·소재·건설 등 클러스터 밸류체인 관련주가 재조명될 수 있어요. 테마 추격 매수는 주의하세요.'},
+      worker: {lv:1, dir:'flat', text:'호남권에 반도체 일자리가 대규모로 늘어날 전망이에요. 관련 직무라면 채용 시장 변화를 지켜볼 만해요.'},
+      self:   {lv:1, dir:'up',   text:'클러스터 조성 지역과 배후 상권에는 장기적으로 유동인구 증가 요인이에요.'},
+      freelance:{lv:1, dir:'up', text:'메가프로젝트가 시작되면 설계·IT·콘텐츠 등 외주 프로젝트 수요도 함께 늘어나요.'},
+      student:{lv:1, dir:'up',   text:'반도체 인력 수요가 커지는 신호예요. 관련 전공·직무 취업 문이 넓어질 수 있어요.'},
+    }
+  },
+  dxunion: {
+    title:'"성과급 격차 못참아"…삼성전자 DX노조, 대규모 집회 예고',
+    summary:'삼성전자 DX부문 노조가 사업부 간 성과급 격차에 반발하며 대규모 집회를 예고했다. 성과급 개편 갈등이 그룹 전반으로 확산되는 분위기다.',
+    map:{
+      samsung:{lv:2, dir:'down', text:'노사 갈등이 길어지면 투자심리에 단기 부담이 될 수 있어요. 성과급 비용 확대 여부가 체크 포인트예요.'},
+      worker: {lv:1, dir:'flat', text:'대기업 성과급 갈등이 업계 전반으로 번지는 중이에요. 우리 회사 성과급 협상 때 참고할 흐름이에요.'},
+    }
+  },
+  rally: {
+    title:'증시는 역대급 랠리…기업 자금조달은 전년대비 \'반토막\'',
+    summary:'증시가 역대급 랠리를 이어가는 동안 기업의 유상증자·회사채 발행 등 자금조달 규모는 전년 대비 절반 수준으로 줄었다. 증시로 몰린 자금이 실물 투자로 이어지지 않고 있다는 분석이 나온다.',
+    map:{
+      kstock: {lv:3, dir:'flat', text:'랠리 속에 기업 자금조달이 줄었다는 건 증시로 몰린 돈이 실물로 흐르지 않는다는 신호예요. 과열 여부를 점검해 보세요.'},
+      savings:{lv:1, dir:'flat', text:'증시가 뜨거울수록 예·적금에서 돈이 빠져나가요. 무리한 갈아타기보다 비중 조절로 접근하세요.'},
+      coin:   {lv:2, dir:'flat', text:'증시와 코인은 위험자산 심리를 공유해요. 증시 과열 신호가 나오면 코인 변동성도 함께 커질 수 있어요.'},
+      pension:{lv:1, dir:'flat', text:'연금 계좌의 주식형 비중이 랠리로 많이 올라와 있을 수 있어요. 리밸런싱 시점을 점검해 보세요.'},
+      goal_seed:{lv:2, dir:'flat', text:'종잣돈을 모으는 단계라면 랠리 추격 매수가 가장 위험해요. 정해둔 적립 원칙을 지키는 게 유리해요.'},
+      gold:   {lv:1, dir:'flat', text:'위험자산 랠리 구간에는 금·달러가 소외되기 쉬워요. 헤지 목적이라면 비중을 유지하는 게 원칙이에요.'},
+    }
+  },
+  supply: {
+    title:'내년 서울 입주물량 1.3만가구…1990년 이후 최저',
+    summary:'내년 서울 아파트 입주 예정 물량이 1만3천여 가구로 1990년 이후 가장 적을 전망이다. 정비사업 지연과 착공 감소가 겹치며 전세·매매 시장 모두 공급 부족 우려가 커지고 있다.',
+    map:{
+      jeonse:   {lv:3, dir:'down', text:'입주 물량이 줄면 전세 매물도 줄어요. 재계약 때 보증금 인상 요구 가능성이 커졌으니, 갱신청구권 사용 계획을 미리 세워두세요.'},
+      cheongyak:{lv:3, dir:'down', text:'공급 감소는 분양 물량 감소로 이어져요. 청약 경쟁률이 더 오르기 전에 가점 전략을 점검하세요.'},
+      wolse:    {lv:3, dir:'down', text:'전세 매물이 줄면 월세 수요가 늘어 월세도 함께 올라요. 계약 갱신 시점의 인상 폭을 미리 알아보세요.'},
+      goal_house:{lv:3, dir:'down', text:'내 집 마련이 목표라면 공급 절벽은 매매가·분양가 모두에 상승 압력이에요. 매수 시점 전략을 다시 점검해 보세요.'},
+      mortgage: {lv:2, dir:'up',   text:'공급 부족은 집값 하방을 받쳐주는 요인이에요. 보유 주택 가치에는 우호적인 뉴스예요.'},
+      homeowner:{lv:2, dir:'up',   text:'공급 부족은 집값을 받쳐주는 요인이라, 보유 주택 가치에는 우호적인 뉴스예요.'},
+    }
+  },
+  kospi: {
+    title:'코스피, 외인·기관 \'팔자\'에 하락…8000선은 사수',
+    summary:'외국인과 기관의 동반 매도로 코스피가 하락했지만 8,000선은 지켜냈다. 반도체 업종의 낙폭이 상대적으로 컸고, 원/달러 환율은 1,530원대로 올라섰다.',
+    map:{
+      kstock: {lv:3, dir:'down', text:'외국인·기관이 동반 매도 중이에요. 내 보유 종목의 수급 주체를 확인하고 분할 대응을 고려하세요.'},
+      samsung:{lv:2, dir:'down', text:'지수 하락기엔 대형주 수급이 먼저 흔들려요. 삼성전자 외국인 지분율 추이를 함께 지켜보세요.'},
+      usstock:{lv:2, dir:'down', text:'원/달러가 1,530원대예요. 지금 달러 환전 후 미국주식 추가 매수는 환율 부담이 큰 구간이에요.'},
+      pension:{lv:2, dir:'down', text:'DC형 퇴직연금·연금저축에 주식형 펀드가 있다면 지수 하락이 수익률에 그대로 반영돼요.'},
+      coin:   {lv:1, dir:'down', text:'외국인 매도로 위험자산 심리가 함께 위축될 수 있어요. 코인 변동성 확대에 대비하세요.'},
+      gold:   {lv:2, dir:'up',   text:'원/달러 1,530원대로 달러 자산은 평가익 구간이에요. 분할 차익 실현을 고민해볼 만해요.'},
+      goal_retire:{lv:2, dir:'down', text:'노후 자금은 급락 구간의 손실 복구가 어려워요. 주식·안전자산 비중을 점검해 보세요.'},
+    }
+  },
+  sds: {
+    title:'삼성SDS 첫 노조 출범',
+    map:{
+      samsung:{lv:1, dir:'flat', text:'그룹 전반으로 노사 리스크가 확산되는 흐름이에요. 계열사 인건비 구조 변화를 참고하세요.'},
+      worker: {lv:1, dir:'flat', text:'IT 서비스 업계까지 노조 설립이 확산 중이에요. 성과급 체계 개편 논의가 이어질 수 있어요.'},
+    }
+  },
+  axsummit: {
+    title:'2026 한경 AX 서밋 개최',
+    map:{
+      worker: {lv:1, dir:'up',   text:'AI 전환(AX)이 전 직무로 확산 중이에요. 내 직무의 리스킬링 힌트를 얻을 수 있는 행사예요.'},
+      self:   {lv:1, dir:'up',   text:'소상공인이 바로 쓸 수 있는 AI 도구 사례가 다수 공유될 예정이에요.'},
+      freelance:{lv:1, dir:'up', text:'AI 도구를 먼저 익힌 프리랜서가 단가와 작업 속도에서 앞서가요. 실무 사례를 챙겨보세요.'},
+      student:{lv:1, dir:'up',   text:'기업들이 원하는 AI 역량이 무엇인지 확인할 수 있는 기회예요.'},
+      goal_side:{lv:1, dir:'up', text:'AI를 활용한 부업·사이드 프로젝트 사례가 다수 공유돼요. 부수입 아이디어를 얻어 보세요.'},
+    }
+  },
+  baseball: { title:'배재고 야구부 사과', map:{} },
+  crime:    { title:'수사팀장 증거인멸 사건', map:{} },
+};
+
+const LV_LABEL = {3:'영향 커요', 2:'체크해 보세요', 1:'참고'};
+const DIR_MARK = {up:'<b class="dir-up">▲</b>', down:'<b class="dir-down">▼</b>', flat:'─'};
+
+/* ── 한경 유튜브 프로그램 (실서비스에선 방송 메타데이터 연동) ── */
+const PROGRAMS = {
+  morning:{label:'모닝루틴',      host:'임현우 기자',  emoji:'🌅'},
+  wsnow:  {label:'월스트리트나우', host:'김현석 기자',  emoji:'🗽'},
+  jip:    {label:'집코노미TV',    host:'집코노미팀',   emoji:'🏘️'},
+  ju:     {label:'주코노미TV',    host:'증권부',      emoji:'📊'},
+};
+/* 뉴스별: 오늘 어느 방송에서 다뤘는지 (PoC 목업 — 실서비스에선 방송 스크립트 매칭) */
+const ON_AIR = {
+  cluster:['morning'],
+  kospi:  ['morning','wsnow'],
+  rally:  ['morning','ju'],
+  dxunion:['ju'],
+  supply: ['jip'],
+};
+
+let profile  = JSON.parse(localStorage.getItem('wallet_profile') || '[]');
+let programs = JSON.parse(localStorage.getItem('wallet_programs') || '[]');
+
+/* ─────────────────────────────────────────────
+   게이미피케이션: XP · 레벨 · 미션 · 퀴즈
+───────────────────────────────────────────── */
+const LEVELS = [
+  {min:0,   name:'경제 새싹',   emoji:'🌱'},
+  {min:50,  name:'경제 관심러', emoji:'👀'},
+  {min:120, name:'경제 똑똑이', emoji:'💡'},
+  {min:250, name:'경제 고수',   emoji:'🎯'},
+  {min:400, name:'경제 프로',   emoji:'🏆'},
+];
+/* 방송별 오늘의 퀴즈 (실서비스에선 방송 스크립트에서 자동 생성) */
+const QUIZ = {
+  morning:{q:'오늘 방송에서 다룬 내용! 코스피가 지켜낸 지수선은?', options:['7,000선','8,000선','9,000선'], answer:1, exp:'외국인·기관의 동반 매도에도 8,000선은 사수했어요.'},
+  wsnow:  {q:'오늘 원/달러 환율은 어느 구간이었을까요?', options:['1,330원대','1,430원대','1,530원대'], answer:2, exp:'달러 자산 보유자에겐 평가익 구간이에요.'},
+  jip:    {q:'내년 서울 아파트 입주물량은 어느 수준일까요?', options:['1.3만 가구 (역대급 부족)','5.2만 가구 (평년 수준)','10만 가구 (공급 과잉)'], answer:0, exp:'1990년 이후 최저 수준이라 전세·매매 모두 공급 부족 우려가 커요.'},
+  ju:     {q:'증시 역대급 랠리 속, 기업 자금조달은 어떻게 됐을까요?', options:['두 배로 늘었다','전년과 비슷하다','반토막 났다'], answer:2, exp:'증시로 몰린 돈이 실물 투자로는 흐르지 않고 있다는 신호예요.'},
+};
+
+let xp = parseInt(localStorage.getItem('hk_xp')||'0', 10);
+let earnedSet = new Set(JSON.parse(localStorage.getItem('hk_earned')||'[]'));
+
+function earned(k){ return earnedSet.has(k); }
+function earnedAny(prefix){ return [...earnedSet].some(k=>k.startsWith(prefix)); }
+
+function addXPOnce(key, n, reason){
+  if(earnedSet.has(key)) return false;
+  earnedSet.add(key);
+  xp += n;
+  localStorage.setItem('hk_earned', JSON.stringify([...earnedSet]));
+  localStorage.setItem('hk_xp', String(xp));
+  const before = levelOf(xp-n), after = levelOf(xp);
+  toast(`+${n} XP · ${reason}`);
+  if(after !== before) setTimeout(()=>toast(`${LEVELS[after].emoji} 레벨 업! ${LEVELS[after].name} 달성`), 500);
+  renderXP();
+  return true;
+}
+function levelOf(v){
+  let idx = 0;
+  LEVELS.forEach((l,i)=>{ if(v>=l.min) idx=i; });
+  return idx;
+}
+function toast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toastWrap').appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+const MISSIONS = [
+  {label:'내 지갑 번역기 켜기',      check:()=>earned('wallet_on')},
+  {label:'내 지갑 영향 확인하기',    check:()=>earned('impact_seen')},
+  {label:'방송 기사 1건 읽기',       check:()=>earnedAny('read_')},
+  {label:'오늘의 방송 퀴즈 맞히기',  check:()=>earnedAny('quiz_')},
+];
+
+function renderXP(){
+  const li = levelOf(xp);
+  const cur = LEVELS[li], next = LEVELS[li+1];
+  const pct = next ? Math.min(100, Math.round((xp-cur.min)/(next.min-cur.min)*100)) : 100;
+  const doneCnt = MISSIONS.filter(m=>m.check()).length;
+  document.getElementById('xpWidget').innerHTML = `
+    <div class="xp-top">
+      <span class="xp-emoji">${cur.emoji}</span>
+      <span><span class="xp-name">${cur.name}</span><br><span class="xp-lv">Lv.${li+1} · ${xp} XP</span></span>
+      <span class="xp-streak">🔥 3일 연속</span>
+    </div>
+    <div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div>
+    <div class="xp-sub">${next ? `다음 레벨 <b>${next.name}</b>까지 ${next.min-xp} XP` : '최고 레벨 달성! 🎉'}</div>
+    <div class="xp-missions">
+      <div class="m-title">오늘의 미션 (${doneCnt}/${MISSIONS.length})</div>
+      ${MISSIONS.map(m=>`<div class="xp-mission ${m.check()?'done':''}"><span class="mk">${m.check()?'✅':'⬜'}</span>${m.label}</div>`).join('')}
+    </div>`;
+}
+
+/* ── 온보딩 ── */
+function openOnboard(){
+  document.querySelectorAll('#onboard .chips button').forEach(b=>{
+    b.classList.toggle('sel', profile.includes(b.dataset.tag));
+  });
+  syncGoBtn();
+  document.getElementById('onboard').classList.add('open');
+}
+document.querySelectorAll('#onboard .chips button').forEach(b=>{
+  b.addEventListener('click', ()=>{ b.classList.toggle('sel'); syncGoBtn(); });
+});
+function syncGoBtn(){
+  const n = document.querySelectorAll('#onboard .chips button.sel').length;
+  const go = document.getElementById('goBtn');
+  go.disabled = n===0;
+  go.textContent = n===0 ? '내 지갑 번역 시작하기' : `내 지갑 번역 시작하기 (${n}개 선택)`;
+}
+document.getElementById('onboard').addEventListener('click', e=>{
+  if(e.target.id==='onboard') e.target.classList.remove('open');
+});
+
+/* ── 적용 ── */
+function applyWallet(){
+  profile = [...document.querySelectorAll('#onboard .chips button.sel')].map(b=>b.dataset.tag);
+  localStorage.setItem('wallet_profile', JSON.stringify(profile));
+  document.getElementById('onboard').classList.remove('open');
+  renderChips();
+  document.body.classList.add('wallet-on');
+  renderImpacts(true);   // 로딩 연출 포함
+  addXPOnce('wallet_on', 20, '내 지갑 번역기 시작');
+}
+function walletOff(){
+  document.body.classList.remove('wallet-on');
+  document.getElementById('walletBanner').style.display='';
+}
+
+function renderChips(){
+  document.getElementById('chipArea').innerHTML =
+    profile.map(t=>`<span class="chip">${TAGS[t].emoji} ${TAGS[t].label}</span>`).join(' ');
+}
+
+/* ── 방송 기사 모아보기: 별도 온보딩/상태 ── */
+function openTvOnboard(){
+  document.querySelectorAll('#tvOnboard .chips button').forEach(b=>{
+    b.classList.toggle('sel', programs.includes(b.dataset.prog));
+  });
+  syncTvGoBtn();
+  document.getElementById('tvOnboard').classList.add('open');
+}
+document.querySelectorAll('#tvOnboard .chips button').forEach(b=>{
+  b.addEventListener('click', ()=>{ b.classList.toggle('sel'); syncTvGoBtn(); });
+});
+function syncTvGoBtn(){
+  const n = document.querySelectorAll('#tvOnboard .chips button.sel').length;
+  const go = document.getElementById('tvGoBtn');
+  go.disabled = n===0;
+  go.textContent = n===0 ? '방송 기사 모아보기 시작' : `방송 기사 모아보기 시작 (${n}개 선택)`;
+}
+document.getElementById('tvOnboard').addEventListener('click', e=>{
+  if(e.target.id==='tvOnboard') e.target.classList.remove('open');
+});
+function applyTV(){
+  programs = [...document.querySelectorAll('#tvOnboard .chips button.sel')].map(b=>b.dataset.prog);
+  localStorage.setItem('wallet_programs', JSON.stringify(programs));
+  document.getElementById('tvOnboard').classList.remove('open');
+  renderTvChips();
+  document.body.classList.add('tv-on');
+  renderImpacts(false);  // 방송 배지 + 모아보기 갱신
+  addXPOnce('tv_on', 15, '방송 기사 모아보기 시작');
+}
+function tvOff(){
+  document.body.classList.remove('tv-on');
+  document.getElementById('tvBanner').style.display='';
+}
+function renderTvChips(){
+  document.getElementById('tvChipArea').innerHTML =
+    programs.map(p=>`<span class="chip">${PROGRAMS[p].emoji} ${PROGRAMS[p].label}</span>`).join(' ');
+}
+
+/* ── 뉴스별 영향 렌더링 ── */
+function renderImpacts(withLoading){
+  const briefItems = [];
+
+  document.querySelectorAll('[data-news]').forEach(node=>{
+    const id = node.dataset.news;
+    const slot = node.querySelector('.impact-slot');
+    const data = IMPACTS[id];
+    if(!slot || !data) return;
+
+    const hits = profile
+      .filter(t => data.map[t])
+      .map(t => ({tag:t, ...data.map[t]}))
+      .sort((a,b)=>b.lv-a.lv)
+      .slice(0,2);
+
+    hits.forEach(h => briefItems.push({news:data.title, ...h}));
+
+    // 오늘 방송에서 다룬 기사 배지 (선택한 프로그램만)
+    const progs = (ON_AIR[id]||[]).filter(p=>programs.includes(p));
+    const onairHtml = progs.map(p=>
+      `<span class="onair" data-openprog="${p}" title="오늘 방송 기사 모아보기">📺 ${PROGRAMS[p].emoji} ${PROGRAMS[p].label} 오늘 방송에서 다룸 →</span>`).join('');
+
+    if(hits.length===0){
+      slot.innerHTML = onairHtml || (Object.keys(data.map).length===0
+        ? `<p class="impact-none show">💰 내 지갑과 직접 관련은 낮은 뉴스예요</p>` : '');
+      return;
+    }
+
+    const body = hits.map(h=>`
+      <div class="item">
+        <span>${DIR_MARK[h.dir]}</span>
+        <span class="tag">${TAGS[h.tag].emoji} ${TAGS[h.tag].label}</span>
+        <span class="txt">${h.text}</span>
+        <span class="lv lv${h.lv}">${LV_LABEL[h.lv]}</span>
+      </div>`).join('');
+
+    slot.innerHTML = onairHtml + `
+      <div class="impact has ${withLoading?'loading':''}">
+        <div class="head"><span>💰</span><span class="label">내 지갑 영향</span>
+          <span style="font-size:10.5px;color:#5eaaa0;margin-left:auto;">AI 번역 · 참고용</span></div>
+        <div class="skeleton" style="width:88%"></div>
+        <div class="skeleton" style="width:64%"></div>
+        <div class="body">${body}</div>
+      </div>`;
+  });
+
+  renderBriefing(briefItems);
+  renderTVBox();
+
+  if(withLoading){
+    setTimeout(()=>{
+      document.querySelectorAll('.impact.loading').forEach(el=>el.classList.remove('loading'));
+    }, 900);
+  }
+}
+
+/* ── 오늘의 내 지갑 브리핑 ── */
+function renderBriefing(items){
+  const top = items.sort((a,b)=>b.lv-a.lv).slice(0,3);
+  const el = document.getElementById('briefing');
+  if(top.length===0){ el.innerHTML=''; return; }
+  const newsCount = new Set(items.map(i=>i.news)).size;
+  el.innerHTML = `
+    <h3>💰 오늘의 내 지갑 브리핑</h3>
+    <p class="meta">오늘 주요 뉴스 9건 중 <b>${newsCount}건</b>이 내 지갑과 연결돼 있어요</p>
+    ${top.map(i=>`
+      <div class="b-item">
+        <div class="b-title">${DIR_MARK[i.dir]} <span>${i.news}</span> <span class="lv lv${i.lv}">${LV_LABEL[i.lv]}</span></div>
+        <div class="b-txt">${TAGS[i.tag].emoji} ${i.text}</div>
+      </div>`).join('')}
+  `;
+}
+
+/* ── 오늘 방송 기사 모아보기 ── */
+function renderTVBox(){
+  const el = document.getElementById('tvbox');
+  if(programs.length===0){ el.classList.remove('has'); el.innerHTML=''; return; }
+  el.classList.add('has');
+  el.innerHTML = `<h3>📺 오늘 방송 기사 모아보기</h3>` + programs.map(p=>{
+    const covered = Object.entries(ON_AIR).filter(([nid,ps])=>ps.includes(p));
+    return `
+      <div class="tv-prog">
+        <div class="tv-head">
+          <span class="tv-name">${PROGRAMS[p].emoji} ${PROGRAMS[p].label}</span>
+          <span class="tv-host">${PROGRAMS[p].host}</span>
+          <a class="tv-collect" data-collect="${p}">모아보기 ↗</a>
+          <a class="tv-replay">다시보기 ▶</a>
+        </div>
+        ${covered.length
+          ? covered.map(([nid])=>`<button class="tv-art" data-goto="${nid}">· ${IMPACTS[nid].title}</button>`).join('')
+          : `<p class="tv-none">오늘 방송과 연결된 기사가 없어요</p>`}
+      </div>`;
+  }).join('');
+  el.querySelectorAll('.tv-art').forEach(b=>{
+    b.addEventListener('click', ()=>gotoNews(b.dataset.goto));
+  });
+  el.querySelectorAll('.tv-collect').forEach(b=>{
+    b.addEventListener('click', ()=>openTvCollection(b.dataset.collect));
+  });
+}
+
+/* ── 기사 위치로 스크롤 + 하이라이트 ── */
+function gotoNews(nid){
+  const t = document.querySelector(`[data-news="${nid}"]`);
+  if(t){
+    t.scrollIntoView({behavior:'smooth', block:'center'});
+    t.style.outline = '2px solid #dc2626'; t.style.outlineOffset = '4px';
+    setTimeout(()=>{ t.style.outline=''; t.style.outlineOffset=''; }, 1600);
+  }
+}
+
+/* ── 오늘 방송 기사 모아보기: 전용 뷰 ── */
+function walletImpactLine(nid){
+  if(!document.body.classList.contains('wallet-on')) return '';
+  const map = IMPACTS[nid].map;
+  const hit = profile.filter(t=>map[t]).map(t=>({tag:t, ...map[t]})).sort((a,b)=>b.lv-a.lv)[0];
+  if(!hit) return '';
+  return `
+    <div class="impact has" style="display:block; margin:0 0 10px;">
+      <div class="body"><div class="item">
+        <span>${DIR_MARK[hit.dir]}</span>
+        <span class="tag">${TAGS[hit.tag].emoji} ${TAGS[hit.tag].label}</span>
+        <span class="txt">${hit.text}</span>
+        <span class="lv lv${hit.lv}">${LV_LABEL[hit.lv]}</span>
+      </div></div>
+    </div>`;
+}
+
+function openTvCollection(p){
+  const prog = PROGRAMS[p];
+  const covered = Object.entries(ON_AIR).filter(([nid,ps])=>ps.includes(p)).map(([nid])=>nid);
+  const el = document.getElementById('tvCollection');
+  el.innerHTML = `
+    <div class="tvcol-head">
+      <div class="tvcol-wrap">
+        <button class="tvcol-close" id="tvColClose">← 뉴스홈으로</button>
+        <div class="tvcol-title">${prog.emoji} ${prog.label}</div>
+        <div class="tvcol-meta">
+          <span class="tv-host" style="background:rgba(255,255,255,.16); color:#fff;">${prog.host}</span>
+          <span>오늘 아침 방송 · 2026.07.06</span>
+        </div>
+      </div>
+    </div>
+    <div class="tvcol-wrap tvcol-body">
+      <div class="tvcol-video">▶ &nbsp;오늘 방송 다시보기 &nbsp;<span style="opacity:.55;">12:34</span></div>
+      ${readProgressHtml(p, covered)}
+      ${covered.map((nid,i)=>`
+        <div class="tvcol-card ${earned('read_'+nid)?'read':''}">
+          <div class="tvcol-num">${i+1}</div>
+          <div class="tvcol-cont">
+            <h4>${IMPACTS[nid].title}${earned('read_'+nid)?'<span class="read-chip">읽음 ✓</span>':''}</h4>
+            <p>${IMPACTS[nid].summary||''}</p>
+            ${walletImpactLine(nid)}
+            <button class="tvcol-go" data-goto="${nid}">기사 본문 보기 → <b style="color:#f59e0b;">+10 XP</b></button>
+          </div>
+        </div>`).join('')}
+      ${quizHtml(p)}
+    </div>`;
+  el.querySelector('#tvColClose').addEventListener('click', closeTvCollection);
+  el.querySelectorAll('.tvcol-go').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const nid = b.dataset.goto;
+      addXPOnce('read_'+nid, 10, '방송 기사 읽기');
+      // 이 방송의 기사를 모두 읽으면 완주 보너스
+      if(covered.every(n=>earned('read_'+n))) addXPOnce('complete_'+p, 30, `${prog.label} 오늘 방송 완주! 🏁`);
+      closeTvCollection();
+      gotoNews(nid);
+    });
+  });
+  bindQuiz(el, p);
+  el.classList.add('open');
+  el.scrollTop = 0;
+}
+
+function readProgressHtml(p, covered){
+  const readCnt = covered.filter(n=>earned('read_'+n)).length;
+  const pct = Math.round(readCnt/covered.length*100);
+  return `
+    <div class="tvcol-progress">
+      <div class="p-txt">오늘 방송에서 다룬 기사 ${covered.length}건 · <b>${readCnt}건 읽음</b>${readCnt===covered.length?' — 완주! 🏁':''}</div>
+      <div class="p-bar"><div class="p-fill" style="width:${pct}%"></div></div>
+    </div>`;
+}
+
+/* ── 오늘의 방송 퀴즈 ── */
+function quizHtml(p){
+  const q = QUIZ[p];
+  if(!q) return '';
+  const done = earned('quiz_'+p);
+  return `
+    <div class="quiz-card">
+      <div class="quiz-title">🎯 오늘의 방송 퀴즈 <b style="color:#f59e0b;">+30 XP</b>${done?'<span class="quiz-done-chip">완료 ✓</span>':''}</div>
+      <p class="quiz-q">${q.q}</p>
+      ${q.options.map((o,i)=>`<button class="quiz-opt ${done&&i===q.answer?'correct':''}" data-qi="${i}" ${done?'disabled':''}>${o}</button>`).join('')}
+      <p class="quiz-exp" style="display:${done?'block':'none'};">💡 ${q.exp}</p>
+    </div>`;
+}
+function bindQuiz(el, p){
+  const q = QUIZ[p];
+  if(!q || earned('quiz_'+p)) return;
+  el.querySelectorAll('.quiz-opt').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const i = parseInt(b.dataset.qi, 10);
+      if(i === q.answer){
+        b.classList.add('correct');
+        el.querySelectorAll('.quiz-opt').forEach(o=>o.disabled=true);
+        el.querySelector('.quiz-exp').style.display = 'block';
+        addXPOnce('quiz_'+p, 30, '방송 퀴즈 정답! 🎉');
+      } else {
+        b.classList.add('wrong');
+        b.disabled = true;
+        toast('아쉬워요! 다시 골라보세요 🤔');
+      }
+    });
+  });
+}
+function closeTvCollection(){
+  document.getElementById('tvCollection').classList.remove('open');
+}
+/* 기사 카드의 방송 배지 클릭 → 모아보기 진입 (배지는 동적 생성이라 위임 바인딩) */
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.onair[data-openprog]');
+  if(b) openTvCollection(b.dataset.openprog);
+  // 지갑 영향 카드를 눌러 확인하면 미션 달성
+  const imp = e.target.closest('.impact.has');
+  if(imp && document.body.classList.contains('wallet-on')){
+    addXPOnce('impact_seen', 10, '내 지갑 영향 확인');
+  }
+});
+
+/* ── 방송 모아보기 미리보기 오버레이: ON_AIR 매핑을 그대로 재사용 ── */
+let tvPvProg = 'morning';
+
+function renderTvPv(){
+  // 프로그램 칩
+  const tags = document.getElementById('tvPvTags');
+  tags.innerHTML = Object.keys(PROGRAMS).map(p=>
+    `<button data-tvpv="${p}" class="${p===tvPvProg?'sel':''}">${PROGRAMS[p].emoji} ${PROGRAMS[p].label}</button>`).join('');
+  tags.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ tvPvProg = b.dataset.tvpv; renderTvPv(); });
+  });
+
+  const prog = PROGRAMS[tvPvProg];
+  const covered = Object.entries(ON_AIR).filter(([nid,ps])=>ps.includes(tvPvProg)).map(([nid])=>nid);
+
+  // 왼쪽: 기사 카드 + 방송 배지
+  const first = covered[0];
+  document.getElementById('tvPvArticle').innerHTML = `
+    <h5>${IMPACTS[first].title}</h5>
+    <p class="pv-body">오늘 아침 ${prog.label} 방송에서 다룬 기사예요. 기사 목록에서 바로 알아볼 수 있게 배지가 붙어요.</p>
+    <span class="onair">📺 ${prog.emoji} ${prog.label} 오늘 방송에서 다룸</span>`;
+
+  // 오른쪽: 사이드바 모아보기 모듈 미리보기
+  document.getElementById('tvPvBox').innerHTML = `
+    <div class="tv-prog">
+      <div class="tv-head">
+        <span class="tv-name">${prog.emoji} ${prog.label}</span>
+        <span class="tv-host">${prog.host}</span>
+        <a class="tv-replay">다시보기 ▶</a>
+      </div>
+      ${covered.map(nid=>`<button class="tv-art">· ${IMPACTS[nid].title}</button>`).join('')}
+    </div>
+    <p style="font-size:11px; color:#9ca3af; margin-top:8px;">기사를 누르면 본문으로 바로 이동해요</p>`;
+}
+
+function openTvPreview(){
+  renderTvPv();
+  document.getElementById('tvPreviewOv').classList.add('open');
+}
+document.getElementById('tvPreviewOv').addEventListener('click', e=>{
+  if(e.target.id==='tvPreviewOv') e.target.classList.remove('open');
+});
+
+/* ── 미리보기 오버레이: supply 기사 매핑 데이터를 그대로 재사용 ── */
+const PV_NEWS = 'supply';
+let pvTag = 'jeonse';
+
+function renderPvImpact(tag){
+  const h = IMPACTS[PV_NEWS].map[tag];
+  document.getElementById('pvImpact').innerHTML = `
+    <div class="impact has" style="display:block;">
+      <div class="head"><span>💰</span><span class="label">내 지갑 영향</span>
+        <span style="font-size:10.5px;color:#5eaaa0;margin-left:auto;">AI 번역 · 참고용</span></div>
+      <div class="body">
+        <div class="item">
+          <span>${DIR_MARK[h.dir]}</span>
+          <span class="tag">${TAGS[tag].emoji} ${TAGS[tag].label}</span>
+          <span class="txt">${h.text}</span>
+          <span class="lv lv${h.lv}">${LV_LABEL[h.lv]}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderPvTags(){
+  const wrap = document.getElementById('pvTags');
+  wrap.innerHTML = Object.keys(IMPACTS[PV_NEWS].map).map(t=>
+    `<button data-pvtag="${t}" class="${t===pvTag?'sel':''}">${TAGS[t].emoji} ${TAGS[t].label}</button>`).join('');
+  wrap.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      pvTag = b.dataset.pvtag;
+      renderPvTags();
+      renderPvImpact(pvTag);
+    });
+  });
+}
+
+function openPreview(){
+  renderPvTags();
+  renderPvImpact(pvTag);
+  document.getElementById('previewOv').classList.add('open');
+}
+document.getElementById('previewOv').addEventListener('click', e=>{
+  if(e.target.id==='previewOv') e.target.classList.remove('open');
+});
+
+/* ── 버튼 바인딩 (인라인 onclick 차단 환경 대응) ── */
+document.getElementById('tvStartBtn').addEventListener('click', openTvOnboard);
+document.getElementById('tvEditBtn').addEventListener('click', openTvOnboard);
+document.getElementById('tvOffBtn').addEventListener('click', tvOff);
+document.getElementById('tvGoBtn').addEventListener('click', applyTV);
+document.getElementById('tvBannerDismiss').addEventListener('click', function(){
+  document.getElementById('tvBanner').style.display='none';
+});
+document.getElementById('tvPvBtn').addEventListener('click', openTvPreview);
+document.getElementById('tvPvGo').addEventListener('click', function(){
+  document.getElementById('tvPreviewOv').classList.remove('open');
+  openTvOnboard();
+});
+document.getElementById('pvBtn').addEventListener('click', openPreview);
+document.getElementById('pvGo').addEventListener('click', function(){
+  document.getElementById('previewOv').classList.remove('open');
+  openOnboard();
+});
+document.getElementById('startBtn').addEventListener('click', openOnboard);
+document.getElementById('editBtn').addEventListener('click', openOnboard);
+document.getElementById('offBtn').addEventListener('click', walletOff);
+document.getElementById('goBtn').addEventListener('click', applyWallet);
+document.getElementById('bannerDismiss').addEventListener('click', function(){
+  document.getElementById('walletBanner').style.display='none';
+});
+
+/* ── 초기화: 저장된 프로필/프로그램 있으면 각 기능 개별 ON ── */
+if(profile.length>0){
+  renderChips();
+  document.body.classList.add('wallet-on');
+}
+if(programs.length>0){
+  renderTvChips();
+  document.body.classList.add('tv-on');
+}
+if(profile.length>0 || programs.length>0){
+  renderImpacts(false);
+}
+renderXP();
+</script>
+</body>
+</html>

@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>머니워크 MoneyWalk — 걸으면서 줍는 경제뉴스 (PoC)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
+  :root{
+    --paper:#faf6ec; --paper2:#fffdf6; --inkl:#23272f; --sub:#8a8272; --line:#e2dbc9;
+    --mustard:#e0a63a; --brick:#c96f4a; --olive:#7a8a4f; --slate:#5b7a99; --plum:#8a6f9e;
+    --teal:#e0a63a; --teal-d:#23272f; --ink:#23272f; --up:#c0392b; --down:#3b82f6; --gold:#e0a63a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Pretendard","Malgun Gothic",-apple-system,sans-serif; background:#e9e3d3; color:var(--ink);
+       display:flex; justify-content:center; min-height:100vh;}
+  button{font-family:inherit; cursor:pointer;}
+  .hand{font-family:'Gaegu','Pretendard',cursive;}
+
+  /* ── 폰 프레임: 스케치북 ── */
+  .app{width:390px; max-width:100vw; height:100vh; max-height:844px; background:var(--paper); position:relative;
+       overflow:hidden; box-shadow:0 10px 34px rgba(60,50,30,.35); align-self:center; border-radius:20px;
+       border:2.5px solid var(--inkl);}
+
+  /* ── 상단 바 ── */
+  .topbar{position:absolute; top:0; left:0; right:0; z-index:30; display:flex; align-items:center; gap:8px;
+          padding:12px 12px 8px; color:var(--inkl);}
+  .loc-chip{background:var(--paper2); border:2px solid var(--inkl); border-radius:999px; padding:6px 13px;
+            font-size:13px; font-weight:800; box-shadow:2px 2px 0 rgba(35,39,47,.18);}
+  .loc-chip small{font-weight:400; color:var(--sub); font-size:10.5px;}
+  .lv-chip{margin-left:auto; background:var(--paper2); border:2px solid var(--inkl); border-radius:999px;
+           padding:6px 11px; font-size:12px; font-weight:800; color:var(--inkl); display:flex; gap:6px; align-items:center;
+           box-shadow:2px 2px 0 rgba(35,39,47,.18);}
+  .lv-chip .bar{width:44px; height:6px; background:#ece5d3; border-radius:3px; overflow:hidden; border:1px solid #d8d0bb;}
+  .lv-chip .fill{height:100%; background:var(--mustard); border-radius:3px; transition:width .5s;}
+
+  /* ── 화면(탭) 전환 ── */
+  .scene{position:absolute; inset:0; display:none;}
+  .scene.active{display:block;}
+
+  /* ═══ AR 탐색 뷰 ═══ */
+  .ar-view{position:absolute; inset:0; overflow:hidden;}
+  .sky{position:absolute; inset:0 0 38% 0;}
+  .ground{position:absolute; left:0; right:0; bottom:0; height:40%;}
+  .road{position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:78%; height:38%;
+        background:linear-gradient(#cfc7b2,#bdb49d); clip-path:polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+        border-top:2px solid rgba(35,39,47,.35);}
+  .road::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:5px; transform:translateX(-50%);
+        background:repeating-linear-gradient(var(--mustard) 0 26px, transparent 26px 52px); opacity:.8;}
+  .bld{position:absolute; bottom:36%; border-radius:6px 6px 0 0; border:2.5px solid var(--inkl); border-bottom:none;
+       background:
+         repeating-linear-gradient(rgba(35,39,47,.10) 0 2.5px, transparent 2.5px 20px),
+         repeating-linear-gradient(90deg, rgba(35,39,47,.10) 0 2.5px, transparent 2.5px 20px),
+         var(--bcolor,#fffdf6);}
+  .bld .sign{position:absolute; top:10px; left:50%; transform:translateX(-50%); font-size:19px;
+             background:var(--paper2); border:2px solid var(--inkl); border-radius:7px; padding:2px 6px;}
+  .cam-note{position:absolute; top:64px; left:50%; transform:translateX(-50%); z-index:9;
+            background:var(--paper2); border:1.5px dashed var(--inkl); color:#6d6656; font-size:10px;
+            border-radius:6px; padding:3px 9px; white-space:nowrap;}
+
+  /* AR 마커 */
+  .marker{position:absolute; z-index:20; transform:translate(-50%,-50%); text-align:center; background:none; border:none;}
+  .marker .pulse{position:absolute; left:50%; top:26px; transform:translate(-50%,-50%); width:64px; height:64px;
+                 border-radius:50%; border:2.5px dashed var(--mustard); animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{transform:translate(-50%,-50%) scale(.55); opacity:.95;} 100%{transform:translate(-50%,-50%) scale(1.5); opacity:0;}}
+  .marker .orb{position:relative; width:52px; height:52px; margin:0 auto;
+               border-radius:48% 52% 55% 45% / 55% 58% 42% 45%;
+               background:var(--paper2); border:2.5px solid var(--inkl);
+               display:flex; align-items:center; justify-content:center; font-size:24px;
+               box-shadow:3px 3px 0 rgba(35,39,47,.2); animation:bob 2.6s ease-in-out infinite;}
+  .marker.gotcha .orb{opacity:.45; filter:grayscale(1); box-shadow:none; animation:none;}
+  .marker.gotcha .pulse{display:none;}
+  @keyframes bob{0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);}}
+  .marker .tag{margin-top:5px; display:inline-block; background:var(--inkl); color:var(--paper); font-size:10.5px;
+               font-weight:700; border-radius:6px; padding:3px 8px; white-space:nowrap;}
+  .marker .dist{display:block; font-size:9.5px; color:#6d6656; font-weight:700; margin-top:2px;}
+  .radar{position:absolute; bottom:86px; left:12px; z-index:22; background:var(--paper2); color:var(--inkl);
+         border:2px solid var(--inkl); border-radius:999px; padding:7px 13px; font-size:11.5px; font-weight:800;
+         box-shadow:2px 2px 0 rgba(35,39,47,.18);}
+
+  /* 산책 강아지 마스코트 */
+  .mascot{position:absolute; bottom:13%; left:50%; transform:translateX(-50%); z-index:16; text-align:center; pointer-events:none;}
+  .mascot svg{animation:bob 2.2s ease-in-out infinite; filter:drop-shadow(2px 3px 0 rgba(35,39,47,.15));}
+  .mascot .bubble{display:inline-block; background:var(--paper2); border:2px solid var(--inkl); border-radius:12px;
+                  padding:3px 11px; font-size:14px; font-weight:700; margin-bottom:4px;}
+
+  /* ═══ 지도 뷰 ═══ */
+  .map{position:absolute; inset:0; background:#e8efe6;
+       background-image:
+         linear-gradient(rgba(180,200,180,.5) 2px, transparent 2px),
+         linear-gradient(90deg, rgba(180,200,180,.5) 2px, transparent 2px);
+       background-size:46px 46px;}
+  .map .river{position:absolute; top:44%; left:-10%; right:-10%; height:60px; background:#bcd9ee; transform:rotate(-7deg); border-radius:40px;}
+  .map-title{position:absolute; top:76px; left:0; right:0; text-align:center; z-index:5; color:#374151; font-size:12px; font-weight:700;}
+  .pin{position:absolute; z-index:6; transform:translate(-50%,-100%); text-align:center; background:none; border:none;}
+  .pin .p-orb{width:46px; height:46px; border-radius:50% 50% 50% 8px; transform:rotate(-45deg); margin:0 auto;
+              background:var(--paper2); display:flex; align-items:center; justify-content:center;
+              box-shadow:3px 3px 0 rgba(35,39,47,.2); border:2.5px solid var(--inkl);}
+  .pin .p-orb span{transform:rotate(45deg); font-size:19px;}
+  .pin.here .p-orb{background:var(--mustard);}
+  .pin .p-name{margin-top:6px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 8px;
+               font-size:11px; font-weight:800; color:#111; box-shadow:0 2px 6px rgba(0,0,0,.12);}
+  .pin .p-cnt{font-size:9.5px; color:var(--teal-d); font-weight:700;}
+  .me-dot{position:absolute; z-index:7; width:16px; height:16px; border-radius:50%; background:#3b82f6;
+          border:3px solid #fff; box-shadow:0 0 0 6px rgba(59,130,246,.25); transform:translate(-50%,-50%);}
+
+  /* ═══ 산책 수첩 뷰 ═══ */
+  .dex{position:absolute; inset:0; background:var(--paper); overflow-y:auto; padding:70px 16px 96px;}
+  .dex h2{color:var(--inkl); font-size:24px; margin-bottom:3px; font-family:'Gaegu',cursive;}
+  .dex .dex-sub{color:var(--sub); font-size:12px; margin-bottom:14px;}
+  .dex-xp{background:var(--paper2); border:2px solid var(--inkl); border-radius:14px; padding:14px; margin-bottom:16px;
+          color:var(--inkl); box-shadow:3px 3px 0 rgba(35,39,47,.15);}
+  .dex-xp .row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .dex-xp .em{font-size:24px;}
+  .dex-xp .nm{font-weight:900; font-size:15px;}
+  .dex-xp .lv{font-size:11px; color:var(--sub);}
+  .dex-xp .st{margin-left:auto; background:#f5e6c4; color:#8a6413; border:1.5px solid #d8c48e; font-size:10.5px; font-weight:800; border-radius:6px; padding:3px 7px;}
+  .dex-xp .bar{height:9px; background:#ece5d3; border-radius:5px; overflow:hidden; border:1px solid #d8d0bb;}
+  .dex-xp .fill{height:100%; background:var(--mustard); transition:width .6s;}
+  .dex-xp .nxt{font-size:10.5px; color:var(--sub); margin-top:5px;}
+  /* 폴더형 도감 그리드 */
+  .dex-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .folder{position:relative; height:152px; background:none; border:none; text-align:left; padding:0;}
+  .folder:active{transform:scale(.97);}
+  .f-tab{position:absolute; top:6px; left:0; width:46%; height:36px; z-index:1;
+         border-radius:12px 16px 0 0; background:var(--fmain);}
+  .f-back{position:absolute; top:20px; left:0; right:0; bottom:0; z-index:1; border-radius:14px; background:var(--fback);}
+  .f-papers{position:absolute; top:4px; left:0; right:0; z-index:2; display:flex; justify-content:center;}
+  .f-paper{width:36px; height:46px; background:#fff; border-radius:5px; margin:0 -7px; position:relative;
+           box-shadow:0 1px 4px rgba(0,0,0,.22); transform:rotate(var(--rot)); top:var(--top);}
+  .f-paper::before{content:''; position:absolute; left:7px; right:7px; top:8px; height:3px;
+                   background:#dbe2ea; border-radius:2px; box-shadow:0 7px 0 #e8edf3, 0 14px 0 #e8edf3;}
+  .f-paper.q{display:flex; align-items:center; justify-content:center; font-weight:900; font-size:15px;
+             color:#8494ab; background:#dde4ec;}
+  .f-paper.q::before{display:none;}
+  .f-front{position:absolute; left:0; right:0; bottom:0; height:63%; z-index:3; border-radius:14px;
+           background:linear-gradient(155deg, var(--fmain), var(--fdark));
+           padding:10px 12px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;
+           box-shadow:0 -2px 8px rgba(0,0,0,.12) inset;}
+  .f-name{font-size:11.5px; font-weight:800; line-height:1.35; opacity:.97;}
+  .f-loc{font-size:9px; opacity:.62; margin-top:2px;}
+  .f-cnt{position:absolute; right:12px; bottom:9px; font-size:21px; font-weight:900; letter-spacing:-.5px;}
+  .f-cnt small{font-size:11px; opacity:.7; font-weight:800;}
+  .f-done{position:absolute; top:26px; right:8px; z-index:4; background:#22c55e; color:#fff; width:22px; height:22px;
+          border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;
+          box-shadow:0 2px 6px rgba(0,0,0,.35);}
+  .folder.empty .f-tab{background:#cfc7b2;}
+  .folder.empty .f-back{background:#e0d9c6;}
+  .folder.empty .f-front{background:linear-gradient(155deg,#cfc7b2,#b3aa93);}
+  .folder.empty .f-name{opacity:.85;}
+  .dex-tip{color:var(--sub); font-size:12.5px; text-align:center; margin-top:14px; font-family:'Gaegu',cursive;}
+
+  /* 손그림 이정표 */
+  .roadsign{position:absolute; top:72px; left:50%; transform:translateX(-50%) rotate(-1.2deg); z-index:5; min-width:230px;
+            background:var(--paper2); border:2.5px solid var(--inkl); border-radius:12px; padding:11px 16px 9px;
+            color:var(--inkl); text-align:center; box-shadow:3px 4px 0 rgba(35,39,47,.2);}
+  .roadsign .rs-big{font-size:16px; font-weight:700; letter-spacing:-.3px; font-family:'Gaegu',cursive;}
+  .roadsign .rs-big .rs-n{display:inline-flex; width:18px; height:18px; border-radius:50%; background:var(--inkl);
+            color:var(--paper); font-size:11px; font-weight:900; align-items:center; justify-content:center;
+            vertical-align:1px; margin-right:5px;}
+  .roadsign .rs-rom{font-size:8.5px; color:var(--sub); margin-top:1px; letter-spacing:.5px;}
+  .roadsign .rs-sub{font-size:11px; color:#6d6656; margin-top:6px; border-top:1.5px dashed var(--inkl); padding-top:5px; font-family:'Gaegu',cursive;}
+
+  /* ── 하단 탭 바 ── */
+  .tabbar{position:absolute; bottom:0; left:0; right:0; z-index:40; display:flex; background:var(--paper2);
+          border-top:2.5px solid var(--inkl); padding:8px 0 12px;}
+  .tabbar button{flex:1; background:none; border:none; color:#b3aa93; font-size:11px; font-weight:800;}
+  .tabbar button .ico{display:block; font-size:21px; margin-bottom:2px; filter:grayscale(1); opacity:.5;}
+  .tabbar button.on{color:var(--inkl);}
+  .tabbar button.on .ico{filter:none; opacity:1;}
+
+  /* ── 바텀시트 (스팟 상세) ── */
+  .sheet-bg{position:absolute; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none;}
+  .sheet-bg.open{display:block;}
+  .sheet{position:absolute; left:0; right:0; bottom:0; z-index:51; background:#fff; border-radius:20px 20px 0 0;
+         padding:14px 18px 24px; max-height:76%; overflow-y:auto; transform:translateY(105%); transition:transform .28s;}
+  .sheet.open{transform:none;}
+  .sheet .grab{width:42px; height:4px; background:#d1d5db; border-radius:2px; margin:0 auto 12px;}
+  .sh-head{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .sh-emoji{width:46px; height:46px; border-radius:14px; background:var(--paper); border:2px solid var(--inkl);
+            display:flex; align-items:center; justify-content:center; font-size:24px;}
+  .sh-name{font-weight:900; font-size:16px;}
+  .sh-loc{font-size:11px; color:var(--sub);}
+  .stat-card{background:var(--paper2); color:var(--inkl); border:2.5px solid var(--inkl); border-radius:14px;
+             padding:14px 16px; margin-bottom:14px; box-shadow:3px 3px 0 rgba(35,39,47,.15);}
+  .stat-card .s-label{font-size:11.5px; color:#6d6656;}
+  .stat-card .s-value{font-size:26px; font-weight:900; margin:3px 0;}
+  .stat-card .s-delta{font-size:12px; font-weight:800;}
+  .stat-card .s-delta.up{color:var(--up);} .stat-card .s-delta.down{color:var(--down);}
+  .stat-card .s-src{font-size:9.5px; color:#b3aa93; margin-top:6px;}
+  .sh-sub{font-size:12.5px; font-weight:900; color:#374151; margin:0 0 8px;}
+  .news-item{border:2px solid var(--line); border-radius:12px; padding:12px; margin-bottom:9px; background:#fff;}
+  .news-item h4{font-size:13.5px; line-height:1.45; margin-bottom:4px;}
+  .news-item .n-sum{font-size:11.5px; color:var(--sub); line-height:1.5;}
+  .n-impact{margin-top:8px; background:#fdf6e3; border:1.5px dashed #c9a856; border-radius:9px; padding:7px 9px;
+            font-size:11px; color:#5a5142; line-height:1.5;}
+  .n-impact b.t{color:#a1771c;}
+  .pick-btn{width:100%; margin-top:6px; background:var(--inkl); color:var(--paper); border:none; border-radius:999px;
+            padding:14px; font-size:14.5px; font-weight:900;}
+  .pick-btn:disabled{background:#cfc7b2; color:#8a8272;}
+  .read-chip{display:inline-block; background:#f2e8cf; color:#8a6413; border:1px solid #d8c48e; font-size:9.5px;
+             font-weight:800; border-radius:4px; padding:1.5px 6px; margin-left:6px; vertical-align:2px;}
+
+  /* ── 기사 리더 (끝까지 읽어야 줍기 활성화) ── */
+  .reader{position:absolute; inset:0; z-index:55; background:#fff; transform:translateX(100%);
+          transition:transform .28s; display:flex; flex-direction:column;}
+  .reader.open{transform:none;}
+  .reader-top{display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  .reader-top .r-back{background:none; border:none; font-size:19px; line-height:1;}
+  .reader-top .r-src{font-size:12px; font-weight:800; color:#374151;}
+  .reader-body{flex:1; overflow-y:auto; padding:20px 20px 28px;}
+  .r-cat{font-size:11px; font-weight:800; color:var(--teal-d); margin-bottom:7px;}
+  .reader-body h2{font-size:19px; line-height:1.45; margin-bottom:9px; word-break:keep-all;}
+  .r-meta{font-size:11px; color:#9ca3af; padding-bottom:13px; border-bottom:1px solid var(--line); margin-bottom:15px;}
+  .r-p{font-size:14px; line-height:1.85; color:#1f2937; margin-bottom:15px; word-break:keep-all;}
+  .r-impact-title{font-size:12.5px; font-weight:900; color:#0f766e; margin:18px 0 7px;}
+
+  /* ── 토스트 ── */
+  .toasts{position:absolute; top:96px; left:0; right:0; z-index:60; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;}
+  .toast{background:rgba(17,24,39,.92); color:#fff; border-radius:8px; padding:9px 15px; font-size:12.5px; font-weight:800;
+         animation:tIn .25s, tOut .4s 2.3s forwards;}
+  @keyframes tIn{from{opacity:0; transform:translateY(-8px);} to{opacity:1;}}
+  @keyframes tOut{to{opacity:0; transform:translateY(-8px);}}
+
+  /* ── 두들 강아지 캐릭터 (손그림 강아지 레퍼런스) ── */
+  .dog-slot{display:inline-block; flex-shrink:0; line-height:0;}
+  .dog-slot svg{display:block;}
+  .doodle-note{position:absolute; font-family:'Gaegu',cursive; font-size:12.5px; color:#a89d85; transform:rotate(-4deg); white-space:nowrap;}
+
+  /* ── 온보딩 (WALK THE DOG 스케치북 무드) ── */
+  .onb{position:absolute; inset:0; z-index:70; background:var(--paper); color:var(--inkl);
+       display:flex; flex-direction:column; justify-content:center; padding:28px 24px; overflow-y:auto;}
+  .blob-row{display:flex; justify-content:center; align-items:flex-end; gap:14px; margin-bottom:14px;}
+  .blob-row .dog-slot{animation:bob 2.8s ease-in-out infinite;}
+  .blob-row .dog-slot:nth-child(2){animation-delay:.4s;} .blob-row .dog-slot:nth-child(3){animation-delay:.8s;}
+  .blob-row .dog-slot:nth-child(4){animation-delay:1.2s;}
+  .onb .step{text-align:center; font-size:11px; font-weight:900; color:#b3aa93; letter-spacing:3px; margin-bottom:7px;}
+  .onb h1{font-size:30px; text-align:center; line-height:1.35; margin-bottom:10px; word-break:keep-all;
+          font-family:'Gaegu',cursive; font-weight:700;}
+  .onb h1 b{color:var(--brick);}
+  .onb p{font-size:12.5px; color:#6d6656; text-align:center; line-height:1.7; margin-bottom:18px; word-break:keep-all;}
+  .pcards{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:20px;}
+  .pcard{background:var(--paper2); border:2px solid var(--inkl); border-radius:18px; padding:13px; min-height:88px;
+         display:flex; justify-content:space-between; align-items:flex-end; gap:6px;
+         box-shadow:3px 3px 0 rgba(35,39,47,.12); cursor:pointer;}
+  .pcard .p-label{font-size:13px; font-weight:800; color:var(--inkl); text-align:left; line-height:1.45; align-self:flex-start;}
+  .pcard.sel{border-color:var(--brick); background:#fbeee6; box-shadow:3px 3px 0 rgba(201,111,74,.35);}
+  .onb .go{background:var(--inkl); color:var(--paper); border:none; border-radius:999px; padding:15px; font-size:14.5px; font-weight:900;}
+  .onb .skip{background:none; border:none; color:#b3aa93; font-size:12px; margin-top:11px; text-decoration:underline;}
+  .onb .powered{position:absolute; bottom:14px; left:0; right:0; text-align:center; font-size:10px; color:#c4bba6;}
+
+  .poc-note{position:absolute; bottom:64px; right:10px; z-index:41; background:rgba(0,0,0,.55); color:#94a3b8;
+            font-size:9px; padding:3px 7px; border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 상단 바 -->
+  <div class="topbar">
+    <span class="loc-chip" id="locChip">📍 역삼동 오피스텔 거리 <small>서울 강남구</small></span>
+    <span class="lv-chip" id="lvChip"></span>
+  </div>
+
+  <!-- AR 탐색 -->
+  <div class="scene active" id="scene-ar">
+    <div class="ar-view" id="arView"></div>
+    <span class="cam-note">📷 카메라 화면 시뮬레이션 (PoC)</span>
+    <span class="radar" id="radar"></span>
+  </div>
+
+  <!-- 지도 -->
+  <div class="scene" id="scene-map">
+    <div class="map" id="mapView"></div>
+    <div class="roadsign" id="roadsign"></div>
+  </div>
+
+  <!-- 도감 -->
+  <div class="scene" id="scene-dex">
+    <div class="dex" id="dexView"></div>
+  </div>
+
+  <!-- 하단 탭 -->
+  <div class="tabbar">
+    <button data-tab="ar" class="on"><span class="ico">🐕</span>산책</button>
+    <button data-tab="map"><span class="ico">🗺️</span>지도</button>
+    <button data-tab="dex"><span class="ico">📔</span>산책 수첩</button>
+  </div>
+
+  <!-- 스팟 상세 바텀시트 -->
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet"></div>
+
+  <!-- 기사 리더 (읽어야 줍기 가능) -->
+  <div class="reader" id="reader"></div>
+
+  <!-- 토스트 -->
+  <div class="toasts" id="toasts"></div>
+
+  <!-- 온보딩 -->
+  <div class="onb" id="onb">
+    <span class="doodle-note" style="top:9%; left:7%;">every thing is fine ·˖</span>
+    <span class="doodle-note" style="top:13%; right:6%; transform:rotate(5deg);">경제, 별거 아냐 멍</span>
+    <span class="doodle-note" style="bottom:11%; left:9%; transform:rotate(-6deg);">walk the dog 🐾</span>
+    <div>
+      <div class="blob-row">
+        <span class="dog-ph" data-c="#7a8a4f" data-m="flat" data-s="sm"></span>
+        <span class="dog-ph" data-c="#c96f4a" data-s="big"></span>
+        <span class="dog-ph" data-c="#e0a63a" data-m="wow"></span>
+        <span class="dog-ph" data-c="#5b7a99" data-s="sm"></span>
+      </div>
+      <div class="step">MONEYWALK · WALK THE DOG</div>
+      <h1>가로막힌 경제,<br><b>강아지랑 산책</b>하면 돼</h1>
+      <p>강아지가 뉴스 냄새를 맡으면 멈춰 서요.<br>부동산 앞에선 월세가, 증권가에선 코스피가 툭 —<br>
+         먼저 <b>내 지갑 상황</b>을 골라주세요. 뉴스를 내 돈으로 번역해드려요.</p>
+      <div class="pcards" id="onbChips">
+        <button class="pcard" data-tag="jeonse">
+          <span class="p-label">전세·월세<br>살아요</span>
+          <span class="dog-ph" data-c="#e0a63a"></span>
+        </button>
+        <button class="pcard" data-tag="stock">
+          <span class="p-label">주식<br>투자 중</span>
+          <span class="dog-ph" data-c="#c96f4a" data-m="wow"></span>
+        </button>
+        <button class="pcard" data-tag="self">
+          <span class="p-label">장사해요<br>(자영업)</span>
+          <span class="dog-ph" data-c="#7a8a4f" data-m="flat"></span>
+        </button>
+        <button class="pcard" data-tag="savings">
+          <span class="p-label">예·적금<br>위주</span>
+          <span class="dog-ph" data-c="#5b7a99"></span>
+        </button>
+      </div>
+      <button class="go" id="onbGo">강아지랑 산책 시작 🐕</button>
+      <div style="text-align:center;"><button class="skip" id="onbSkip">건너뛰기</button></div>
+    </div>
+    <div class="powered">PoC 프로토타입 · powered by 한국경제</div>
+  </div>
+
+  <span class="poc-note">PoC · 실제 위치/카메라 미사용</span>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   데이터: 지갑 태그 / 레벨 / 동네 / 뉴스 스팟
+───────────────────────────────────────────── */
+const TAGS = {
+  jeonse:{label:'전세·월세', emoji:'🏠'},
+  stock:{label:'주식 투자', emoji:'📈'},
+  self:{label:'자영업', emoji:'🏪'},
+  savings:{label:'예·적금', emoji:'💵'},
+};
+const LEVELS = [
+  {min:0,  name:'경제 새싹',   emoji:'🌱', rom:'Gyeongje Saessak',   bc:'#7a8a4f', mood:'flat'},
+  {min:40, name:'경제 관심러', emoji:'👀', rom:'Gwansimneo',         bc:'#e0a63a', mood:''},
+  {min:100,name:'경제 똑똑이', emoji:'💡', rom:'Ttokttoki',          bc:'#c96f4a', mood:''},
+  {min:200,name:'경제 고수',   emoji:'🎯', rom:'Gosu',               bc:'#5b7a99', mood:'wow'},
+  {min:350,name:'경제 프로',   emoji:'🏆', rom:'Pro',                bc:'#8a6f9e', mood:''},
+];
+
+/* 두들 강아지 얼굴 (collar = 목줄 색 = 레벨/태그 색) */
+function blobHtml(collar, mood, size){
+  const w = size==='sm' ? 38 : size==='big' ? 62 : 48;
+  const mouth = mood==='flat'
+    ? '<path d="M27 37 h8"/>'
+    : mood==='wow'
+      ? '<circle cx="31" cy="38" r="3.2"/>'
+      : '<path d="M31 34 q0 4 -4 5 M31 34 q0 4 4 5"/>';
+  return `<span class="dog-slot"><svg width="${w}" viewBox="0 0 62 56" fill="none" stroke="#23272f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 20 Q13 4 22 5 Q28 6 27 13"/>
+    <path d="M45 20 Q53 5 45 4 Q39 3 37 11 Z" fill="#23272f" stroke="none"/>
+    <path d="M17 20 Q11 40 22 46 Q31 50 40 46 Q51 40 45 20"/>
+    <circle cx="24" cy="27" r="2.4" fill="#23272f" stroke="none"/>
+    <circle cx="38" cy="27" r="2.4" fill="#23272f" stroke="none"/>
+    <path d="M29 32 h4 l-2 3 z" fill="#23272f" stroke="none"/>
+    ${mouth}
+    <path d="M12 30 h-4 M13 35 h-4 M50 30 h4 M49 35 h4" stroke-width="2.2"/>
+    <path d="M21 47 Q31 53 41 47" stroke="${collar}" stroke-width="5"/>
+  </svg></span>`;
+}
+
+/* 산책 중인 강아지 (옆모습 + 목줄) */
+function dogWalkSvg(collar){
+  return `<svg width="118" viewBox="0 0 100 64" fill="none" stroke="#23272f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 4 Q30 0 60 14" stroke="#b3aa93" stroke-width="2.2" stroke-dasharray="1 7"/>
+    <path d="M22 40 Q16 24 30 22 L56 22 Q66 22 66 32 Q66 42 56 42 L30 42 Q23 42 22 40 Z"/>
+    <path d="M60 24 Q58 10 70 10 Q80 10 79 20 Q78 27 70 27"/>
+    <path d="M68 8 L64 1"/>
+    <path d="M22 32 Q10 30 12 20"/>
+    <path d="M32 42 L30 56 M42 42 L42 56 M52 42 L50 56 M60 41 L63 54"/>
+    <circle cx="72" cy="16" r="1.8" fill="#23272f" stroke="none"/>
+    <circle cx="79" cy="19" r="2.6" fill="#23272f" stroke="none"/>
+    <path d="M62 23 Q61 29 56 28" stroke="${collar}" stroke-width="4.5"/>
+  </svg>`;
+}
+
+const LOCATIONS = {
+  yeoksam:{name:'역삼동 오피스텔 거리', gu:'서울 강남구', mapX:72, mapY:30,
+    sky:'linear-gradient(#f3ecdc,#faf6ec)', buildings:[
+      {left:'2%',  width:'26%', height:'44%', color:'#f0e6cf', sign:'🏢'},
+      {left:'70%', width:'28%', height:'52%', color:'#ead9d0', sign:'🏨'},
+      {left:'30%', width:'13%', height:'26%', color:'#fffdf6', sign:'🏠'},
+      {left:'57%', width:'12%', height:'22%', color:'#e3e8d5', sign:'🏦'}]},
+  yeouido:{name:'여의도 증권가', gu:'서울 영등포구', mapX:24, mapY:38,
+    sky:'linear-gradient(#e5ebef,#f6f5ee)', buildings:[
+      {left:'4%',  width:'22%', height:'56%', color:'#dde5ec', sign:'📈'},
+      {left:'28%', width:'18%', height:'48%', color:'#e9e9f2', sign:'🏛️'},
+      {left:'72%', width:'24%', height:'60%', color:'#e2e0d3', sign:'🏢'},
+      {left:'50%', width:'14%', height:'24%', color:'#fffdf6', sign:'💱'}]},
+  hongdae:{name:'홍대 상권 골목', gu:'서울 마포구', mapX:18, mapY:66,
+    sky:'linear-gradient(#f8e9d5,#faf4e8)', buildings:[
+      {left:'3%',  width:'20%', height:'30%', color:'#f2e0cd', sign:'☕'},
+      {left:'25%', width:'16%', height:'24%', color:'#e8e0ef', sign:'🎸'},
+      {left:'62%', width:'17%', height:'27%', color:'#e6ecd8', sign:'🍜'},
+      {left:'81%', width:'17%', height:'33%', color:'#e6e2d8', sign:'🏚️'}]},
+};
+
+const POIS = {
+  realty:{loc:'yeoksam', emoji:'🏠', name:'대박공인중개사', x:36, y:52, dist:'12m',
+    stat:{label:'이 동네 원룸 월세 평균', value:'78만원', delta:'▲ 전년比 +9%', dir:'up', src:'출처: 한경 집코노미 시세 (2026.07)'},
+    news:[
+      {title:'내년 서울 입주물량 1.3만가구…1990년 이후 최저', sum:'공급 절벽에 전·월세 상승 압력이 커지고 있다.',
+       impact:{tag:'jeonse', text:'재계약 때 월세 인상 요구 가능성이 커요. 갱신청구권 사용 계획을 미리 세워두세요.'}},
+      {title:'"전세 대신 월세" 계약 비중 60% 돌파', sum:'금리 부담에 월세 선호가 뚜렷해지며 월세가 오르는 중.',
+       impact:{tag:'jeonse', text:'월세 재계약 시즌 전에 주변 시세를 미리 확인해두면 협상에 유리해요.'}}]},
+  bank:{loc:'yeoksam', emoji:'🏦', name:'시중은행 역삼지점', x:62, y:58, dist:'27m',
+    stat:{label:'정기예금 금리 (12개월)', value:'연 2.8%', delta:'▼ 전월比 -0.3%p', dir:'down', src:'출처: 은행연합회 공시 (2026.07)'},
+    news:[
+      {title:'기준금리 인하 기대에 예금금리 뚝뚝', sum:'시중은행 예금금리가 일제히 2%대로 내려앉았다.',
+       impact:{tag:'savings', text:'만기가 다가온 예금이 있다면, 갈아타기 전에 금리 비교가 필수인 구간이에요.'}},
+      {title:'증시는 역대급 랠리…예·적금 자금 대이동', sum:'은행에서 증시로 자금이 빠르게 이동하고 있다.',
+       impact:{tag:'savings', text:'유행 따라 무리하게 갈아타기보다 비중 조절로 접근하는 게 안전해요.'}}]},
+  store:{loc:'yeoksam', emoji:'🏪', name:'편의점 앞', x:18, y:66, dist:'8m',
+    stat:{label:'편의점 도시락 평균가', value:'5,900원', delta:'▲ 전년比 +12%', dir:'up', src:'출처: 한경 유통 데이터 (2026.07)'},
+    news:[
+      {title:'"점심값이 무섭다" 런치플레이션 재점화', sum:'외식·간편식 물가가 다시 뛰며 직장인 부담이 커졌다.',
+       impact:{tag:'savings', text:'한 달 점심 예산을 정해두면 물가 상승기의 지출 방어에 도움이 돼요.'}}]},
+  sec:{loc:'yeouido', emoji:'📈', name:'OO증권 본사', x:22, y:48, dist:'15m',
+    stat:{label:'코스피 (오늘)', value:'8,252.65', delta:'▼ -0.42%', dir:'down', src:'출처: KRX (2026.07.06 종가)'},
+    news:[
+      {title:'코스피, 외인·기관 \'팔자\'에 하락…8000선은 사수', sum:'외국인·기관 동반 매도에도 8,000선은 지켜냈다.',
+       impact:{tag:'stock', text:'내 보유 종목의 수급 주체를 확인하고 분할 대응을 고려해 보세요.'}},
+      {title:'증시는 역대급 랠리…기업 자금조달은 \'반토막\'', sum:'증시로 몰린 돈이 실물 투자로 흐르지 않고 있다.',
+       impact:{tag:'stock', text:'랠리 추격 매수가 가장 위험한 구간이에요. 정해둔 원칙을 지키세요.'}}]},
+  fx:{loc:'yeouido', emoji:'💱', name:'환전소', x:57, y:62, dist:'9m',
+    stat:{label:'원/달러 환율', value:'1,532.64', delta:'▲ 연중 최고권', dir:'up', src:'출처: 서울외환시장 (2026.07.06)'},
+    news:[
+      {title:'환율 1,530원대…\'킹달러\' 다시 오나', sum:'달러 강세가 이어지며 수입 물가 부담이 커지고 있다.',
+       impact:{tag:'stock', text:'지금 달러 환전 후 미국주식 추가 매수는 환율 부담이 큰 구간이에요.'}},
+      {title:'해외여행 경비 부담 쑥…환테크 관심 급증', sum:'환율 상승에 여행 경비와 직구 비용이 늘었다.',
+       impact:{tag:'savings', text:'달러 예금이 있다면 평가익 구간이에요. 분할 차익 실현을 고민해볼 만해요.'}}]},
+  cafe:{loc:'hongdae', emoji:'☕', name:'카페거리 상가', x:24, y:56, dist:'11m',
+    stat:{label:'이 골목 상가 임대료 (3.3㎡)', value:'18.2만원', delta:'▲ 전년比 +6%', dir:'up', src:'출처: 한경 상권 리포트 (2026 상반기)'},
+    news:[
+      {title:'홍대 상권 임대료 다시 상승세…"버티기 힘들다"', sum:'유동인구 회복에 임대료가 오르며 자영업 부담 가중.',
+       impact:{tag:'self', text:'재계약 앞두고 있다면 주변 공실률 데이터가 임대료 협상 카드가 돼요.'}},
+      {title:'배달비 부담에 \'홀 장사\' 회귀하는 사장님들', sum:'수수료 부담에 매장 중심 운영으로 돌아서는 추세.',
+       impact:{tag:'self', text:'배달 비중이 높다면 수수료 구조를 다시 계산해볼 타이밍이에요.'}}]},
+  vacant:{loc:'hongdae', emoji:'🏚️', name:'공실 상가', x:76, y:50, dist:'19m',
+    stat:{label:'이 상권 공실률', value:'12.4%', delta:'▲ 전분기比 +1.1%p', dir:'up', src:'출처: 한국부동산원 (2026 2분기)'},
+    news:[
+      {title:'목 좋아도 빈다…거리 상권 양극화 심화', sum:'같은 상권에서도 골목별 희비가 갈리고 있다.',
+       impact:{tag:'self', text:'창업 준비 중이라면 공실률·권리금 추이를 함께 봐야 해요. 지금은 협상력이 세입자에게 있어요.'}}]},
+};
+
+const XP_PICK = 15, XP_SPOT_ALL = 30;
+
+/* 기사 본문 (PoC 목업 — 키: 스팟id_뉴스index) */
+const BODIES = {
+  realty_0:[
+    '내년 서울 아파트 입주 예정 물량이 1만3천여 가구로 집계됐다. 관련 통계 작성이 시작된 1990년 이후 가장 적은 수준이다.',
+    '정비사업 지연과 착공 물량 감소가 겹친 결과다. 통상 착공에서 입주까지 3년가량 걸리는 점을 감안하면 공급 부족은 당분간 이어질 가능성이 크다.',
+    '전문가들은 "입주 물량 감소는 전세 매물 감소로 직결된다"며 "내년 갱신 계약을 앞둔 세입자라면 시장 변화를 미리 살펴야 한다"고 조언했다.'],
+  realty_1:[
+    '올해 서울 주택 임대차 계약 가운데 월세를 낀 계약 비중이 60%를 넘어섰다. 전세의 자리를 월세가 빠르게 대체하고 있다.',
+    '전세대출 이자 부담이 커지자 아예 월세를 택하는 수요가 늘어난 영향이다. 집주인들도 목돈보다 매달 들어오는 현금 흐름을 선호하는 분위기다.',
+    '월세 수요가 몰리면서 가격도 오르고 있다. 재계약을 앞둔 세입자라면 주변 시세를 미리 확인해두는 것이 협상에 유리하다.'],
+  bank_0:[
+    '시중은행 12개월 정기예금 금리가 일제히 연 2%대로 내려앉았다. 기준금리 인하 기대가 선반영된 결과다.',
+    '은행들은 채권 금리 하락에 맞춰 수신 금리를 빠르게 조정하고 있다. 우대금리 조건도 갈수록 까다로워지는 추세다.',
+    '전문가들은 "만기가 돌아오는 예금은 자동 재예치보다 은행별 금리 비교 후 옮기는 것이 유리하다"고 말했다.'],
+  bank_1:[
+    '증시가 역대급 랠리를 이어가면서 은행 예·적금에서 증권 계좌로 자금이 빠르게 이동하고 있다.',
+    '지난달 5대 은행 정기예금 잔액은 큰 폭으로 줄어든 반면 증시 대기성 자금인 투자자예탁금은 사상 최대 수준으로 불어났다.',
+    '다만 전문가들은 "고점 추격형 자금 이동은 위험하다"며 "정해둔 비중 안에서 움직이는 것이 안전하다"고 조언했다.'],
+  store_0:[
+    '편의점 도시락 평균 가격이 5,900원까지 오르며 1년 전보다 12% 뛰었다. 직장인들의 점심 부담이 다시 커지고 있다.',
+    '식재료비와 인건비 상승이 겹치며 외식·간편식 물가가 전방위로 오르는 이른바 \'런치플레이션\'이 재점화된 모습이다.',
+    '유통업계는 구독 할인과 자체브랜드(PB) 상품을 늘리며 대응에 나섰다. 한 달 점심 예산을 정해두는 소비자도 늘고 있다.'],
+  sec_0:[
+    '코스피가 외국인과 기관의 동반 매도에 하락했지만 8,000선은 지켜냈다. 반도체 업종의 낙폭이 상대적으로 컸다.',
+    '원/달러 환율이 1,530원대로 올라서며 외국인 수급에 부담으로 작용했다는 분석이 나온다.',
+    '증권가에서는 "지수 하락기일수록 보유 종목의 수급 주체를 확인하고 분할 대응하는 것이 중요하다"고 조언했다.'],
+  sec_1:[
+    '증시가 역대급 랠리를 이어가는 동안 기업의 유상증자·회사채 발행 등 자금조달 규모는 전년 대비 절반 수준으로 줄었다.',
+    '증시로 몰린 돈이 기업의 실물 투자로 흐르지 않고 있다는 뜻이다. 유동성 장세의 지속 가능성에 물음표가 붙는 이유다.',
+    '전문가들은 "랠리 후반부일수록 추격 매수가 가장 위험하다"며 "정해둔 투자 원칙을 지키라"고 입을 모았다.'],
+  fx_0:[
+    '원/달러 환율이 1,530원대에 올라서며 연중 최고권을 기록했다. 시장에서는 \'킹달러\'의 귀환 가능성이 거론된다.',
+    '달러 강세가 이어지면 수입 물가가 올라 국내 물가 전반에 부담이 된다. 원자재 의존도가 높은 기업들의 비용 압박도 커진다.',
+    '외환 전문가들은 "지금 환전해 미국 자산을 늘리는 것은 환율 부담이 큰 구간"이라며 분할 접근을 권했다.'],
+  fx_1:[
+    '환율이 치솟으며 해외여행 경비와 직구 비용 부담이 커졌다. 반대로 달러 자산 보유자들은 평가익 구간에 들어섰다.',
+    '은행권에 따르면 최근 달러 예금 잔액 변동성이 커지고 있다. 환차익을 노린 이른바 \'환테크\' 수요가 몰린 영향이다.',
+    '전문가들은 "환율은 방향 예측이 가장 어려운 자산"이라며 "몰아서 사고팔기보다 분할 매매가 원칙"이라고 말했다.'],
+  cafe_0:[
+    '홍대 카페거리 상가 임대료가 3.3㎡당 18만원대로 1년 전보다 6% 올랐다. 유동인구 회복과 함께 임대료 상승세가 재개된 것이다.',
+    '자영업자들은 "매출이 늘어도 임대료·재료비가 더 빨리 오른다"며 버티기 힘들다고 호소한다.',
+    '상권 전문가들은 "재계약을 앞둔 임차인이라면 주변 공실률 데이터가 임대료 협상의 카드가 될 수 있다"고 조언했다.'],
+  cafe_1:[
+    '배달 수수료 부담이 커지자 매장(홀) 중심 운영으로 돌아서는 자영업자가 늘고 있다.',
+    '배달 비중이 높을수록 수수료·광고비가 이익을 잠식하는 구조가 뚜렷해졌기 때문이다.',
+    '컨설팅 업계는 "배달 비중이 절반을 넘는 매장이라면 수수료 구조를 다시 계산해볼 타이밍"이라고 짚었다.'],
+  vacant_0:[
+    '홍대 상권의 공실률이 12%대로 올라섰다. 유동인구가 회복됐는데도 골목별 희비가 갈리는 \'상권 양극화\'가 뚜렷하다.',
+    '목 좋은 대로변조차 임대료를 감당하지 못한 점포가 빠져나가며 빈 상가가 늘고 있다.',
+    '전문가들은 "창업 준비자라면 공실률·권리금 추이를 함께 봐야 한다"며 "지금은 협상력이 세입자 쪽에 있다"고 말했다.'],
+};
+
+/* ─────────────────────────────────────────────
+   상태
+───────────────────────────────────────────── */
+let mwProfile  = JSON.parse(localStorage.getItem('mw_profile') || 'null');   // null = 온보딩 전
+let mwXp       = parseInt(localStorage.getItem('mw_xp')||'0',10);
+let collected  = new Set(JSON.parse(localStorage.getItem('mw_collected')||'[]'));
+let readNews   = new Set(JSON.parse(localStorage.getItem('mw_read')||'[]'));  // 끝까지 읽은 뉴스
+let curLoc     = localStorage.getItem('mw_loc') || 'yeoksam';
+let curPoi     = null;
+
+function save(){
+  localStorage.setItem('mw_xp', String(mwXp));
+  localStorage.setItem('mw_collected', JSON.stringify([...collected]));
+  localStorage.setItem('mw_read', JSON.stringify([...readNews]));
+  localStorage.setItem('mw_loc', curLoc);
+}
+function levelOf(v){ let i=0; LEVELS.forEach((l,k)=>{ if(v>=l.min) i=k; }); return i; }
+
+/* 탭 헬퍼: click이 씹히는 환경(터치/임베드 패널) 대비 pointerup 폴백 + 중복 방지 */
+function onTap(el, fn){
+  let last = 0;
+  el.addEventListener('pointerup', e=>{
+    if(e.button !== undefined && e.button !== 0) return;
+    last = Date.now(); fn(e);
+  });
+  el.addEventListener('click', e=>{
+    if(Date.now() - last < 600) return; // pointerup에서 이미 처리됨
+    fn(e);
+  });
+}
+function toast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.getElementById('toasts').appendChild(t); setTimeout(()=>t.remove(), 3000);
+}
+function addXP(n, reason){
+  const before=levelOf(mwXp); mwXp+=n; save();
+  toast(`+${n} XP · ${reason}`);
+  const after=levelOf(mwXp);
+  if(after!==before) setTimeout(()=>toast(`${LEVELS[after].emoji} 레벨 업! ${LEVELS[after].name} 달성`), 500);
+  renderLvChip();
+  renderRoadsign();
+}
+
+/* ─────────────────────────────────────────────
+   렌더링: 상단 레벨칩 / AR / 지도 / 도감
+───────────────────────────────────────────── */
+function renderLvChip(){
+  const li=levelOf(mwXp), cur=LEVELS[li], next=LEVELS[li+1];
+  const pct = next ? Math.min(100, Math.round((mwXp-cur.min)/(next.min-cur.min)*100)) : 100;
+  document.getElementById('lvChip').innerHTML =
+    `${cur.emoji} Lv.${li+1} <span class="bar"><span class="fill" style="width:${pct}%"></span></span> ${mwXp}XP`;
+}
+
+function renderAR(){
+  const loc = LOCATIONS[curLoc];
+  document.getElementById('locChip').innerHTML = `📍 ${loc.name} <small>${loc.gu}</small>`;
+  const pois = Object.entries(POIS).filter(([id,p])=>p.loc===curLoc);
+  const allClear = pois.every(([id,p])=>p.news.every((n,i)=>collected.has(id+'_'+i)));
+  document.getElementById('arView').innerHTML = `
+    <div class="sky" style="background:${loc.sky}"></div>
+    <div class="ground" style="background:linear-gradient(#ded6c2,#cfc7b2)"></div>
+    ${loc.buildings.map(b=>`<div class="bld" style="left:${b.left}; width:${b.width}; height:${b.height}; --bcolor:${b.color};"><span class="sign">${b.sign}</span></div>`).join('')}
+    <div class="road"></div>
+    <div class="mascot">
+      <span class="bubble hand">${allClear ? '이 동네 산책 끝! 멍 🦴' : '킁킁… 뉴스 냄새! 🐾'}</span><br>
+      ${dogWalkSvg('#c96f4a')}
+    </div>
+    ${pois.map(([id,p])=>{
+      const done = p.news.every((n,i)=>collected.has(id+'_'+i));
+      return `<button class="marker ${done?'gotcha':''}" data-poi="${id}" style="left:${p.x}%; top:${p.y}%;">
+        <span class="pulse"></span>
+        <span class="orb">${p.emoji}</span>
+        <span class="tag">${p.name}${done?' ✓':''}</span>
+        <span class="dist">${p.dist}</span>
+      </button>`;
+    }).join('')}`;
+  document.getElementById('radar').textContent = `🐾 뉴스 냄새 ${pois.length}곳`;
+  document.querySelectorAll('.marker').forEach(m=>{
+    onTap(m, ()=>openSheet(m.dataset.poi));
+  });
+}
+
+/* 도로표지판: 다음 레벨 이정표 + 미룸 유머 */
+function renderRoadsign(){
+  const el = document.getElementById('roadsign');
+  if(!el) return;
+  const li = levelOf(mwXp), next = LEVELS[li+1];
+  el.innerHTML = next ? `
+    <div class="rs-big"><span class="rs-n">${li+2}</span>↑ ${next.name} <small style="opacity:.8;">${next.min-mwXp} XP</small></div>
+    <div class="rs-rom">${next.rom} ${next.min-mwXp}XP</div>
+    <div class="rs-sub">← 안 읽음 <i>Anilgeum</i> &nbsp;·&nbsp; 미룸 <i>Mirum</i> →</div>`
+    : `
+    <div class="rs-big">🏆 정상 도착 · 경제 프로</div>
+    <div class="rs-rom">Gyeongje Pro — You made it!</div>`;
+}
+
+function renderMap(){
+  renderRoadsign();
+  const el = document.getElementById('mapView');
+  el.innerHTML = `
+    <div class="river"></div>
+    <div class="me-dot" style="left:${LOCATIONS[curLoc].mapX}%; top:${LOCATIONS[curLoc].mapY + 9}%;"></div>
+    ${Object.entries(LOCATIONS).map(([id,l])=>{
+      const cnt = Object.values(POIS).filter(p=>p.loc===id).length;
+      return `<button class="pin ${id===curLoc?'here':''}" data-loc="${id}" style="left:${l.mapX}%; top:${l.mapY}%;">
+        <span class="p-orb"><span>${id===curLoc?'🚶':'📍'}</span></span>
+        <span class="p-name">${l.name}<br><span class="p-cnt">뉴스 스팟 ${cnt}곳</span></span>
+      </button>`;
+    }).join('')}`;
+  el.querySelectorAll('.pin').forEach(p=>{
+    onTap(p, ()=>{
+      if(p.dataset.loc===curLoc) return;
+      curLoc = p.dataset.loc; save();
+      renderAR(); renderMap();
+      switchTab('ar');
+      toast(`🐕 ${LOCATIONS[curLoc].name} 도착! (PoC라 순간이동)`);
+    });
+  });
+}
+
+/* 스팟별 폴더 컬러 (크레용 톤) */
+const FCOLORS = {
+  realty:{main:'#e0a63a', dark:'#a8781f', back:'#f0d391'},
+  bank:  {main:'#7a8a4f', dark:'#59683a', back:'#c2cd9a'},
+  store: {main:'#b09374', dark:'#846b52', back:'#ddc9b2'},
+  sec:   {main:'#5b7a99', dark:'#3e566e', back:'#aec4d8'},
+  fx:    {main:'#7fa8c9', dark:'#557b99', back:'#c3daea'},
+  cafe:  {main:'#8a6f9e', dark:'#655177', back:'#c9b8d8'},
+  vacant:{main:'#c96f4a', dark:'#94502f', back:'#e8b49b'},
+};
+
+function renderDex(){
+  const total = Object.entries(POIS).reduce((a,[id,p])=>a+p.news.length, 0);
+  const li=levelOf(mwXp), cur=LEVELS[li], next=LEVELS[li+1];
+  const pct = next ? Math.min(100, Math.round((mwXp-cur.min)/(next.min-cur.min)*100)) : 100;
+
+  // 스팟별 폴더: 주운 뉴스는 흰 종이, 미수집은 ? 종이로 폴더 주머니에서 삐져나옴
+  const folders = Object.entries(POIS).map(([id,p])=>{
+    const got = p.news.filter((n,i)=>collected.has(id+'_'+i)).length;
+    const tot = p.news.length;
+    const c = FCOLORS[id];
+    const papers = p.news.map((n,i)=>{
+      const rot = (i - (tot-1)/2) * 10, top = i%2 ? 4 : 0;
+      return collected.has(id+'_'+i)
+        ? `<span class="f-paper" style="--rot:${rot}deg; --top:${top}px"></span>`
+        : `<span class="f-paper q" style="--rot:${rot}deg; --top:${top}px">?</span>`;
+    }).join('');
+    return `
+      <button class="folder ${got===0?'empty':''}" data-poi="${id}"
+              style="--fmain:${c.main}; --fdark:${c.dark}; --fback:${c.back};">
+        <span class="f-tab"></span>
+        <span class="f-back"></span>
+        <span class="f-papers">${papers}</span>
+        <span class="f-front">
+          <span class="f-name">${p.emoji} ${p.name}</span>
+          <span class="f-loc">📍 ${LOCATIONS[p.loc].name}</span>
+          <span class="f-cnt">${got}<small>/${tot}</small></span>
+        </span>
+        ${got===tot ? '<span class="f-done">✓</span>' : ''}
+      </button>`;
+  }).join('');
+
+  document.getElementById('dexView').innerHTML = `
+    <h2>📔 산책 수첩</h2>
+    <div class="dex-sub">강아지랑 주운 뉴스 <b style="color:#c96f4a;">${collected.size}</b> / ${total}건 — 다 모으면 이 동네 경제가 보여요</div>
+    <div class="dex-xp">
+      <div class="row">
+        ${blobHtml(cur.bc, cur.mood, 'sm')}
+        <span><span class="nm">${cur.name}</span><br><span class="lv">Lv.${li+1} · ${mwXp} XP</span></span>
+        <span class="st">🔥 3일째 산책</span>
+      </div>
+      <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="nxt">${next?`다음 레벨 ${next.name}까지 ${next.min-mwXp} XP`:'최고 레벨! 🎉'}</div>
+    </div>
+    <div class="dex-grid">${folders}</div>
+    <div class="dex-tip">폴더를 누르면 그 스팟의 뉴스를 바로 볼 수 있어요</div>`;
+
+  document.querySelectorAll('#dexView .folder').forEach(f=>{
+    onTap(f, ()=>openSheet(f.dataset.poi));
+  });
+}
+
+/* ─────────────────────────────────────────────
+   바텀시트: 스팟 상세 (시세 + 뉴스 줍기)
+───────────────────────────────────────────── */
+function openSheet(poiId){
+  curPoi = poiId;
+  const p = POIS[poiId];
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="grab"></div>
+    <div class="sh-head">
+      <span class="sh-emoji">${p.emoji}</span>
+      <span><div class="sh-name">${p.name}</div><div class="sh-loc">📍 ${LOCATIONS[p.loc].name} · ${p.dist} 앞</div></span>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">${p.stat.label}</div>
+      <div class="s-value">${p.stat.value}</div>
+      <div class="s-delta ${p.stat.dir}">${p.stat.delta}</div>
+      <div class="s-src">${p.stat.src}</div>
+    </div>
+    <p class="sh-sub">🐾 강아지가 찾아낸 뉴스</p>
+    ${p.news.map((n,i)=>{
+      const key = poiId+'_'+i;
+      const picked = collected.has(key);
+      const imp = (mwProfile && mwProfile.includes(n.impact.tag))
+        ? `<div class="n-impact">💰 <b class="t">${TAGS[n.impact.tag].emoji} ${TAGS[n.impact.tag].label}인 나에게:</b> ${n.impact.text}</div>` : '';
+      return `<div class="news-item">
+        <h4>${n.title}${readNews.has(key)?'<span class="read-chip">읽음 ✓</span>':''}</h4>
+        <p class="n-sum">${n.sum}</p>
+        ${imp}
+        <button class="pick-btn" data-idx="${i}" ${picked?'disabled':''}>
+          ${picked ? '줍줍 완료 🐾' : `기사 읽고 줍줍 📖 +${XP_PICK} XP`}
+        </button>
+      </div>`;
+    }).join('')}`;
+  sheet.querySelectorAll('.pick-btn:not(:disabled)').forEach(b=>{
+    onTap(b, ()=>{ if(!b.disabled) openReader(poiId, parseInt(b.dataset.idx,10)); });
+  });
+  document.getElementById('sheetBg').classList.add('open');
+  sheet.offsetHeight; // 리플로우 강제 → 백그라운드 탭에서도 슬라이드업 보장
+  sheet.classList.add('open');
+}
+
+/* ─────────────────────────────────────────────
+   기사 리더: 끝까지 읽어야 줍기 버튼 활성화
+───────────────────────────────────────────── */
+function openReader(poiId, idx){
+  const p = POIS[poiId], n = p.news[idx], key = poiId+'_'+idx;
+  const picked = collected.has(key);
+  const paras = BODIES[key] || [n.sum];
+  const imp = (mwProfile && mwProfile.includes(n.impact.tag))
+    ? `<div class="r-impact-title">💰 내 지갑 번역</div>
+       <div class="n-impact"><b class="t">${TAGS[n.impact.tag].emoji} ${TAGS[n.impact.tag].label}인 나에게:</b> ${n.impact.text}</div>` : '';
+  const reader = document.getElementById('reader');
+  reader.innerHTML = `
+    <div class="reader-top">
+      <button class="r-back" id="rBack">←</button>
+      <span class="r-src">${p.emoji} ${p.name}에서 발견한 기사</span>
+    </div>
+    <div class="reader-body" id="rBody">
+      <div class="r-cat">📍 ${LOCATIONS[p.loc].name} · ${p.stat.label} ${p.stat.value}</div>
+      <h2>${n.title}</h2>
+      <div class="r-meta">한국경제 · 2026.07.06</div>
+      ${paras.map(t=>`<p class="r-p">${t}</p>`).join('')}
+      ${imp}
+      <button class="pick-btn" id="rPick" disabled>
+        ${picked ? '줍줍 완료 🐾' : '⬇ 기사를 끝까지 읽으면 줍줍할 수 있어요'}
+      </button>
+    </div>`;
+  onTap(reader.querySelector('#rBack'), closeReader);
+
+  const body = reader.querySelector('#rBody');
+  const pickBtn = reader.querySelector('#rPick');
+
+  function unlock(){
+    if(!readNews.has(key)){ readNews.add(key); save(); }
+    if(picked || collected.has(key)) return;      // 이미 주운 뉴스는 읽기만
+    pickBtn.disabled = false;
+    pickBtn.textContent = `이 뉴스 줍줍 🐾 +${XP_PICK} XP`;
+  }
+  function checkEnd(){
+    if(body.scrollTop + body.clientHeight >= body.scrollHeight - 24) unlock();
+  }
+  body.addEventListener('scroll', checkEnd);
+  setTimeout(checkEnd, 100);   // 본문이 짧아 스크롤이 없는 경우 즉시 해제
+
+  onTap(pickBtn, ()=>{
+    if(pickBtn.disabled || collected.has(key)) return;
+    collected.add(key); save();
+    pickBtn.disabled = true; pickBtn.textContent = '줍줍 완료 🐾';
+    addXP(XP_PICK, '멍! 뉴스 물어왔어요 🐶');
+    if(p.news.every((nn,i)=>collected.has(poiId+'_'+i))){
+      setTimeout(()=>addXP(XP_SPOT_ALL, `${p.name} 스팟 클리어! 🦴`), 400);
+    }
+    renderAR(); renderDex();
+    setTimeout(()=>{ closeReader(); openSheet(poiId); }, 700);  // 시트로 복귀(상태 갱신)
+  });
+
+  reader.offsetHeight;
+  reader.classList.add('open');
+}
+function closeReader(){
+  document.getElementById('reader').classList.remove('open');
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheetBg').classList.remove('open');
+}
+onTap(document.getElementById('sheetBg'), closeSheet);
+
+/* ─────────────────────────────────────────────
+   탭 / 온보딩 / 초기화
+───────────────────────────────────────────── */
+function switchTab(tab){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scene-'+tab).classList.add('active');
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  if(tab==='dex') renderDex();
+  closeSheet();
+  closeReader();
+}
+document.querySelectorAll('.tabbar button').forEach(b=>{
+  onTap(b, ()=>switchTab(b.dataset.tab));
+});
+
+/* 온보딩 */
+document.querySelectorAll('#onbChips button').forEach(b=>{
+  onTap(b, ()=>b.classList.toggle('sel'));
+});
+function startWalk(tags){
+  mwProfile = tags;
+  localStorage.setItem('mw_profile', JSON.stringify(tags));
+  document.getElementById('onb').style.display = 'none';
+  toast('🐕 산책 시작! 강아지가 뉴스 냄새를 맡으면 알려줄 거예요');
+}
+onTap(document.getElementById('onbGo'), ()=>{
+  startWalk([...document.querySelectorAll('#onbChips button.sel')].map(b=>b.dataset.tag));
+});
+onTap(document.getElementById('onbSkip'), ()=>startWalk([]));
+
+/* 초기화 */
+document.querySelectorAll('.dog-ph').forEach(el=>{
+  el.outerHTML = blobHtml(el.dataset.c, el.dataset.m||'', el.dataset.s||'');
+});
+renderLvChip();
+renderAR();
+renderMap();
+renderDex();
+if(mwProfile !== null) document.getElementById('onb').style.display = 'none';
+</script>
+</body>
+</html>
