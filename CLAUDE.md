@@ -17,6 +17,8 @@ docs/
   meeting-notes/  # 회의록 (AI 회의록 툴 요약본, 날짜순)
   planning/       # 프로젝트 계획서, 마일스톤
   deliverables/   # 스프린트별 최종 산출물 요약 및 링크
+  images/
+    screenshot/   # 현황 분석 캡처 아카이브 (service/ sns-reaction/ user-pattern/, 규칙은 폴더 내 README)
 ```
 
 프로젝트 진행 중 만들어지는 문서(회의록, 산출물, 디자인 결정 등)는 위 폴더 아래 md 파일로 기록합니다.
