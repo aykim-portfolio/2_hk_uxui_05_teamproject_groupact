@@ -57,7 +57,8 @@
   }
   #roomLabel.show { opacity: 1; }
   #modeBtn {
-    position: absolute; right: 20px; bottom: 20px; pointer-events: auto;
+    /* 우하단은 조이스틱 고정 자리라 모드 버튼은 좌하단 */
+    position: absolute; left: 20px; bottom: 20px; pointer-events: auto;
     padding: 11px 20px; border: none; border-radius: 999px; cursor: pointer;
     background: rgba(255,250,243,.92); color: #6b4f3a; font-size: 13px; font-weight: 700;
     box-shadow: 0 4px 16px rgba(107,79,58,.18);
@@ -80,6 +81,35 @@
     transition: background .8s ease, color .8s ease;
   }
   #timeBadge.night { background: rgba(28,34,58,.82); color: #ffe3b8; }
+
+  /* ---------- 입장 직후 시선 조작 온보딩 힌트 ---------- */
+  #lookHint {
+    position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%);
+    padding: 13px 24px; border-radius: 999px;
+    background: rgba(20,16,12,.55); color: #fff;
+    font-size: 14px; font-weight: 600; letter-spacing: .01em;
+    pointer-events: none; white-space: nowrap;
+    opacity: 0; transition: opacity .5s ease;
+  }
+  #lookHint.show { opacity: 1; }
+
+  /* ---------- 가상 조이스틱 (우하단 고정, 반투명 — 터치·마우스 공용) ---------- */
+  #joystick {
+    display: block;
+    position: absolute; right: 18px; bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+    width: 118px; height: 118px; border-radius: 50%;
+    background: rgba(255,250,243,.16);
+    border: 1.5px solid rgba(255,250,243,.45);
+    pointer-events: auto; touch-action: none;
+    opacity: .55; transition: opacity .2s ease;
+  }
+  #joystick.active { opacity: .9; background: rgba(255,250,243,.24); }
+  #joyKnob {
+    position: absolute; left: 50%; top: 50%;
+    width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+    background: rgba(255,250,243,.78);
+    box-shadow: 0 2px 10px rgba(107,79,58,.35);
+  }
 
   /* ---------- 조작법 모달 ---------- */
   #helpModal {
@@ -189,6 +219,8 @@
   <div id="timeBadge">☀️ 낮</div>
   <div id="roomLabel"></div>
   <button id="modeBtn">🏠 돌하우스 뷰 (M)</button>
+  <div id="joystick" aria-label="이동 조이스틱"><div id="joyKnob"></div></div>
+  <div id="lookHint">🖐 화면을 드래그해서 둘러보세요 · 🕹️ 스틱으로 이동</div>
 </div>
 
 <div id="intro">
@@ -202,6 +234,7 @@
     <div><kbd>M</kbd> 돌하우스 뷰</div>
     <div><kbd>클릭</kbd> 사물 상호작용</div>
     <div><kbd>ESC</kbd> 창 닫기</div>
+    <div class="touch-only"><kbd>🕹️ 스틱</kbd> 이동 (우하단)</div>
   </div>
 </div>
 
@@ -216,6 +249,7 @@
       <div><kbd>M</kbd> 돌하우스 뷰</div>
       <div><kbd>클릭</kbd> 사물 상호작용</div>
       <div><kbd>ESC</kbd> 창 닫기</div>
+      <div class="touch-only"><kbd>🕹️ 스틱</kbd> 이동 · 끝까지 밀면 달리기</div>
     </div>
   </div>
 </div>
@@ -1013,6 +1047,39 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => keys[e.code] = false);
 
+/* 모바일 가상 조이스틱: 이동은 키보드 전용이라 터치 기기에서는 걸을 수 없음 → 우하단 반투명 스틱으로 보완 */
+const joy = { x: 0, z: 0, active: false };
+const joystickEl = document.getElementById('joystick');
+const joyKnob = document.getElementById('joyKnob');
+const JOY_MAX = 40; // 노브 최대 이동 반경(px) = 입력 크기 1.0
+let joyPointerId = null;
+function joyUpdate(e) {
+  const r = joystickEl.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2);
+  let dy = e.clientY - (r.top + r.height / 2);
+  const len = Math.hypot(dx, dy) || 1;
+  const c = Math.min(len, JOY_MAX);
+  dx = dx / len * c; dy = dy / len * c;
+  joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  joy.x = dx / JOY_MAX; joy.z = dy / JOY_MAX; // 화면 위쪽 = 전진(-z)과 방향 일치
+  joy.active = true;
+}
+function joyReset(e) {
+  if (e && e.pointerId !== joyPointerId) return;
+  joyPointerId = null; joy.active = false; joy.x = joy.z = 0;
+  joyKnob.style.transform = '';
+  joystickEl.classList.remove('active');
+}
+joystickEl.addEventListener('pointerdown', e => {
+  joyPointerId = e.pointerId;
+  try { joystickEl.setPointerCapture(joyPointerId); } catch (_) { /* 일부 브라우저/합성 이벤트에서 미지원 */ }
+  joystickEl.classList.add('active');
+  joyUpdate(e);
+});
+joystickEl.addEventListener('pointermove', e => { if (e.pointerId === joyPointerId) joyUpdate(e); });
+joystickEl.addEventListener('pointerup', joyReset);
+joystickEl.addEventListener('pointercancel', joyReset);
+
 /* 마우스: 드래그로 둘러보기, 짧은 클릭은 사물 상호작용 */
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -1057,26 +1124,37 @@ document.addEventListener('mousemove', e => {
     renderer.domElement.style.cursor = pickInteractable(e.clientX, e.clientY) ? 'pointer' : 'grab';
   }
 });
-/* 터치: 한 손가락 드래그로 둘러보기 */
+/* 터치: 드래그로 둘러보기 — 손가락 identifier를 추적해서
+   조이스틱을 잡은 상태(터치 2개)에서도 다른 손가락으로 시선을 돌릴 수 있게 한다 */
+let lookTouchId = null;
 renderer.domElement.addEventListener('touchstart', e => {
-  if (mode !== 'walk' || uiOpen() || e.touches.length !== 1) return;
+  if (mode !== 'walk' || uiOpen() || lookTouchId !== null) return;
+  const t = e.changedTouches[0]; // 캔버스에서 새로 시작된 터치만 (조이스틱 터치는 대상이 달라 여기 안 옴)
+  lookTouchId = t.identifier;
   dragging = true; dragDist = 0;
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  lastX = t.clientX; lastY = t.clientY;
 }, { passive: true });
 renderer.domElement.addEventListener('touchmove', e => {
-  if (!dragging || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+  if (!dragging || lookTouchId === null) return;
+  const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouchId);
+  if (!t) return;
+  const dx = t.clientX - lastX, dy = t.clientY - lastY;
   dragDist += Math.abs(dx) + Math.abs(dy);
   applyLook(dx * 1.4, dy * 1.4);
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  lastX = t.clientX; lastY = t.clientY;
 }, { passive: true });
-renderer.domElement.addEventListener('touchend', e => {
+function endLookTouch(e) {
+  if (lookTouchId === null) return;
+  const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouchId);
+  if (!t) return;
   if (dragging && dragDist < 6 && mode === 'walk' && !uiOpen()) {
     const it = pickInteractable(lastX, lastY);
     if (it) it.onClick();
   }
-  dragging = false;
-});
+  dragging = false; lookTouchId = null;
+}
+renderer.domElement.addEventListener('touchend', endLookTouch);
+renderer.domElement.addEventListener('touchcancel', endLookTouch);
 
 function collide(x, z) {
   for (const c of colliders) {
@@ -1098,16 +1176,20 @@ function resolveCamFraction(px, pz, offX, offZ) {
 let debugPaused = false;
 function updatePlayer(dt) {
   if (debugPaused) return;
-  const running = keys['ShiftLeft'] || keys['ShiftRight'];
+  // 조이스틱을 끝까지 밀면 달리기 (Shift와 동일)
+  const running = keys['ShiftLeft'] || keys['ShiftRight'] || (joy.active && Math.hypot(joy.x, joy.z) > 0.92);
   const speed = running ? 5.2 : 2.8;
   let fx = 0, fz = 0;
   if (keys['KeyW'] || keys['ArrowUp']) fz -= 1;
   if (keys['KeyS'] || keys['ArrowDown']) fz += 1;
   if (keys['KeyA'] || keys['ArrowLeft']) fx -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) fx += 1;
+  if (joy.active) { fx += joy.x; fz += joy.z; }
   const moving = !!(fx || fz);
   if (moving) {
-    const len = Math.hypot(fx, fz); fx /= len; fz /= len;
+    // 대각선 입력만 정규화하고, 조이스틱의 1 미만 기울기는 아날로그 감속으로 유지
+    const len = Math.hypot(fx, fz);
+    if (len > 1) { fx /= len; fz /= len; }
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
     const dx = (fx * cos + fz * sin) * speed * dt;
     const dz = (-fx * sin + fz * cos) * speed * dt;
@@ -1177,10 +1259,13 @@ function toggleMode() {
     modeBtn.textContent = '🚶 걷기 모드 (M)';
     crosshair.style.display = 'none';
     roomLabel.classList.remove('show'); currentRoom = null;
+    joystickEl.style.display = 'none';
+    joyReset();
   } else {
     roofGroup.visible = true;
     modeBtn.textContent = '🏠 돌하우스 뷰 (M)';
     crosshair.style.display = '';
+    joystickEl.style.display = '';
   }
 }
 modeBtn.addEventListener('click', toggleMode);
@@ -1197,8 +1282,16 @@ function updateOrbit(dt) {
    인트로 & 루프
 ============================================================ */
 const intro = document.getElementById('intro');
+const lookHint = document.getElementById('lookHint');
+let lookHintShown = false;
 intro.addEventListener('click', () => {
   intro.classList.add('hidden');
+  // 입장 직후 한 번만: 시선/이동 조작 온보딩 힌트를 잠깐 띄웠다 사라지게
+  if (!lookHintShown) {
+    lookHintShown = true;
+    lookHint.classList.add('show');
+    setTimeout(() => lookHint.classList.remove('show'), 2800);
+  }
 });
 
 /* ============================================================
