@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>한경 페이퍼 — 지면으로 공부하는 경제</title>
+<style id="app-style">
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+/* ═══ 한경 AIS 디자인 시스템 토큰 ═══ */
+:root{
+  /* surface / text / border — 회색·블루가 섞인 신문 톤 */
+  --bg:#e9edf2; --surface:#ffffff; --muted:#edf0f4;
+  --ink:#191f28; --ink-soft:#4e5968; --ink-3:#8b95a1;
+  --rule:#dde3ea;
+  /* brand / accent */
+  --brand:#143c7e; --brand-hover:#0e2856; --link:#3182f6;
+  --indigo:#6366f1; --teal:#10b981; --amber:#f59e0b; --rose:#fb7185;
+  --success:#16a34a; --success-bg:#f0fdf4; --error:#ef4444;
+  --grad-primary:linear-gradient(135deg,#3182f6,#6366f1);
+  /* elevation */
+  --e1:0 1px 2px rgba(0,0,0,.04),0 1px 4px rgba(0,0,0,.04);
+  --e2:0 2px 8px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --e4:0 8px 24px rgba(0,0,0,.14);
+  --e5:0 16px 48px rgba(0,0,0,.20);
+  --glow:0 4px 20px rgba(49,130,246,.3);
+  /* fonts */
+  --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --serif:var(--sans);
+  /* legacy aliases (인라인 JS 호환) */
+  --paper:var(--surface); --paper-deep:var(--muted); --accent:var(--brand); --stamp:var(--brand);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:linear-gradient(180deg,#c3ccd7,#aab6c4);
+  font-family:var(--sans);
+  color:var(--ink);
+  display:flex;justify-content:center;
+  letter-spacing:-.01em;
+}
+#app{
+  width:100%;max-width:430px;height:100dvh;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+  box-shadow:0 0 60px rgba(25,31,40,.28);
+}
+
+/* ── 공통: 뷰 ───────────────────────── */
+.view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none}
+.view.active{display:block}
+
+/* ── 하단 내비게이션 ─────────────────── */
+#bottomNav{
+  display:flex;border-top:1px solid var(--rule);
+  background:var(--surface);flex-shrink:0;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -1px 3px rgba(0,0,0,.03);
+}
+#bottomNav button{
+  flex:1;padding:9px 0 7px;background:none;border:none;
+  font-family:var(--sans);font-size:11px;font-weight:600;color:var(--ink-3);
+  display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;position:relative;
+}
+#bottomNav button .ico{font-size:21px;line-height:1;opacity:.65;filter:grayscale(.35)}
+#bottomNav button.on{color:var(--brand)}
+#bottomNav button.on .ico{opacity:1;filter:none}
+#bottomNav button.on::before{content:'';position:absolute;top:0;width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
+#bottomNav button .soon{display:none}
+
+/* ── 홈: 오늘의 지면 (한 장에 전체 기사) ── */
+.app-header{background:var(--surface);border-bottom:1px solid var(--rule);padding:14px 20px 12px;
+  position:sticky;top:0;z-index:3}
+.app-header .brand-row{display:flex;align-items:center;justify-content:space-between}
+.app-header .wordmark{font-size:21px;font-weight:800;letter-spacing:-.6px;color:var(--brand)}
+.app-header .wordmark .dot{color:var(--link)}
+.app-header .date{font-size:11.5px;color:var(--ink-3);font-weight:500}
+/* 지면 시트 — 종이신문 감성 */
+.sheet{
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.012) 0 2px, transparent 2px 4px), #f9f6ee;
+  color:#1f1f1f;min-height:100%;padding:14px 16px 30px;
+  font-family:'Nanum Myeongjo','AppleMyungjo','Noto Serif KR','Noto Serif CJK KR','Batang',serif;
+}
+.sheet .masthead{text-align:center;border-bottom:3px double #222;padding-bottom:10px;margin-bottom:2px}
+.sheet .masthead .ed{font-size:9.5px;letter-spacing:4px;color:#6e6a5e;font-family:var(--sans)}
+.sheet .masthead h1{font-size:31px;letter-spacing:10px;font-weight:800;margin:3px 0 5px;text-indent:10px;color:#111}
+.sheet .masthead .dateline{display:flex;justify-content:space-between;font-size:10.5px;color:#6e6a5e;
+  border-top:1px solid #222;margin-top:6px;padding-top:5px;font-family:var(--sans)}
+.page-head{display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:2px solid #222;padding:8px 1px 7px;margin-bottom:2px}
+.page-head .sec-name{font-size:15px;font-weight:800;letter-spacing:2px}
+.page-head .pg-no{font-size:10.5px;color:#6e6a5e;font-family:var(--sans)}
+/* 지면 기사 블록 */
+.p-art{padding:14px 2px;cursor:pointer;position:relative;transition:opacity .2s}
+.p-art + .p-art, .p-grid + .p-art, .p-art + .p-grid{border-top:1px solid #d9d3c2}
+.p-art:active{background:rgba(20,60,126,.05)}
+.p-art.done{opacity:.5}
+.p-art.done:active{opacity:.72}
+.p-art.lead h2{font-size:23px;line-height:1.36;font-weight:800;letter-spacing:-.5px;word-break:keep-all;color:#111}
+.p-art.lead .p-sub{font-size:13px;color:#54503f;margin-top:8px;line-height:1.5;word-break:keep-all}
+.p-art.lead .p-lede{font-size:12.5px;line-height:1.75;margin-top:12px;text-align:justify;word-break:break-all;
+  column-count:2;column-gap:16px;column-rule:1px solid #d9d3c2;color:#333}
+.p-art h3{font-size:16.5px;line-height:1.4;font-weight:800;letter-spacing:-.3px;word-break:keep-all;color:#111}
+.p-art .p-lede-s{font-size:12px;line-height:1.7;color:#555;margin-top:6px;text-align:justify;word-break:break-all;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.p-meta{font-size:10.5px;color:#8a8474;margin-top:8px;display:flex;gap:8px;align-items:center;font-family:var(--sans)}
+/* 2단 그리드(작은 기사) — 가운데 세로 괘선 */
+.p-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:15px;position:relative}
+.p-grid::before{content:'';position:absolute;left:50%;top:12px;bottom:12px;width:1px;background:#d9d3c2}
+.p-grid .p-art{border-top:none}
+/* 촘촘한 전체 지면 그리드 */
+.p-kick{font-size:9.5px;font-weight:700;letter-spacing:1.5px;color:var(--brand);margin-bottom:5px;font-family:var(--sans)}
+.p-grid.dense .p-art{padding:12px 2px;border-top:1px solid #e2dccb}
+.p-grid.dense .p-art:nth-child(-n+2){border-top:none}
+.p-grid.dense h3{font-size:14px;line-height:1.42;letter-spacing:-.2px}
+.p-grid.dense .p-lede-s{font-size:10.5px;line-height:1.6;margin-top:5px;-webkit-line-clamp:2}
+.p-grid.dense .p-meta{font-size:9.5px;margin-top:6px}
+.p-grid.dense .done-chip{font-size:9px;padding:1px 7px}
+.page-foot{text-align:center;font-size:10px;color:#8a8474;margin-top:20px;
+  border-top:3px double #222;padding-top:9px;letter-spacing:1px;font-family:var(--sans)}
+.done-chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--success);
+  background:var(--success-bg);border-radius:999px;padding:2px 9px;font-family:var(--sans)}
+
+/* ── 기사 리더(필기) ─────────────────── */
+#reader{
+  position:absolute;inset:0;background:var(--bg);z-index:50;
+  display:none;flex-direction:column;
+}
+#reader.open{display:flex}
+#readerBar{
+  display:flex;align-items:center;gap:6px;
+  padding:10px 12px;border-bottom:1px solid var(--rule);
+  background:var(--surface);flex-shrink:0;
+}
+#readerBar .rb-title{flex:1;min-width:20px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-btn{
+  background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+  font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--ink-soft);
+  padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;
+}
+.bar-btn:active{background:var(--muted)}
+.bar-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+#btnBack{border:none;background:none;color:var(--ink-soft);padding:8px 4px 8px 0}
+#btnSummary{color:var(--indigo);border-color:#c7d2fe;background:#eef2ff}
+#readerScroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative}
+#paperWrap{position:relative}
+.article-paper{background:var(--surface);color:var(--ink);font-family:var(--sans);padding:22px 20px 42px;min-height:100%}
+.art-hd{border-bottom:1px solid var(--rule);padding-bottom:13px;margin-bottom:16px}
+.art-hd .a-brand{font-size:13px;font-weight:800;color:var(--brand);letter-spacing:-.3px}
+.art-hd .a-brand .dot{color:var(--link)}
+.art-hd .a-date{font-size:11px;color:var(--ink-3);margin-top:3px}
+.article-paper .kicker{display:inline-block;font-size:11px;font-weight:700;color:var(--brand);background:#e8f3ff;border-radius:6px;padding:3px 9px;margin-bottom:10px}
+.article-paper h2{font-size:22px;line-height:1.4;font-weight:800;letter-spacing:-.5px;margin-bottom:10px;word-break:keep-all}
+.article-paper .sub{font-size:14px;color:var(--ink-soft);line-height:1.55;margin-bottom:12px;word-break:keep-all}
+.article-paper .byline{
+  font-size:12px;color:var(--ink-3);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  padding:9px 0;margin-bottom:18px;display:flex;justify-content:space-between;
+}
+.article-paper .body{font-size:15px;line-height:1.8;color:var(--ink);word-break:keep-all}
+.article-paper .body p{margin-bottom:15px}
+.article-paper .term-box{
+  break-inside:avoid;border:1px solid #c5dcff;border-radius:10px;padding:13px 15px;margin:18px 0;
+  background:#e8f3ff;
+}
+.article-paper .term-box b{font-size:13px;display:block;margin-bottom:5px;color:var(--brand);font-weight:700}
+.article-paper .term-box span{font-size:13px;line-height:1.6;display:block;color:var(--ink-soft)}
+.article-paper .paper-foot{font-size:12px;color:var(--ink-3);margin-top:24px;padding-top:14px;border-top:1px solid var(--rule);text-align:center}
+#inkCanvas{position:absolute;inset:0;z-index:5;pointer-events:none;touch-action:none}
+#readerScroll.draw-mode #inkCanvas{pointer-events:auto}
+.stamp{
+  position:absolute;right:16px;top:98px;z-index:6;
+  width:66px;height:66px;border:2.5px solid var(--brand);border-radius:50%;
+  color:var(--brand);font-family:var(--sans);background:rgba(20,60,126,.06);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:rotate(-8deg);pointer-events:none;
+  animation:stampIn .4s cubic-bezier(.2,1.6,.4,1);
+}
+.stamp .big{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.stamp .sml{font-size:8px;font-weight:700;letter-spacing:1px;margin-top:2px;opacity:.7}
+@keyframes stampIn{
+  from{transform:rotate(-8deg) scale(2.2);opacity:0}
+  to{transform:rotate(-8deg) scale(1);opacity:1}
+}
+
+/* 필기 도구 바 */
+#toolBar{
+  flex-shrink:0;background:var(--surface);border-top:1px solid var(--rule);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:space-between;gap:6px;overflow-x:auto;
+}
+.tool{
+  width:40px;height:40px;border-radius:10px;border:1px solid var(--rule);
+  background:var(--surface);font-size:18px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;position:relative;transition:.12s;
+}
+.tool.on{border-color:var(--brand);background:#e8f3ff;box-shadow:var(--e1)}
+.tool .chip{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+  width:16px;height:3px;border-radius:2px}
+.tool-sep{width:1px;height:24px;background:var(--rule);flex-shrink:0;margin:0 2px}
+
+/* ── 내보내기 모달 ───────────────────── */
+#exportModal{
+  position:absolute;inset:0;z-index:100;background:rgba(25,31,40,.62);backdrop-filter:blur(3px);
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;
+}
+#exportModal.open{display:flex}
+#exportModal img{max-width:100%;max-height:60%;border-radius:12px;box-shadow:var(--e5)}
+#exportModal .ex-title{color:#fff;font-family:var(--sans);font-size:15px;font-weight:700;margin-bottom:16px}
+#exportModal .ex-btns{display:flex;gap:8px;margin-top:20px}
+#exportModal .ex-btns .bar-btn{padding:12px 16px;font-size:14px;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+#exportModal .ex-btns .bar-btn.primary{background:var(--grad-primary);border:none}
+#exportModal .ex-hint{color:rgba(255,255,255,.72);font-size:11.5px;margin-top:14px;text-align:center}
+
+/* ── 게임/마이 ───────────── */
+.placeholder{padding:24px 20px 30px;font-family:var(--sans)}
+.ph-badge{
+  display:inline-block;font-size:11px;font-weight:800;letter-spacing:1px;
+  color:var(--brand);background:#e8f3ff;border-radius:6px;padding:5px 11px;margin-bottom:12px;
+}
+.placeholder h2{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:10px}
+.placeholder p{font-size:13.5px;line-height:1.75;color:var(--ink-soft)}
+.my-stats{display:flex;gap:10px;margin:16px 0 6px}
+.my-stat{
+  flex:1;background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+  padding:16px 12px;text-align:center;box-shadow:var(--e2);
+}
+.my-stat .num{font-size:28px;font-weight:800;color:var(--brand);letter-spacing:-1px}
+.my-stat .lbl{font-size:12px;color:var(--ink-3);margin-top:4px}
+.my-record{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:14px;margin-bottom:10px;
+  cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:var(--e2);transition:.12s}
+.my-record:active{transform:scale(.99);background:var(--muted)}
+.my-record .rec-body{flex:1;min-width:0}
+.my-record .t{font-size:14px;font-weight:700;line-height:1.4;color:var(--ink);word-break:keep-all}
+.my-record .d{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+.my-record .chev{font-family:var(--sans);color:var(--link);font-weight:700;font-size:12px;
+  flex-shrink:0;white-space:nowrap}
+.my-record .cat-tag{display:inline-block;font-size:10.5px;font-weight:700;
+  border-radius:999px;padding:2px 9px;margin-bottom:6px}
+
+/* 마이페이지 섹션 공통 */
+.my-section{margin:24px 0 6px}
+.my-section .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.my-section .sec-head h3{font-size:16px;font-weight:800;letter-spacing:-.3px;color:var(--ink)}
+.my-section .sec-head .sec-sub{font-size:11.5px;color:var(--ink-3);font-weight:500}
+
+/* 관심 분야 막대그래프 대시보드 */
+.dash-card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 16px;box-shadow:var(--e2);margin-bottom:2px}
+.dash-bar{margin-bottom:15px}
+.dash-bar:last-child{margin-bottom:0}
+.dash-bar .row{display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;margin-bottom:7px}
+.dash-bar .row .name{font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.dash-bar .row .name .dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.dash-bar .row .val{color:var(--ink-3);font-size:12px;font-weight:600}
+.dash-bar .track{height:10px;background:var(--muted);border-radius:999px;overflow:hidden}
+.dash-bar .fill{height:100%;width:0;border-radius:999px;
+  transition:width .7s cubic-bezier(.2,.8,.3,1)}
+.dash-empty{font-size:13px;color:var(--ink-3);line-height:1.7;padding:4px 0}
+.dash-top{font-size:12.5px;color:var(--ink-soft);margin-top:14px;padding-top:14px;border-top:1px solid var(--rule);line-height:1.6}
+.dash-top b{color:var(--brand);font-weight:700}
+
+/* 펼쳐보기 토글 */
+.expand-btn{width:100%;margin-top:2px;padding:12px;background:var(--surface);
+  border:1px solid var(--rule);border-radius:10px;font-family:var(--sans);
+  font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;box-shadow:var(--e1)}
+.expand-btn:active{background:var(--muted)}
+
+/* AI 하이라이트 요약 */
+.ai-card{border:1px solid #c7d2fe;border-radius:14px;padding:16px;
+  background:#eef2ff;margin-bottom:8px}
+.ai-card .ai-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;
+  font-weight:800;color:var(--indigo);letter-spacing:.3px;margin-bottom:10px}
+.ai-card .ai-lead{font-size:14px;line-height:1.65;margin-bottom:12px;font-weight:600;color:var(--ink)}
+.ai-card .ai-lead b{color:var(--indigo)}
+.ai-card ul{list-style:none;margin:0 0 4px}
+.ai-card li{font-size:13px;line-height:1.6;padding-left:16px;position:relative;margin-bottom:8px;color:var(--ink-soft)}
+.ai-card li::before{content:'';position:absolute;left:2px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--indigo)}
+.ai-keys{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ai-keys .kw{font-size:11.5px;font-weight:600;background:var(--indigo);color:#fff;border-radius:999px;padding:4px 11px}
+.ai-empty{font-size:13px;color:var(--ink-soft);line-height:1.7}
+
+/* AI 요약 모달 (리더에서 열림) */
+#summaryModal{position:absolute;inset:0;z-index:100;background:rgba(25,31,40,.62);backdrop-filter:blur(3px);
+  display:none;align-items:flex-end;justify-content:center}
+#summaryModal.open{display:flex}
+#summaryModal .sheet{background:var(--surface);width:100%;max-height:80%;overflow-y:auto;
+  border-radius:24px 24px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+  box-shadow:var(--e5)}
+#summaryModal .sheet h3{font-size:18px;font-weight:800;margin-bottom:3px;color:var(--ink)}
+#summaryModal .sheet .s-sub{font-size:12px;color:var(--ink-3);margin-bottom:16px}
+#summaryModal .sheet .s-close{width:100%;margin-top:10px;padding:14px;background:var(--brand);
+  color:#fff;border:none;border-radius:10px;font-family:var(--sans);font-size:14.5px;font-weight:700;cursor:pointer}
+
+/* ═══ 게임(경제 퀴즈) ═══ */
+.quiz-wrap{padding:24px 20px 30px;font-family:var(--sans)}
+.quiz-wrap h2{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-bottom:10px;color:var(--ink)}
+.quiz-lead{font-size:14px;line-height:1.7;color:var(--ink-soft);margin-bottom:16px}
+.quiz-lead b{color:var(--brand);font-weight:700}
+.quiz-empty{font-size:14px;line-height:1.8;color:var(--ink-soft);margin:8px 0 20px}
+.quiz-empty b{color:var(--brand);font-weight:700}
+.quiz-best{display:inline-block;font-size:12.5px;font-weight:600;color:#b45309;
+  border:1px solid #fde68a;border-radius:999px;padding:6px 12px;margin-bottom:16px;background:#fffbeb}
+.quiz-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px}
+.quiz-cats .qc{font-size:11.5px;font-weight:700;color:#fff;border-radius:999px;padding:4px 11px}
+.quiz-start{width:100%;padding:16px;background:var(--grad-primary);color:#fff;border:none;
+  border-radius:12px;font-family:var(--sans);font-size:15.5px;font-weight:700;cursor:pointer;box-shadow:var(--glow)}
+.quiz-start:active{transform:translateY(1px)}
+.quiz-ghost{width:100%;margin-top:10px;padding:14px;background:var(--surface);color:var(--ink-soft);
+  border:1px solid var(--rule);border-radius:12px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer}
+
+/* 문제 진행 */
+.quiz-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--ink-3);font-weight:600}
+.quiz-top .quiz-score{font-weight:800;color:var(--brand)}
+.quiz-progress{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;margin-bottom:22px}
+.quiz-progress-fill{height:100%;background:var(--grad-primary);border-radius:999px;transition:width .4s ease}
+.quiz-cat-tag{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;border-radius:999px;padding:4px 12px;margin-bottom:14px}
+.quiz-q{font-size:19px;font-weight:800;line-height:1.5;letter-spacing:-.3px;margin-bottom:20px;word-break:keep-all;color:var(--ink)}
+.quiz-opts{display:flex;flex-direction:column;gap:10px}
+.quiz-opt{text-align:left;padding:15px;background:var(--surface);border:1.5px solid var(--rule);
+  border-radius:12px;font-family:var(--sans);font-size:14.5px;line-height:1.45;color:var(--ink);cursor:pointer;
+  display:flex;gap:11px;align-items:center;transition:.15s;word-break:keep-all;box-shadow:var(--e1)}
+.quiz-opt .mk{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--rule);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--ink-3)}
+.quiz-opt:active{background:var(--muted)}
+.quiz-opt.correct{border-color:var(--success);background:var(--success-bg)}
+.quiz-opt.correct .mk{border-color:var(--success);background:var(--success);color:#fff}
+.quiz-opt.wrong{border-color:var(--error);background:#fff1f2}
+.quiz-opt.wrong .mk{border-color:var(--error);background:var(--error);color:#fff}
+.quiz-opt.locked{cursor:default;pointer-events:none}
+.quiz-opt.dim{opacity:.5}
+.quiz-feedback{margin-top:16px;padding:14px 15px;border-radius:12px;font-size:13px;line-height:1.65;
+  display:none;background:var(--muted);color:var(--ink-soft)}
+.quiz-feedback.show{display:block}
+.quiz-feedback.ok{background:var(--success-bg)}
+.quiz-feedback.no{background:#fff1f2}
+.quiz-feedback .fb-head{font-weight:800;margin-bottom:5px}
+.quiz-feedback.ok .fb-head{color:var(--success)}
+.quiz-feedback.no .fb-head{color:var(--error)}
+.quiz-feedback .fb-src{display:block;margin-top:8px;font-size:11.5px;color:var(--ink-3)}
+.quiz-next{width:100%;margin-top:18px;padding:15px;background:var(--brand);color:#fff;border:none;
+  border-radius:12px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer}
+
+/* 결과 */
+.quiz-result{text-align:center;padding-top:8px}
+.result-score{font-size:60px;font-weight:800;line-height:1;margin:20px 0 6px;color:var(--brand);letter-spacing:-2px}
+.result-score span{font-size:26px;color:var(--ink-3);font-weight:700}
+.result-msg{font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin-bottom:22px}
+.result-bar{height:12px;background:var(--muted);border-radius:999px;overflow:hidden;margin-bottom:24px}
+.result-bar .rf{height:100%;background:var(--grad-primary);width:0;border-radius:999px;transition:width .8s cubic-bezier(.2,.8,.3,1)}
+
+.toast{
+  position:absolute;left:50%;bottom:82px;transform:translateX(-50%);
+  background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:999px;
+  z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;
+  font-family:var(--sans);box-shadow:var(--e4);
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ 홈 (오늘의 지면 탐색) ═══ -->
+  <div class="view active" id="view-home">
+    <div id="frontPage"></div>
+  </div>
+
+  <!-- ═══ 게임 (경제 퀴즈) ═══ -->
+  <div class="view" id="view-game">
+    <div id="gamePage"></div>
+  </div>
+
+  <!-- ═══ 마이페이지 ═══ -->
+  <div class="view" id="view-my">
+    <div class="placeholder" id="myPage"></div>
+  </div>
+
+  <!-- ═══ 하단 내비 ═══ -->
+  <nav id="bottomNav">
+    <button data-view="game"><span class="ico">🎮</span>게임<span class="soon">&nbsp;</span></button>
+    <button data-view="home" class="on"><span class="ico">📰</span>홈<span class="soon">&nbsp;</span></button>
+    <button data-view="my"><span class="ico">📓</span>마이<span class="soon">&nbsp;</span></button>
+  </nav>
+
+  <!-- ═══ 기사 리더 ═══ -->
+  <div id="reader">
+    <div id="readerBar">
+      <button class="bar-btn" id="btnBack">← 지면</button>
+      <div class="rb-title" id="rbTitle"></div>
+      <button class="bar-btn" id="btnSummary" title="하이라이트 AI 요약">✨요약</button>
+      <button class="bar-btn" id="btnDone">완독</button>
+      <button class="bar-btn primary" id="btnExport">내보내기</button>
+    </div>
+    <div id="readerScroll">
+      <div id="paperWrap">
+        <div class="paper article-paper" id="articlePaper"></div>
+        <canvas id="inkCanvas"></canvas>
+      </div>
+    </div>
+    <div id="toolBar">
+      <button class="tool" data-tool="hl" data-color="rgba(255,220,0,0.55)" title="형광펜 노랑">🖍️<span class="chip" style="background:#ffdc00"></span></button>
+      <button class="tool" data-tool="hl" data-color="rgba(255,105,150,0.45)" title="형광펜 분홍">🖍️<span class="chip" style="background:#ff6996"></span></button>
+      <button class="tool" data-tool="hl" data-color="rgba(80,220,130,0.45)" title="형광펜 초록">🖍️<span class="chip" style="background:#50dc82"></span></button>
+      <div class="tool-sep"></div>
+      <button class="tool" data-tool="pen" data-color="#c0392b" title="볼펜 빨강">🖊️<span class="chip" style="background:#c0392b"></span></button>
+      <button class="tool" data-tool="pen" data-color="#1a3a8f" title="볼펜 파랑">🖊️<span class="chip" style="background:#1a3a8f"></span></button>
+      <div class="tool-sep"></div>
+      <button class="tool" data-tool="eraser" title="지우개">◻️</button>
+      <button class="tool" id="btnUndo" title="되돌리기">↩️</button>
+    </div>
+  </div>
+
+  <!-- ═══ 내보내기 모달 ═══ -->
+  <div id="exportModal">
+    <div class="ex-title">— 오늘의 공부 지면 —</div>
+    <img id="exportImg" alt="공부한 지면 미리보기">
+    <div class="ex-btns">
+      <button class="bar-btn" id="btnCloseExport">닫기</button>
+      <button class="bar-btn" id="btnSaveImg">이미지 저장</button>
+      <button class="bar-btn primary" id="btnShare">SNS 공유</button>
+    </div>
+    <div class="ex-hint">#한경페이퍼 #경제공부 #신문스크랩 태그와 함께 인증해 보세요</div>
+  </div>
+
+  <!-- ═══ AI 하이라이트 요약 모달 ═══ -->
+  <div id="summaryModal">
+    <div class="sheet">
+      <h3>✨ 하이라이트 AI 요약</h3>
+      <div class="s-sub" id="sumSub"></div>
+      <div id="sumBody"></div>
+      <button class="s-close" id="btnCloseSummary">닫기</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ═══════════ 데이터 (샘플 기사) ═══════════ */
+const ARTICLES = [
+  {
+    id:'rate', kicker:'종합·금융', cat:'종합·금융', lead:true,
+    title:'한은, 기준금리 연 2.25% 동결…"물가·가계부채 사이 균형"',
+    sub:'금통위 만장일치 결정…이창용 "하반기 인하 여지 열어둬"',
+    reporter:'김경제 기자',
+    body:[
+      '한국은행 금융통화위원회가 8일 기준금리를 연 2.25%로 동결했다. 지난 2월 0.25%포인트 인하 이후 세 차례 연속 동결이다. 물가 상승률이 목표 수준인 2% 부근에서 안정세를 보이고 있지만, 수도권 주택가격 상승과 가계부채 증가세가 이어지고 있는 점을 고려한 결정으로 풀이된다.',
+      '금통위는 통화정책방향 의결문에서 "물가는 안정 흐름을 지속하고 있으나 금융안정 측면의 리스크가 여전하다"며 "긴축 기조를 유지하면서 추가 인하 시점을 검토해 나가겠다"고 밝혔다.',
+      {term:'기준금리란?', desc:'한국은행이 금융회사와 거래할 때 기준이 되는 금리. 기준금리가 내려가면 대출·예금 금리가 따라 내려가 시중에 돈이 풀리고, 올라가면 반대로 돈줄이 조여진다.'},
+      '시장의 관심은 인하 시점으로 옮겨가고 있다. 전문가들은 미국 중앙은행(Fed)의 금리 인하 속도와 환율 흐름이 변수라고 지적한다. 원·달러 환율이 1300원대에서 등락을 반복하는 상황에서 한은이 먼저 큰 폭으로 금리를 내리기는 부담스럽다는 것이다.',
+      '이창용 한은 총재는 기자간담회에서 "가계부채 증가세가 둔화되는 것을 확인하면 하반기 중 인하를 논의할 수 있다"며 "다만 부동산 시장 상황을 면밀히 지켜보겠다"고 말했다.'
+    ]
+  },
+  {
+    id:'chip', kicker:'산업', cat:'산업',
+    title:'반도체 수출 다시 날개…상반기 수출 역대 최대',
+    sub:'AI 서버용 HBM 주문 폭주…하반기에도 슈퍼사이클 지속 전망',
+    reporter:'박산업 기자',
+    body:[
+      '올해 상반기 반도체 수출액이 800억달러를 넘어서며 반기 기준 역대 최대치를 기록했다. 인공지능(AI) 데이터센터 투자 확대로 고대역폭메모리(HBM)와 기업용 솔리드스테이트드라이브(eSSD) 수요가 폭발적으로 늘어난 덕분이다.',
+      {term:'HBM이란?', desc:'D램을 수직으로 쌓아 데이터 처리 속도를 획기적으로 높인 고대역폭 메모리. AI 반도체의 필수 부품으로, 일반 D램보다 수 배 비싸게 팔리는 고부가가치 제품이다.'},
+      '산업통상자원부에 따르면 상반기 전체 수출은 3400억달러로 전년 동기 대비 9% 증가했다. 반도체가 전체 수출의 4분의 1을 차지하며 성장을 견인했다.',
+      '증권가에서는 하반기에도 메모리 가격 상승세가 이어질 것으로 본다. 다만 미국의 관세 정책과 중국 메모리 업체의 추격은 변수로 꼽힌다. 업계 관계자는 "범용 D램은 경쟁이 치열해지는 만큼 HBM 등 고부가 제품 중심의 체질 전환이 관건"이라고 말했다.'
+    ]
+  },
+  {
+    id:'fx', kicker:'국제·외환', cat:'국제·외환',
+    title:'원·달러 환율 1300원대 공방…수출기업 환리스크 비상',
+    sub:'"환율 10원 움직이면 영업이익 수백억 왔다갔다"',
+    reporter:'이외환 기자',
+    body:[
+      '원·달러 환율이 1300원대 초반에서 치열한 공방을 벌이고 있다. 미국의 금리 인하 기대가 커질 때마다 환율은 1290원대로 내려섰다가, 지정학 리스크가 부각되면 다시 1310원대로 올라서는 흐름이 반복되고 있다.',
+      '환율 변동성이 커지면서 수출기업들의 환리스크 관리에도 비상이 걸렸다. 자동차·조선처럼 달러로 대금을 받는 업종은 환율 하락(원화 강세)이 수익성 악화로 직결된다.',
+      {term:'환헤지란?', desc:'미래의 환율 변동 위험을 없애기 위해 미리 환율을 고정해 두는 거래. 선물환 계약이 대표적이며, 보험료처럼 일정 비용이 든다.'},
+      '전문가들은 하반기 환율의 방향을 결정할 핵심 변수로 미국의 금리 인하 폭과 한·미 금리 차를 꼽는다. 금리 차가 좁혀지면 달러 매력이 줄어 원화 강세 압력이 커진다는 설명이다.'
+    ]
+  },
+  {
+    id:'housing', kicker:'부동산', cat:'부동산',
+    title:'서울 아파트 거래 회복세…"똘똘한 한 채" 쏠림 여전',
+    sub:'강남 3구 신고가 속출…지방은 미분양 부담 지속',
+    reporter:'최부동 기자',
+    body:[
+      '서울 아파트 매매 거래량이 석 달 연속 늘며 회복 흐름을 보이고 있다. 서울부동산정보광장에 따르면 지난달 서울 아파트 거래는 6800건으로 전월 대비 12% 증가했다. 금리 인하 기대와 공급 부족 우려가 맞물리며 매수 심리가 살아난 것으로 분석된다.',
+      '다만 온기는 고르게 퍼지지 않고 있다. 강남 3구(강남·서초·송파)와 마용성(마포·용산·성동) 등 선호 지역에서는 신고가 거래가 잇따르는 반면, 지방은 미분양 물량이 쌓이며 양극화가 심해지는 모습이다.',
+      {term:'똘똘한 한 채란?', desc:'여러 채를 보유하는 대신 입지가 좋은 고가 주택 한 채에 집중하는 투자 흐름. 다주택자 규제가 강화되면서 확산됐다.'},
+      '전문가들은 "공급 절벽이 예고된 2027년 전까지 선호 지역 중심의 상승 압력이 이어질 수 있다"면서도 "가계부채 관리 강화로 대출 문턱이 높아지면 추격 매수는 제한될 것"이라고 내다봤다.'
+    ]
+  },
+  {
+    id:'basic', kicker:'경제야 놀자 (입문)', cat:'입문·교육',
+    title:'금리가 오르면 왜 주가는 떨어질까',
+    sub:'뉴스가 쉬워지는 5분 경제교실 ① 금리와 자산가격',
+    reporter:'한경 경제교육팀',
+    body:[
+      '경제 뉴스에서 가장 자주 나오는 단어는 단연 "금리"다. 금리가 오르면 주가가 떨어지고, 금리가 내리면 부동산이 들썩인다는 말은 왜 나올까. 원리는 의외로 단순하다. 금리는 "돈의 값"이기 때문이다.',
+      '금리가 오르면 예금만 해도 이자를 두둑이 받을 수 있다. 굳이 위험한 주식에 투자할 이유가 줄어든다. 기업 입장에서도 대출 이자 부담이 커져 투자를 줄이고, 이는 실적 둔화로 이어진다. 돈이 주식시장에서 은행으로 이동하는 것이다.',
+      {term:'할인율 효과', desc:'주가는 기업이 미래에 벌어들일 이익을 현재 가치로 환산한 값이다. 금리(할인율)가 오르면 미래 이익의 현재 가치가 줄어 주가가 하락 압력을 받는다.'},
+      '반대로 금리가 내리면 대출 부담이 줄고 시중에 돈이 풀린다. 은행 이자에 만족하지 못한 돈이 주식·부동산으로 흘러가 자산 가격을 밀어 올린다. 오늘 기준금리 기사를 읽을 때 이 흐름을 떠올려 보자. 뉴스가 한결 쉽게 읽힐 것이다.'
+    ]
+  },
+  {
+    id:'stock', kicker:'종합·금융', cat:'종합·금융',
+    title:'코스피 3000선 회복…외국인 순매수 행진',
+    sub:'반도체·금융주 강세…"연말 3200 전망도"',
+    reporter:'정증시 기자',
+    body:[
+      '코스피지수가 3개월 만에 3000선을 회복했다. 외국인 투자자가 8거래일 연속 순매수에 나서며 지수를 끌어올렸다. 반도체 업황 회복과 기업 실적 개선 기대가 맞물린 결과라는 분석이다.',
+      '특히 시가총액 상위 반도체주와 금융주가 지수 상승을 주도했다. 은행주는 견조한 순이자마진과 배당 매력이 부각되며 52주 신고가를 다시 썼다.',
+      {term:'순매수란?', desc:'특정 투자자가 판 금액보다 산 금액이 더 많은 상태. 외국인 순매수가 이어지면 그만큼 국내 증시에 자금이 유입되고 있다는 신호로 읽힌다.'},
+      '증권가에서는 연말 코스피가 3200선까지 오를 수 있다는 전망도 나온다. 다만 미국 금리와 환율 변동성은 여전히 변수로 지목된다.'
+    ]
+  },
+  {
+    id:'bond', kicker:'종합·금융', cat:'종합·금융',
+    title:'국고채 금리 하락…채권시장에 훈풍',
+    sub:'금리 인하 기대에 국고채 3년물 연 2.6%대로',
+    reporter:'한채권 기자',
+    body:[
+      '국고채 금리가 하락세를 이어가고 있다. 하반기 기준금리 인하 기대가 커지면서 국고채 3년물 금리는 연 2.6%대까지 내려섰다. 채권 금리 하락은 곧 채권 가격 상승을 의미한다.',
+      '기관 투자자들은 금리 고점 인식 속에 중장기 채권 비중을 늘리고 있다. 개인들도 채권형 상품과 채권 상장지수펀드(ETF)로 자금을 옮기는 모습이다.',
+      {term:'금리와 채권값', desc:'시장금리가 내려가면 이미 발행된 고금리 채권의 매력이 커져 채권 가격이 오른다. 금리와 채권 가격은 반대로 움직인다.'},
+      '전문가들은 "금리 인하가 현실화되면 채권 투자 수익이 더 커질 수 있다"면서도 "인하 시점이 지연되면 변동성이 확대될 수 있다"고 조언했다.'
+    ]
+  },
+  {
+    id:'auto', kicker:'산업', cat:'산업',
+    title:'K-자동차 질주…친환경차 수출 신기록',
+    sub:'전기차·하이브리드 북미·유럽서 수요 급증',
+    reporter:'차산업 기자',
+    body:[
+      '국산 자동차의 친환경차 수출이 역대 최대를 기록했다. 전기차와 하이브리드차가 북미와 유럽 시장에서 좋은 반응을 얻으며 상반기 자동차 수출액이 크게 늘었다.',
+      '특히 하이브리드 모델은 충전 부담이 적고 연비가 뛰어나 실수요가 몰렸다. 완성차 업체들은 고부가 차종 중심으로 라인업을 재편하며 수익성을 끌어올리고 있다.',
+      {term:'하이브리드차란?', desc:'내연기관 엔진과 전기 모터를 함께 사용하는 자동차. 순수 전기차보다 충전 부담이 적어 과도기 대안으로 인기를 끌고 있다.'},
+      '다만 미국의 관세 정책과 원자재 가격은 하반기 변수로 꼽힌다. 업계는 현지 생산 확대로 리스크에 대응한다는 방침이다.'
+    ]
+  }
+];
+
+/* ═══════════ 완독 기사 기반 퀴즈 ═══════════ */
+const QUIZZES = {
+  rate: [
+    {q:'한국은행 금통위가 이번에 결정한 기준금리 수준은?',
+     options:['연 2.00%','연 2.25%','연 2.50%','연 2.75%'], answer:1,
+     explain:'금통위는 기준금리를 연 2.25%로 동결했습니다. 세 차례 연속 동결이었죠.'},
+    {q:'기준금리가 내려갈 때 나타나는 현상으로 옳은 것은?',
+     options:['대출·예금 금리가 따라 내려가 시중에 돈이 풀린다','돈줄이 조여져 대출이 어려워진다','물가가 반드시 하락한다','환율이 항상 내려간다'], answer:0,
+     explain:'기준금리가 내려가면 대출·예금 금리도 따라 내려가 시중에 돈이 풀립니다.'}
+  ],
+  chip: [
+    {q:'상반기 반도체 수출이 역대 최대를 기록한 주요 배경은?',
+     options:['AI 데이터센터 투자 확대로 HBM 수요 급증','스마트폰 판매 급감','국제 유가 하락','부동산 규제 완화'], answer:0,
+     explain:'AI 데이터센터 투자가 늘며 HBM·eSSD 수요가 폭발적으로 증가한 덕분입니다.'},
+    {q:'HBM에 대한 설명으로 옳은 것은?',
+     options:['D램을 수직으로 쌓아 처리 속도를 높인 고대역폭 메모리','화면을 표시하는 디스플레이 부품','자동차용 2차전지','통신 기지국 장비'], answer:0,
+     explain:'HBM은 D램을 수직으로 쌓아 데이터 처리 속도를 높인 고대역폭 메모리로, AI 반도체의 필수 부품입니다.'}
+  ],
+  fx: [
+    {q:'환율이 하락(원화 강세)할 때 수익성이 나빠지기 쉬운 업종은?',
+     options:['달러로 대금을 받는 수출기업(자동차·조선)','수입에만 의존하는 기업','내수 위주 서비스업','영향을 받는 업종이 없다'], answer:0,
+     explain:'달러로 대금을 받는 수출기업은 원화 강세(환율 하락) 시 수익성이 악화됩니다.'},
+    {q:'환헤지(선물환 계약 등)의 목적으로 옳은 것은?',
+     options:['미래 환율 변동 위험을 미리 고정해 없애는 것','환율을 반드시 상승시키는 것','세금을 줄이는 것','금리를 인하시키는 것'], answer:0,
+     explain:'환헤지는 미래의 환율 변동 위험을 미리 고정해 없애는 거래로, 보험료처럼 비용이 듭니다.'}
+  ],
+  housing: [
+    {q:'기사에서 말한 "똘똘한 한 채"가 뜻하는 것은?',
+     options:['입지 좋은 고가 주택 한 채에 집중하는 흐름','여러 채를 지역별로 분산 보유','전세를 끼고 갭투자하는 것','지방 미분양 주택 투자'], answer:0,
+     explain:'다주택 규제가 강화되며 입지 좋은 고가 주택 한 채에 집중하는 흐름을 뜻합니다.'},
+    {q:'서울 아파트 거래 회복의 배경으로 기사가 짚은 것은?',
+     options:['금리 인하 기대와 공급 부족 우려','인구 급감','대출 규제 대폭 강화','보유세 인상'], answer:0,
+     explain:'금리 인하 기대와 공급 부족 우려가 맞물리며 매수 심리가 살아났습니다.'}
+  ],
+  basic: [
+    {q:'금리가 오르면 주가가 하락 압력을 받는 이유(할인율 효과)는?',
+     options:['미래 이익의 현재 가치가 줄어들기 때문','기업이 세금을 더 내기 때문','환율이 반드시 오르기 때문','배당이 사라지기 때문'], answer:0,
+     explain:'금리(할인율)가 오르면 기업이 미래에 벌 이익의 현재 가치가 줄어 주가가 눌립니다.'},
+    {q:'금리가 내릴 때 일반적으로 나타나는 현상은?',
+     options:['시중에 돈이 풀려 주식·부동산 가격이 오른다','예금으로만 돈이 몰린다','대출이 크게 줄어든다','물가가 반드시 내린다'], answer:0,
+     explain:'금리가 내리면 시중에 돈이 풀려 주식·부동산 등 자산 가격을 밀어 올립니다.'}
+  ],
+  stock: [
+    {q:'코스피 3000선 회복을 이끈 주체로 기사가 지목한 것은?',
+     options:['외국인 순매수','개인의 공매도','정부의 직접 개입','기업의 자사주 소각'], answer:0,
+     explain:'외국인이 8거래일 연속 순매수에 나서며 지수를 끌어올렸습니다.'},
+    {q:'"순매수"의 의미로 옳은 것은?',
+     options:['판 금액보다 산 금액이 더 많은 상태','산 금액보다 판 금액이 많은 상태','매매를 전혀 하지 않는 상태','배당을 받는 것'], answer:0,
+     explain:'순매수는 판 금액보다 산 금액이 더 많은 상태로, 자금이 유입되고 있다는 신호입니다.'}
+  ],
+  bond: [
+    {q:'시장금리가 내려가면 채권 가격은 어떻게 될까?',
+     options:['오른다','내린다','변화가 없다','0이 된다'], answer:0,
+     explain:'금리와 채권 가격은 반대로 움직입니다. 금리가 내리면 채권 가격은 오릅니다.'},
+    {q:'국고채 3년물 금리가 내려선 배경으로 기사가 든 것은?',
+     options:['하반기 기준금리 인하 기대','물가의 급등','환율 급락','부동산 급등'], answer:0,
+     explain:'하반기 기준금리 인하 기대가 커지며 국고채 금리가 하락했습니다.'}
+  ],
+  auto: [
+    {q:'K-자동차 친환경차 수출 신기록을 이끈 차종은?',
+     options:['전기차·하이브리드','경유(디젤)차','클래식카','수소버스만'], answer:0,
+     explain:'전기차와 하이브리드차가 북미·유럽에서 좋은 반응을 얻으며 수출을 이끌었습니다.'},
+    {q:'하이브리드차의 특징으로 옳은 것은?',
+     options:['엔진과 전기 모터를 함께 써 충전 부담이 적다','전기만으로 달린다','연료가 전혀 필요 없다','충전이 불가능하다'], answer:0,
+     explain:'하이브리드차는 내연기관과 전기 모터를 함께 사용해 순수 전기차보다 충전 부담이 적습니다.'}
+  ]
+};
+
+/* ═══════════ 상태 & 저장 ═══════════ */
+const store = {
+  get(k, d){ try{ return JSON.parse(localStorage.getItem('hkpaper:'+k)) ?? d }catch(e){ return d } },
+  set(k, v){ localStorage.setItem('hkpaper:'+k, JSON.stringify(v)) }
+};
+let currentArticle = null;
+let strokes = [];          // {tool,color,width,points:[{x,y}]}
+let drawing = null;
+let tool = {type:'scroll', color:null};
+
+const $ = s => document.querySelector(s);
+const todayStr = () => {
+  const d = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`;
+};
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ═══════════ 홈: 오늘의 지면 (한 장에 전체 기사) ═══════════ */
+function renderFront(){
+  const doneIds = new Set(store.get('done', []).map(r=>r.id));
+  const firstPara = a => a.body.find(b=>typeof b==='string');
+  const lead = ARTICLES.find(a=>a.lead) || ARTICLES[0];
+  const rest = ARTICLES.filter(a=>a!==lead);
+
+  const smallArt = a => `
+    <div class="p-art ${doneIds.has(a.id)?'done':''}" data-id="${a.id}">
+      <div class="p-kick">${a.kicker}</div>
+      <h3>${a.title}</h3>
+      <div class="p-lede-s">${firstPara(a)}</div>
+      <div class="p-meta"><span>${a.reporter}</span>${doneIds.has(a.id)?'<span class="done-chip">✓ 완독</span>':''}</div>
+    </div>`;
+
+  $('#frontPage').innerHTML = `
+    <div class="app-header">
+      <div class="brand-row">
+        <div class="wordmark">한경페이퍼<span class="dot">.</span></div>
+        <div class="date">${todayStr()}</div>
+      </div>
+    </div>
+    <div class="sheet">
+      <div class="masthead">
+        <div class="ed">DIGITAL PAPER EDITION</div>
+        <h1>한경페이퍼</h1>
+        <div class="dateline"><span>제 1 호</span><span>${todayStr()}</span><span>매일 발행</span></div>
+      </div>
+      <div class="page-head"><span class="sec-name">오늘의 지면</span><span class="pg-no">기사 ${ARTICLES.length}건 · 한눈에 보기</span></div>
+      <div class="p-art lead ${doneIds.has(lead.id)?'done':''}" data-id="${lead.id}">
+        <div class="p-kick">${lead.kicker}</div>
+        <h2>${lead.title}</h2>
+        <div class="p-sub">${lead.sub}</div>
+        <div class="p-lede">${firstPara(lead)}</div>
+        <div class="p-meta"><span>${lead.reporter}</span>${doneIds.has(lead.id)?'<span class="done-chip">✓ 완독</span>':''}</div>
+      </div>
+      <div class="p-grid dense">${rest.map(smallArt).join('')}</div>
+      <div class="page-foot">한경페이퍼 · 지면 그대로, 공부는 더 깊게</div>
+    </div>`;
+
+  document.querySelectorAll('.p-art').forEach(el=>{
+    el.addEventListener('click', ()=>openArticle(el.dataset.id));
+  });
+}
+
+/* ═══════════ 마이페이지 렌더 ═══════════ */
+const CAT_COLORS = {
+  '종합·금융':'#3182f6', '산업':'#10b981', '국제·외환':'#6366f1',
+  '부동산':'#f59e0b', '입문·교육':'#fb7185'
+};
+const catColor = c => CAT_COLORS[c] || '#8b95a1';
+const recCat = r => r.cat || (ARTICLES.find(a=>a.id===r.id)||{}).cat || '기타';
+
+const HISTORY_VISIBLE = 4;
+let myExpanded = false;
+
+function renderDashboard(done){
+  if(!done.length){
+    return `<div class="dash-card"><div class="dash-empty">아직 완독한 기사가 없어 관심 분야를 분석할 수 없어요.<br>기사를 완독할 때마다 분야별 관심도가 이 막대그래프에 쌓입니다.</div></div>`;
+  }
+  const counts = {};
+  done.forEach(r=>{ const c = recCat(r); counts[c] = (counts[c]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
+  const max = entries[0][1], total = done.length;
+  const bars = entries.map(([c,n])=>{
+    const pct = Math.round(n/max*100), share = Math.round(n/total*100);
+    return `<div class="dash-bar">
+      <div class="row">
+        <span class="name"><span class="dot" style="background:${catColor(c)}"></span>${c}</span>
+        <span class="val">${n}건 · ${share}%</span>
+      </div>
+      <div class="track"><div class="fill" data-w="${pct}" style="background:${catColor(c)}"></div></div>
+    </div>`;
+  }).join('');
+  return `<div class="dash-card">${bars}<div class="dash-top">요즘 가장 관심있게 보는 분야는 <b>${entries[0][0]}</b>예요.</div></div>`;
+}
+
+function recordHtml(r){
+  const cat = recCat(r), col = catColor(cat);
+  return `<div class="my-record" data-id="${r.id}">
+    <div class="rec-body"><span class="cat-tag" style="color:${col};background:${col}1a">${cat}</span>
+      <div class="t">${r.title}</div><div class="d">${r.date} 완독</div></div>
+    <div class="chev">다시 보기 ›</div></div>`;
+}
+
+function renderMy(){
+  const done = store.get('done', []);
+  const days = new Set(done.map(r=>r.date)).size;
+  const list = done.slice().reverse();
+  const shown = myExpanded ? list : list.slice(0, HISTORY_VISIBLE);
+  const extra = list.length - HISTORY_VISIBLE;
+
+  const historyHtml = done.length
+    ? shown.map(recordHtml).join('') +
+      (list.length > HISTORY_VISIBLE
+        ? `<button class="expand-btn" id="btnExpand">${myExpanded ? '접기 ▲' : `이전 히스토리 펼쳐보기 (+${extra}건) ▼`}</button>`
+        : '')
+    : '<p style="font-size:13px;line-height:1.8;color:var(--ink-soft)">아직 완독한 기사가 없습니다.<br>홈 지면에서 기사를 골라 형광펜과 함께 읽어보세요.</p>';
+
+  $('#myPage').innerHTML = `
+    <div class="ph-badge">MY STUDY</div>
+    <h2>나의 경제공부 기록</h2>
+    <div class="my-stats">
+      <div class="my-stat"><div class="num">${done.length}</div><div class="lbl">완독한 기사</div></div>
+      <div class="my-stat"><div class="num">${days}</div><div class="lbl">공부한 날</div></div>
+    </div>
+
+    <div class="my-section">
+      <div class="sec-head"><h3>관심 분야 대시보드</h3><span class="sec-sub">분야별 완독 비중</span></div>
+      ${renderDashboard(done)}
+    </div>
+
+    <div class="my-section">
+      <div class="sec-head"><h3>완독 히스토리</h3><span class="sec-sub">총 ${done.length}건</span></div>
+      ${historyHtml}
+    </div>
+
+    <p style="margin-top:22px;font-size:11.5px;color:var(--ink-3);line-height:1.6">※ 스크랩북·연속 공부 스트릭 기능이 준비 중입니다.</p>`;
+
+  document.querySelectorAll('.my-record').forEach(el=>{
+    el.addEventListener('click', ()=>openArticle(el.dataset.id));
+  });
+  const exp = $('#btnExpand');
+  if(exp) exp.addEventListener('click', ()=>{ myExpanded = !myExpanded; renderMy(); });
+  // 막대 애니메이션
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#myPage .fill').forEach(f=>{ f.style.width = f.dataset.w + '%'; });
+  });
+}
+
+/* ═══════════ 하이라이트 AI 요약 ═══════════ */
+const HL_STOP = new Set(['그리고','하지만','그러나','또한','이는','대한','통해','위해','있는','없는','같은','때문','대해','오는','지난','으로','이라','가운데','관련','대비','이후','만큼','정도','가장','것','수','더','및','등','때','중','안','밖','전','후']);
+function stripParticle(w){
+  let prev;
+  do { prev = w;
+    w = w.replace(/(으로서|으로|에서는|에서도|에서|에게|께서|이라고|라고|라는|이라는|한테|은|는|이|가|을|를|의|에|도|로|과|와|만|까지|부터|보다|처럼|마다|조차|밖에|께)$/,'');
+  } while(w !== prev && w.length > 1);
+  return w;
+}
+function extractKeywords(text){
+  const counts = {};
+  for(let raw of text.replace(/[^가-힣A-Za-z0-9\s]/g,' ').split(/\s+/)){
+    // 동사·형용사·연결형 토큰 제외 (…다 / …며 / …면 / …면서)
+    if(/(다|며|면|면서)$/.test(raw)) continue;
+    // 3글자 이상이면서 연결·관형형 어미(…고/…한/…게/…진/…린/…던)로 끝나면 제외
+    if(raw.length >= 3 && /(고|한|게|진|린|던)$/.test(raw)) continue;
+    const w = stripParticle(raw);
+    if(w.length < 2 || HL_STOP.has(w) || /(다|며|면)$/.test(w)) continue;
+    counts[w] = (counts[w]||0)+1;
+  }
+  return Object.entries(counts).sort((a,b)=> b[1]-a[1] || b[0].length-a[0].length).slice(0,6).map(e=>e[0]);
+}
+function getHighlightTexts(id){
+  return store.get('ink:'+id, [])
+    .filter(s=>s.tool==='hlsnap' && s.text)
+    .map(s=>s.text.trim().replace(/\s+/g,' '))
+    .filter(t=>t.length>=2);
+}
+function summarizeHighlights(texts){
+  const clean = [], seen = new Set();
+  for(const t of texts){
+    const key = t.replace(/[^가-힣A-Za-z0-9]/g,'');
+    if(!key || seen.has(key)) continue;
+    seen.add(key); clean.push(t);
+  }
+  const keywords = extractKeywords(clean.join(' '));
+  const points = clean.slice(0,4).map(t=> t.length>72 ? t.slice(0,70)+'…' : t);
+  const lead = keywords.length
+    ? `이 기사에서 <b>${keywords.slice(0,3).join('</b>, <b>')}</b>를 중심으로 표시하셨어요. 핵심만 모아 정리했습니다.`
+    : '표시한 하이라이트를 모아 정리했어요.';
+  return {lead, points, keywords, count: clean.length};
+}
+function openSummary(){
+  if(!currentArticle) return;
+  $('#sumSub').textContent = currentArticle.title;
+  const texts = getHighlightTexts(currentArticle.id);
+  if(!texts.length){
+    $('#sumBody').innerHTML = `<div class="ai-card"><div class="ai-badge">✨ AI SUMMARY</div>
+      <div class="ai-empty">아직 형광펜으로 표시한 문장이 없어요.<br>본문에서 중요한 문장을 형광펜으로 그으면, 표시한 문장만 모아 AI가 자동으로 요약해 드려요.</div></div>`;
+  }else{
+    const s = summarizeHighlights(texts);
+    $('#sumBody').innerHTML = `<div class="ai-card">
+      <div class="ai-badge">✨ AI SUMMARY · 하이라이트 ${s.count}곳</div>
+      <div class="ai-lead">${s.lead}</div>
+      <ul>${s.points.map(p=>`<li>${p}</li>`).join('')}</ul>
+      ${s.keywords.length ? `<div class="ai-keys">${s.keywords.map(k=>`<span class="kw"># ${k}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  $('#summaryModal').classList.add('open');
+}
+$('#btnSummary').addEventListener('click', openSummary);
+$('#btnCloseSummary').addEventListener('click', ()=>$('#summaryModal').classList.remove('open'));
+
+/* ═══════════ 게임: 완독 기사 퀴즈 ═══════════ */
+let quizState = null;
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const QUIZ_MAX = 8;
+
+function buildQuizPool(){
+  const done = store.get('done', []);
+  const pool = [];
+  done.forEach(r=>{
+    (QUIZZES[r.id]||[]).forEach(q=> pool.push({...q, cat:recCat(r), title:r.title}));
+  });
+  return pool;
+}
+function goHomeTab(){ document.querySelector('#bottomNav button[data-view="home"]').click(); }
+
+function renderGame(){
+  quizState = null;
+  const pool = buildQuizPool();
+  const done = store.get('done', []);
+  if(!pool.length){
+    $('#gamePage').innerHTML = `<div class="quiz-wrap">
+      <div class="ph-badge">QUIZ</div>
+      <h2>오늘의 경제 퀴즈</h2>
+      <p class="quiz-empty">아직 완독한 기사가 없어요.<br>홈 지면에서 기사를 읽고 <b>완독 도장</b>을 찍으면,<br>그 기사로 만든 퀴즈가 여기에 나타납니다.</p>
+      <button class="quiz-start" id="btnGoHome">지면으로 가기</button>
+    </div>`;
+    $('#btnGoHome').addEventListener('click', goHomeTab);
+    return;
+  }
+  const cats = [...new Set(pool.map(q=>q.cat))];
+  const count = Math.min(QUIZ_MAX, pool.length);
+  const best = store.get('quizBest', null);
+  $('#gamePage').innerHTML = `<div class="quiz-wrap">
+    <div class="ph-badge">QUIZ</div>
+    <h2>오늘의 경제 퀴즈</h2>
+    <p class="quiz-lead">완독한 기사 <b>${done.length}</b>건에서 <b>${pool.length}</b>개의 문제를 준비했어요.<br>지면에서 읽은 내용을 퀴즈로 복습해 볼까요?</p>
+    ${best ? `<div class="quiz-best">🏆 최고 기록 ${best.score} / ${best.total}점</div><br>` : ''}
+    <div class="quiz-cats">${cats.map(c=>`<span class="qc" style="background:${catColor(c)}">${c}</span>`).join('')}</div>
+    <button class="quiz-start" id="btnStartQuiz">퀴즈 시작하기 · ${count}문제</button>
+  </div>`;
+  $('#btnStartQuiz').addEventListener('click', startQuiz);
+}
+
+function startQuiz(){
+  const pool = shuffle(buildQuizPool()).slice(0, QUIZ_MAX);
+  const questions = pool.map(q=>{
+    const opts = shuffle(q.options.map((text,i)=>({text, correct:i===q.answer})));
+    return {q:q.q, cat:q.cat, title:q.title, explain:q.explain, opts};
+  });
+  quizState = {questions, idx:0, score:0, answered:false};
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const st = quizState, q = st.questions[st.idx];
+  const n = st.idx+1, total = st.questions.length;
+  $('#gamePage').innerHTML = `<div class="quiz-wrap">
+    <div class="quiz-top"><span>문제 ${n} / ${total}</span><span class="quiz-score">점수 ${st.score}</span></div>
+    <div class="quiz-progress"><div class="quiz-progress-fill" style="width:${(st.idx)/total*100}%"></div></div>
+    <div class="quiz-cat-tag" style="background:${catColor(q.cat)}">${q.cat}</div>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts">
+      ${q.opts.map((o,i)=>`<button class="quiz-opt" data-i="${i}"><span class="mk">${'ABCD'[i]}</span><span>${o.text}</span></button>`).join('')}
+    </div>
+    <div class="quiz-feedback" id="quizFeedback"></div>
+    <button class="quiz-next" id="btnQuizNext" style="display:none">${n===total?'결과 보기 →':'다음 문제 →'}</button>
+  </div>`;
+  document.querySelectorAll('#gamePage .quiz-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>answerQuestion(parseInt(btn.dataset.i)));
+  });
+}
+
+function answerQuestion(i){
+  const st = quizState;
+  if(st.answered) return;
+  st.answered = true;
+  const q = st.questions[st.idx];
+  const opts = document.querySelectorAll('#gamePage .quiz-opt');
+  const isCorrect = q.opts[i].correct;
+  if(isCorrect) st.score++;
+  opts.forEach((btn,idx)=>{
+    btn.classList.add('locked');
+    if(q.opts[idx].correct) btn.classList.add('correct');
+    else if(idx===i) btn.classList.add('wrong');
+    else btn.classList.add('dim');
+  });
+  const fb = $('#quizFeedback');
+  fb.className = 'quiz-feedback show ' + (isCorrect?'ok':'no');
+  fb.innerHTML = `<div class="fb-head">${isCorrect?'정답이에요! ✓':'아쉬워요, 오답이에요 ✕'}</div>
+    ${q.explain}<span class="fb-src">📰 ${q.title}</span>`;
+  const next = $('#btnQuizNext');
+  next.style.display = 'block';
+  next.addEventListener('click', ()=>{
+    st.answered = false;
+    if(st.idx < st.questions.length-1){ st.idx++; renderQuestion(); }
+    else renderResult();
+  }, {once:true});
+  $('#view-game').scrollTo({top: $('#view-game').scrollHeight, behavior:'smooth'});
+}
+
+function renderResult(){
+  const st = quizState, total = st.questions.length, score = st.score;
+  const pct = Math.round(score/total*100);
+  const best = store.get('quizBest', null);
+  if(!best || score > best.score || (score===best.score && total>best.total))
+    store.set('quizBest', {score, total});
+  let msg;
+  if(pct===100) msg = '만점이에요! 경제 지면을 완벽하게 소화하셨네요 🎉';
+  else if(pct>=70) msg = '훌륭해요! 대부분 정확히 기억하고 계세요 👍';
+  else if(pct>=40) msg = '좋아요! 헷갈린 부분은 지면에서 다시 복습해 볼까요?';
+  else msg = '오늘은 워밍업! 기사를 다시 읽고 도전해 보세요 💪';
+  $('#gamePage').innerHTML = `<div class="quiz-wrap quiz-result">
+    <div class="ph-badge">RESULT</div>
+    <div class="result-score">${score}<span> / ${total}</span></div>
+    <div class="result-msg">${msg}</div>
+    <div class="result-bar"><div class="rf" data-w="${pct}"></div></div>
+    <button class="quiz-start" id="btnRetryQuiz">다시 풀기</button>
+    <button class="quiz-ghost" id="btnQuizHome">지면으로 가기</button>
+  </div>`;
+  requestAnimationFrame(()=>{ const rf=$('#gamePage .rf'); if(rf) rf.style.width = rf.dataset.w+'%'; });
+  $('#btnRetryQuiz').addEventListener('click', startQuiz);
+  $('#btnQuizHome').addEventListener('click', goHomeTab);
+}
+
+/* ═══════════ 내비게이션 ═══════════ */
+document.querySelectorAll('#bottomNav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#bottomNav button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    $('#view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='my') renderMy();
+    if(btn.dataset.view==='game') renderGame();
+  });
+});
+
+/* ═══════════ 기사 리더 ═══════════ */
+function openArticle(id){
+  currentArticle = ARTICLES.find(a=>a.id===id);
+  $('#rbTitle').textContent = currentArticle.title;
+
+  const bodyHtml = currentArticle.body.map(b =>
+    typeof b === 'string'
+      ? `<p>${b}</p>`
+      : `<div class="term-box"><b>📌 ${b.term}</b><span>${b.desc}</span></div>`
+  ).join('');
+
+  const doneIds = new Set(store.get('done', []).map(r=>r.id));
+  $('#articlePaper').innerHTML = `
+    <div class="art-hd">
+      <div class="a-brand">한경페이퍼<span class="dot">.</span> <span style="font-weight:600;color:var(--ink-3)">STUDY EDITION</span></div>
+      <div class="a-date">${currentArticle.kicker} · ${todayStr()}</div>
+    </div>
+    <span class="kicker">${currentArticle.kicker}</span>
+    <h2>${currentArticle.title}</h2>
+    <div class="sub">${currentArticle.sub}</div>
+    <div class="byline"><span>${currentArticle.reporter}</span><span>hankyung paper</span></div>
+    <div class="body">${bodyHtml}</div>
+    <div class="paper-foot">이 지면을 형광펜과 함께 공부하고, 내보내기로 인증해 보세요</div>
+    ${doneIds.has(id) ? stampHtml() : ''}`;
+  $('#articlePaper').classList.toggle('folded', doneIds.has(id));
+
+  $('#reader').classList.add('open');
+  $('#readerScroll').scrollTop = 0;
+
+  strokes = store.get('ink:'+id, []);
+  setupCanvas();   // innerHTML 직후 동기 레이아웃으로 즉시 크기 계산 (rAF 지연 시 빈 캔버스 방지)
+  redraw();
+  clearTool();
+}
+function stampHtml(){
+  return `<div class="stamp"><span class="big">완독</span><span class="sml">HK PAPER</span></div>`;
+}
+$('#btnBack').addEventListener('click', ()=>{
+  $('#reader').classList.remove('open');
+  renderFront();
+});
+
+/* ═══════════ 캔버스 필기 ═══════════ */
+const canvas = $('#inkCanvas');
+const ctx = canvas.getContext('2d');
+let dpr = 1;
+
+function setupCanvas(){
+  const wrap = $('#paperWrap');
+  const w = wrap.offsetWidth, h = wrap.offsetHeight;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function strokeStyle(s){
+  if(s.tool==='eraser'){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.strokeStyle='rgba(0,0,0,1)'; ctx.lineWidth=26; ctx.lineCap='round';
+  }else if(s.tool==='hl'){
+    ctx.globalCompositeOperation='multiply';
+    ctx.strokeStyle=s.color; ctx.lineWidth=16; ctx.lineCap='butt';
+  }else{
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle=s.color; ctx.lineWidth=2.2; ctx.lineCap='round';
+  }
+  ctx.lineJoin='round';
+}
+function drawStroke(s){
+  const pts = s.points;
+  if(pts.length<2) {
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, ctx.lineWidth/2, 0, Math.PI*2);
+    ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+    const mx=(pts[i].x+pts[i+1].x)/2, my=(pts[i].y+pts[i+1].y)/2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.stroke();
+}
+function drawSnapStroke(s){
+  ctx.globalCompositeOperation='multiply';
+  ctx.fillStyle = s.color;
+  for(const r of s.rects){
+    const pad = r.h * 0.16;              // 줄간 여백은 빼고 글자 높이만 칠함
+    ctx.fillRect(r.x - 2, r.y + pad, r.w + 4, r.h - pad*2);
+  }
+}
+function redraw(){
+  ctx.save();
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.restore();
+  for(const s of strokes){
+    if(s.tool==='hlsnap'){ drawSnapStroke(s); }
+    else { strokeStyle(s); drawStroke(s); }
+  }
+  ctx.globalCompositeOperation='source-over';
+}
+function canvasPoint(e){
+  const r = canvas.getBoundingClientRect();
+  return {x:e.clientX-r.left, y:e.clientY-r.top};
+}
+
+/* ── 형광펜: 손끝 아래 텍스트 캐럿을 찾아 항상 줄 단위로 반듯하게 ── */
+let snapAnchor = null;
+
+function caretAt(x, y){
+  canvas.style.pointerEvents = 'none';   // 캔버스 아래 텍스트를 조회
+  let node = null, offset = 0;
+  try{
+    if(document.caretRangeFromPoint){
+      const r = document.caretRangeFromPoint(x, y);
+      if(r){ node = r.startContainer; offset = r.startOffset; }
+    }else if(document.caretPositionFromPoint){
+      const p = document.caretPositionFromPoint(x, y);
+      if(p){ node = p.offsetNode; offset = p.offset; }
+    }
+  }finally{ canvas.style.pointerEvents = ''; }
+  if(!node || node.nodeType !== 3) return null;
+  if(!$('#articlePaper').contains(node)) return null;
+  return {node, offset};
+}
+
+function snapData(a, b){
+  const r = document.createRange();
+  r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
+  if(r.collapsed){ r.setStart(b.node, b.offset); r.setEnd(a.node, a.offset); }
+  const cr = canvas.getBoundingClientRect();
+  const lines = new Map();               // 같은 줄 rect 병합
+  for(const rect of r.getClientRects()){
+    if(rect.width < 2 || rect.height < 4) continue;
+    const key = Math.round(rect.top / 8);
+    const x = rect.left - cr.left, y = rect.top - cr.top;
+    const ex = lines.get(key);
+    if(ex){
+      const right = Math.max(ex.x + ex.w, x + rect.width);
+      ex.x = Math.min(ex.x, x); ex.w = right - ex.x;
+      ex.h = Math.max(ex.h, rect.height); ex.y = Math.min(ex.y, y);
+    }else{
+      lines.set(key, {x, y, w:rect.width, h:rect.height});
+    }
+  }
+  // 하이라이트한 실제 텍스트도 함께 캡처 (AI 요약용)
+  return {rects:[...lines.values()], text:r.toString().replace(/\s+/g,' ').trim()};
+}
+
+/* 멀티터치: 한 손가락 = 필기, 두 손가락 = 스크롤 */
+const activePtrs = new Map();
+let gesture = null;                      // {startY, startScroll}
+const avgPtrY = ()=>[...activePtrs.values()].reduce((s,p)=>s+p.y,0)/activePtrs.size;
+
+canvas.addEventListener('pointerdown', e=>{
+  if(!tool.type) return;
+  e.preventDefault();
+  try{ canvas.setPointerCapture(e.pointerId); }catch(err){/* 이미 사라진 포인터 */}
+  activePtrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(activePtrs.size === 2){
+    // 두 번째 손가락 → 그리던 획 취소하고 스크롤 제스처로 전환
+    if(drawing){ strokes.pop(); drawing=null; snapAnchor=null; redraw(); }
+    gesture = {startY: avgPtrY(), startScroll: $('#readerScroll').scrollTop};
+    return;
+  }
+  if(activePtrs.size > 2 || gesture) return;
+  if(tool.type==='hl'){
+    const c = caretAt(e.clientX, e.clientY);
+    if(!c) return;                       // 텍스트 위가 아니면 시작하지 않음
+    snapAnchor = c;
+    const d = snapData(c, c);
+    drawing = {tool:'hlsnap', color:tool.color, rects:d.rects, text:d.text};
+    strokes.push(drawing);
+  }else{
+    drawing = {tool:tool.type, color:tool.color, points:[canvasPoint(e)]};
+    strokes.push(drawing);
+  }
+  redraw();
+});
+canvas.addEventListener('pointermove', e=>{
+  if(activePtrs.has(e.pointerId)) activePtrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(gesture){
+    if(activePtrs.size >= 2){
+      e.preventDefault();
+      $('#readerScroll').scrollTop = gesture.startScroll - (avgPtrY() - gesture.startY);
+    }
+    return;
+  }
+  if(!drawing) return;
+  e.preventDefault();
+  if(drawing.tool==='hlsnap'){
+    const c = caretAt(e.clientX, e.clientY);
+    if(c){ const d = snapData(snapAnchor, c); drawing.rects = d.rects; drawing.text = d.text; }
+  }else{
+    drawing.points.push(canvasPoint(e));
+  }
+  redraw();
+});
+function endStroke(){
+  if(!drawing) return;
+  if(drawing.tool==='hlsnap' && !drawing.rects.length) strokes.pop();
+  drawing=null; snapAnchor=null;
+  if(currentArticle) store.set('ink:'+currentArticle.id, strokes);
+}
+function endPointer(e){
+  activePtrs.delete(e.pointerId);
+  if(gesture){
+    if(activePtrs.size < 2) gesture = null;  // 손가락이 남아 있어도 새 획은 다음 터치부터
+    return;
+  }
+  endStroke();
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+window.addEventListener('resize', ()=>{
+  if($('#reader').classList.contains('open')){ setupCanvas(); redraw(); }
+});
+
+/* 도구 선택 — 클릭하면 활성화, 같은 도구 재클릭 시 비활성화 */
+function clearTool(){
+  document.querySelectorAll('.tool[data-tool]').forEach(b=>b.classList.remove('on'));
+  tool = {type:null, color:null};
+  $('#readerScroll').classList.remove('draw-mode');
+}
+function setTool(btn){
+  const wasOn = btn.classList.contains('on');
+  clearTool();
+  if(wasOn) return;                      // 재클릭 → 비활성화 (스크롤로 복귀)
+  btn.classList.add('on');
+  tool = {type:btn.dataset.tool, color:btn.dataset.color||null};
+  $('#readerScroll').classList.add('draw-mode');
+}
+document.querySelectorAll('.tool[data-tool]').forEach(btn=>{
+  btn.addEventListener('click', ()=>setTool(btn));
+});
+$('#btnUndo').addEventListener('click', ()=>{
+  strokes.pop(); redraw();
+  if(currentArticle) store.set('ink:'+currentArticle.id, strokes);
+});
+
+/* ═══════════ 완독 도장 ═══════════ */
+$('#btnDone').addEventListener('click', ()=>{
+  const done = store.get('done', []);
+  if(done.some(r=>r.id===currentArticle.id)){
+    // 이미 완독한 기사 → 제목 옆에 찍혀 있는 도장을 보여줌
+    $('#readerScroll').scrollTop = 0;
+    toast('이미 완독 도장을 찍은 기사예요');
+    return;
+  }
+  done.push({id:currentArticle.id, title:currentArticle.title, date:todayStr(), cat:currentArticle.cat});
+  store.set('done', done);
+  $('#articlePaper').insertAdjacentHTML('beforeend', stampHtml());
+  $('#articlePaper').classList.add('folded');
+  // 도장은 기사 제목 옆에 찍힘 → 맨 위로 스크롤해서 보여줌
+  $('#readerScroll').scrollTop = 0;
+  toast('완독 도장을 찍었어요! 📃');
+});
+
+/* ═══════════ 내보내기 (지면+필기 → 이미지) ═══════════ */
+let exportBlob = null;
+
+async function snapshotPaper(){
+  const paper = $('#articlePaper');
+  const w = paper.offsetWidth, h = paper.offsetHeight;
+  const clone = paper.cloneNode(true);
+  clone.setAttribute('style', `width:${w}px;min-height:${h}px;`);
+  // 스냅샷에서는 애니메이션 비활성화 (도장이 opacity:0 첫 프레임으로 찍히는 것 방지)
+  const css = document.getElementById('app-style').textContent
+    + ' *{animation:none!important;transition:none!important}';
+  const xhtml = new XMLSerializer().serializeToString(clone);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`+
+    `<foreignObject width="100%" height="100%">`+
+    `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${xhtml}</div>`+
+    `</foreignObject></svg>`;
+  const img = new Image();
+  await new Promise((res, rej)=>{
+    img.onload=res; img.onerror=rej;
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  });
+  return {img, w, h};
+}
+
+async function buildExportImage(){
+  setupCanvas(); redraw();   // 내보내기 직전 캔버스 크기 보정 + 저장된 필기 다시 그리기
+  const {img, w, h} = await snapshotPaper();
+  const scale = 2;
+  const headH = 54, footH = 46;
+  const out = document.createElement('canvas');
+  out.width = w*scale; out.height = (h+headH+footH)*scale;
+  const c = out.getContext('2d');
+  c.scale(scale, scale);
+
+  // 배경(브랜드 프레임)
+  c.fillStyle = '#143c7e';
+  c.fillRect(0,0,w,h+headH+footH);
+
+  // 상단 라벨
+  c.fillStyle = '#ffffff';
+  c.font = `700 15px ${'Pretendard, -apple-system, sans-serif'}`;
+  c.textAlign = 'center';
+  c.fillText('오늘의 경제공부  ·  한경페이퍼', w/2, 33);
+
+  // 지면 스냅샷
+  c.drawImage(img, 0, headH, w, h);
+  // 필기 레이어
+  c.drawImage(canvas, 0, headH, w, h);
+
+  // 하단 태그
+  c.fillStyle = 'rgba(255,255,255,.75)';
+  c.font = `12px ${'Pretendard, -apple-system, sans-serif'}`;
+  c.fillText(`${todayStr()}  ·  #한경페이퍼 #경제공부 #신문스크랩`, w/2, h+headH+29);
+
+  return new Promise(res=>out.toBlob(b=>res(b), 'image/png'));
+}
+
+$('#btnExport').addEventListener('click', async ()=>{
+  toast('지면을 이미지로 만드는 중…');
+  try{
+    exportBlob = await buildExportImage();
+    if(!exportBlob) throw new Error('blob null');
+    $('#exportImg').src = URL.createObjectURL(exportBlob);
+    $('#exportModal').classList.add('open');
+  }catch(err){
+    console.error(err);
+    toast('이 브라우저에서는 이미지 변환이 제한돼요 😢');
+  }
+});
+$('#btnCloseExport').addEventListener('click', ()=>$('#exportModal').classList.remove('open'));
+$('#btnSaveImg').addEventListener('click', ()=>{
+  const a = document.createElement('a');
+  a.href = $('#exportImg').src;
+  a.download = `한경페이퍼_공부인증_${Date.now()}.png`;
+  a.click();
+  toast('이미지를 저장했어요');
+});
+$('#btnShare').addEventListener('click', async ()=>{
+  const file = new File([exportBlob], 'hankyung-paper-study.png', {type:'image/png'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({
+        files:[file],
+        title:'오늘의 경제공부 · 한경페이퍼',
+        text:'오늘도 지면으로 경제공부 완료! #한경페이퍼 #경제공부 #신문스크랩'
+      });
+    }catch(e){/* 사용자가 취소 */}
+  }else{
+    toast('이 환경은 공유가 안 돼요. "이미지 저장"을 이용해 주세요');
+  }
+});
+
+/* ═══════════ 시작 ═══════════ */
+// 레이아웃(디자인) 변경으로 좌표가 어긋난 이전 필기 데이터 자동 정리
+const INK_VER = 'v2-ais';
+if(store.get('inkVer') !== INK_VER){
+  Object.keys(localStorage)
+    .filter(k=>k.startsWith('hkpaper:ink:'))
+    .forEach(k=>localStorage.removeItem(k));
+  store.set('inkVer', INK_VER);
+}
+renderFront();
+</script>
+</body>
+</html>
