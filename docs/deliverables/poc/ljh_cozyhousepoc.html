@@ -1119,26 +1119,37 @@ document.addEventListener('mousemove', e => {
     renderer.domElement.style.cursor = pickInteractable(e.clientX, e.clientY) ? 'pointer' : 'grab';
   }
 });
-/* 터치: 한 손가락 드래그로 둘러보기 */
+/* 터치: 드래그로 둘러보기 — 손가락 identifier를 추적해서
+   조이스틱을 잡은 상태(터치 2개)에서도 다른 손가락으로 시선을 돌릴 수 있게 한다 */
+let lookTouchId = null;
 renderer.domElement.addEventListener('touchstart', e => {
-  if (mode !== 'walk' || uiOpen() || e.touches.length !== 1) return;
+  if (mode !== 'walk' || uiOpen() || lookTouchId !== null) return;
+  const t = e.changedTouches[0]; // 캔버스에서 새로 시작된 터치만 (조이스틱 터치는 대상이 달라 여기 안 옴)
+  lookTouchId = t.identifier;
   dragging = true; dragDist = 0;
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  lastX = t.clientX; lastY = t.clientY;
 }, { passive: true });
 renderer.domElement.addEventListener('touchmove', e => {
-  if (!dragging || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+  if (!dragging || lookTouchId === null) return;
+  const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouchId);
+  if (!t) return;
+  const dx = t.clientX - lastX, dy = t.clientY - lastY;
   dragDist += Math.abs(dx) + Math.abs(dy);
   applyLook(dx * 1.4, dy * 1.4);
-  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  lastX = t.clientX; lastY = t.clientY;
 }, { passive: true });
-renderer.domElement.addEventListener('touchend', e => {
+function endLookTouch(e) {
+  if (lookTouchId === null) return;
+  const t = Array.from(e.changedTouches).find(t => t.identifier === lookTouchId);
+  if (!t) return;
   if (dragging && dragDist < 6 && mode === 'walk' && !uiOpen()) {
     const it = pickInteractable(lastX, lastY);
     if (it) it.onClick();
   }
-  dragging = false;
-});
+  dragging = false; lookTouchId = null;
+}
+renderer.domElement.addEventListener('touchend', endLookTouch);
+renderer.domElement.addEventListener('touchcancel', endLookTouch);
 
 function collide(x, z) {
   for (const c of colliders) {
