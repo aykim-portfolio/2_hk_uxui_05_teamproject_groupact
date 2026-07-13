@@ -57,7 +57,8 @@
   }
   #roomLabel.show { opacity: 1; }
   #modeBtn {
-    position: absolute; right: 20px; bottom: 20px; pointer-events: auto;
+    /* 우하단은 조이스틱 고정 자리라 모드 버튼은 좌하단 */
+    position: absolute; left: 20px; bottom: 20px; pointer-events: auto;
     padding: 11px 20px; border: none; border-radius: 999px; cursor: pointer;
     background: rgba(255,250,243,.92); color: #6b4f3a; font-size: 13px; font-weight: 700;
     box-shadow: 0 4px 16px rgba(107,79,58,.18);
@@ -81,9 +82,9 @@
   }
   #timeBadge.night { background: rgba(28,34,58,.82); color: #ffe3b8; }
 
-  /* ---------- 모바일 가상 조이스틱 (우하단, 반투명) ---------- */
+  /* ---------- 가상 조이스틱 (우하단 고정, 반투명 — 터치·마우스 공용) ---------- */
   #joystick {
-    display: none;
+    display: block;
     position: absolute; right: 18px; bottom: calc(26px + env(safe-area-inset-bottom, 0px));
     width: 118px; height: 118px; border-radius: 50%;
     background: rgba(255,250,243,.16);
@@ -98,11 +99,6 @@
     background: rgba(255,250,243,.78);
     box-shadow: 0 2px 10px rgba(107,79,58,.35);
   }
-  /* 터치 기기: 조이스틱이 우하단을 차지하므로 모드 버튼은 좌하단으로 */
-  body.touch #joystick { display: block; }
-  body.touch #modeBtn { right: auto; left: 20px; }
-  .touch-only { display: none !important; }
-  body.touch .touch-only { display: flex !important; }
 
   /* ---------- 조작법 모달 ---------- */
   #helpModal {
@@ -1044,15 +1040,6 @@ const joy = { x: 0, z: 0, active: false };
 const joystickEl = document.getElementById('joystick');
 const joyKnob = document.getElementById('joyKnob');
 const JOY_MAX = 40; // 노브 최대 이동 반경(px) = 입력 크기 1.0
-/* 터치 환경 감지: 로드 시 1회만 검사하면 데브툴 기기 에뮬레이션 전환(새로고침 없이)을 놓치므로
-   media query 변화 구독 + 실제 터치 발생 시 폴백까지 3중으로 잡는다 */
-function updateTouchClass() {
-  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (touch) document.body.classList.add('touch');
-}
-updateTouchClass();
-try { matchMedia('(pointer: coarse)').addEventListener('change', updateTouchClass); } catch (_) {}
-window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
 let joyPointerId = null;
 function joyUpdate(e) {
   const r = joystickEl.getBoundingClientRect();
