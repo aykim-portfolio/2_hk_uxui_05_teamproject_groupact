@@ -1044,9 +1044,15 @@ const joy = { x: 0, z: 0, active: false };
 const joystickEl = document.getElementById('joystick');
 const joyKnob = document.getElementById('joyKnob');
 const JOY_MAX = 40; // 노브 최대 이동 반경(px) = 입력 크기 1.0
-if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) {
-  document.body.classList.add('touch');
+/* 터치 환경 감지: 로드 시 1회만 검사하면 데브툴 기기 에뮬레이션 전환(새로고침 없이)을 놓치므로
+   media query 변화 구독 + 실제 터치 발생 시 폴백까지 3중으로 잡는다 */
+function updateTouchClass() {
+  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (touch) document.body.classList.add('touch');
 }
+updateTouchClass();
+try { matchMedia('(pointer: coarse)').addEventListener('change', updateTouchClass); } catch (_) {}
+window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
 let joyPointerId = null;
 function joyUpdate(e) {
   const r = joystickEl.getBoundingClientRect();
