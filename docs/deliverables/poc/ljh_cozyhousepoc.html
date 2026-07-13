@@ -82,6 +82,17 @@
   }
   #timeBadge.night { background: rgba(28,34,58,.82); color: #ffe3b8; }
 
+  /* ---------- 입장 직후 시선 조작 온보딩 힌트 ---------- */
+  #lookHint {
+    position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%);
+    padding: 13px 24px; border-radius: 999px;
+    background: rgba(20,16,12,.55); color: #fff;
+    font-size: 14px; font-weight: 600; letter-spacing: .01em;
+    pointer-events: none; white-space: nowrap;
+    opacity: 0; transition: opacity .5s ease;
+  }
+  #lookHint.show { opacity: 1; }
+
   /* ---------- 가상 조이스틱 (우하단 고정, 반투명 — 터치·마우스 공용) ---------- */
   #joystick {
     display: block;
@@ -209,6 +220,7 @@
   <div id="roomLabel"></div>
   <button id="modeBtn">🏠 돌하우스 뷰 (M)</button>
   <div id="joystick" aria-label="이동 조이스틱"><div id="joyKnob"></div></div>
+  <div id="lookHint">🖐 화면을 드래그해서 둘러보세요 · 🕹️ 스틱으로 이동</div>
 </div>
 
 <div id="intro">
@@ -1270,8 +1282,16 @@ function updateOrbit(dt) {
    인트로 & 루프
 ============================================================ */
 const intro = document.getElementById('intro');
+const lookHint = document.getElementById('lookHint');
+let lookHintShown = false;
 intro.addEventListener('click', () => {
   intro.classList.add('hidden');
+  // 입장 직후 한 번만: 시선/이동 조작 온보딩 힌트를 잠깐 띄웠다 사라지게
+  if (!lookHintShown) {
+    lookHintShown = true;
+    lookHint.classList.add('show');
+    setTimeout(() => lookHint.classList.remove('show'), 2800);
+  }
 });
 
 /* ============================================================
