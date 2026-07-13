@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국경제 | 오늘 방송 기사 모아보기 PoC</title>
+<style>
+  :root{
+    --navy:#1e2f6f; --red:#d0332f; --ink:#111827; --sub:#6b7280; --line:#e5e7eb;
+    --up:#d0332f; --down:#1a56db; --gray:#9ca3af;
+    --tv:#b91c1c; --tv-bg:#fef2f2; --tv-line:#fecaca;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",-apple-system,sans-serif; color:var(--ink); background:#fff;}
+  button{font-family:inherit; cursor:pointer;}
+  .wrap{max-width:1200px; margin:0 auto; padding:0 20px;}
+
+  /* ── 헤더 ─────────────────────────── */
+  .util{display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:#374151; padding:10px 0;}
+  .util .links a{margin-left:18px; text-decoration:none; color:#374151;}
+  .util .links a.prem{font-weight:700;}
+  .logo-row{display:flex; justify-content:space-between; align-items:center; padding:6px 0 18px;}
+  .logo-side{width:260px; display:flex; gap:18px; align-items:center; font-size:12px; font-weight:800; color:#111;}
+  .logo-side .tv{background:#111; color:#fff; padding:2px 6px; border-radius:3px; font-size:11px;}
+  .logo{font-family:"Nanum Myeongjo","Batang",serif; font-size:44px; font-weight:800; color:var(--navy); letter-spacing:2px; text-align:center; text-decoration:none;}
+  .logo-side.right{justify-content:flex-end; font-weight:400; color:#374151;}
+  nav.gnb{border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  nav.gnb .wrap{display:flex; align-items:center; gap:26px; height:52px; font-size:15.5px; font-weight:700; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  nav.gnb .wrap::-webkit-scrollbar{display:none;}
+  nav.gnb a{text-decoration:none; color:var(--ink); white-space:nowrap;}
+  nav.gnb a.pill{border:2px solid var(--red); color:var(--red); border-radius:999px; padding:5px 14px; font-size:14.5px;}
+  nav.gnb .spacer{flex:1;}
+  nav.gnb .search{font-size:18px; background:none; border:none;}
+
+  /* ── 시세 티커 ─────────────────────── */
+  .ticker{border-bottom:1px solid var(--line); background:#fff;}
+  .ticker .wrap{display:flex; gap:26px; align-items:center; height:42px; font-size:13px; overflow-x:auto; white-space:nowrap;}
+  .ticker b{font-weight:700; color:#111;}
+  .t-up{color:var(--up); font-weight:600;}
+  .t-down{color:var(--down); font-weight:600;}
+  .ticker .fx{margin-left:auto; color:#111;}
+
+  /* ── 방송 모아보기 인트로 배너 ─────────── */
+  .tv-banner{background:linear-gradient(90deg,#7f1d1d,#991b1b); color:#fff;}
+  .tv-banner .wrap{display:flex; align-items:center; gap:16px; padding:13px 20px;}
+  .tv-banner .emoji{font-size:26px;}
+  .tv-banner h3{font-size:16px; margin-bottom:2px;}
+  .tv-banner p{font-size:12.5px; opacity:.85;}
+  .tv-banner button.start{margin-left:auto; background:#fff; color:#991b1b; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:800; flex-shrink:0;}
+  .tv-banner button.dismiss{background:none; border:none; color:#fff; opacity:.6; font-size:16px;}
+
+  /* ── 방송 프로필 바 (활성 후) ────────── */
+  .tv-bar{display:none; background:var(--tv-bg); border-bottom:1px solid var(--tv-line); position:sticky; top:0; z-index:50;}
+  .tv-bar .wrap{display:flex; align-items:center; gap:10px; padding:9px 20px; flex-wrap:wrap;}
+  .tv-bar .title{font-size:13.5px; font-weight:800; color:var(--tv);}
+  .tv-bar .chip{display:inline-block; white-space:nowrap; background:#fff; border:1px solid var(--tv-line); color:#991b1b; border-radius:999px; padding:4px 12px; font-size:12.5px; font-weight:600;}
+  .tv-bar .actions{margin-left:auto; display:flex; gap:8px;}
+  .tv-bar .actions button{background:none; border:1px solid #fecaca; color:var(--tv); border-radius:6px; padding:4px 10px; font-size:12px;}
+  body.tv-on .tv-bar{display:block;}
+  body.tv-on .tv-banner{display:none;}
+
+  /* ── 메인 영역 ─────────────────────── */
+  main .wrap{padding-top:24px; padding-bottom:36px;}
+
+  /* 기본 신문 그리드 (프로그램 미선택일 때) */
+  .grid-default{display:grid; grid-template-columns:300px 1fr 320px; gap:28px;}
+  body.tv-on .grid-default{display:none;}
+  .headline-list article{padding:16px 0; border-bottom:1px solid var(--line);}
+  .headline-list article:first-child{padding-top:0;}
+  .thumb{width:100%; aspect-ratio:16/10; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:34px; margin-bottom:10px; color:#fff;}
+  .headline-list h4, .side h4{font-size:15.5px; line-height:1.45; font-weight:700;}
+  .hero{position:relative;}
+  .hero .hero-img{aspect-ratio:16/10.5; border-radius:8px; background:linear-gradient(160deg,#20315f,#0e1a3a); display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; color:#fff;}
+  .hero .hero-scene{flex:1; display:flex; align-items:center; justify-content:center; font-size:70px;}
+  .hero .hero-caption{background:linear-gradient(transparent, rgba(5,10,30,.92)); padding:70px 26px 24px;}
+  .hero .hero-caption h2{font-size:24px; line-height:1.4; margin-bottom:8px;}
+  .hero .hero-caption p{font-size:14.5px; opacity:.85;}
+  .side article{display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); align-items:flex-start; flex-direction:column;}
+  .side article:first-child{padding-top:0;}
+  .side .row{display:flex; gap:12px; width:100%;}
+  .side .sthumb{width:110px; aspect-ratio:16/11; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:26px; color:#fff;}
+  .side h4{font-size:14px; flex:1;}
+
+  /* ── 방송별 모아보기 (프로그램 선택 시) ──── */
+  .collection-view{display:none; max-width:760px; margin:0 auto;}
+  body.tv-on .collection-view{display:block;}
+  .cv-empty{text-align:center; color:var(--gray); font-size:13px; padding:60px 0;}
+  .prog-section{border:1px solid var(--line); border-radius:14px; padding:22px 24px; margin-bottom:22px; background:#fff;}
+  .prog-head{display:flex; align-items:center; gap:14px; margin-bottom:14px;}
+  .prog-emoji{font-size:28px; width:52px; height:52px; border-radius:12px; background:var(--tv-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .prog-head h2{font-size:18px; margin-bottom:3px;}
+  .prog-meta{font-size:12px; color:var(--sub);}
+  .prog-live{display:inline-block; background:#dc2626; color:#fff; font-size:9.5px; font-weight:800; border-radius:4px; padding:2px 6px; margin-right:6px; vertical-align:2px; letter-spacing:.3px;}
+  .prog-brief-title{font-size:12px; font-weight:800; color:var(--tv); margin-bottom:6px;}
+  .prog-brief{background:var(--tv-bg); border:1px solid var(--tv-line); border-radius:10px; padding:13px 15px; font-size:12.5px; line-height:1.7; color:#374151; margin-bottom:18px;}
+  .prog-picks-title{font-size:13px; font-weight:800; color:#7f1d1d; margin-bottom:10px;}
+  .prog-picks{display:flex; flex-direction:column; gap:10px;}
+  .pick-card{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:10px; padding:12px;}
+  .pick-card .pick-thumb{width:52px; height:52px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff;}
+  .pick-card .pick-body{flex:1; min-width:0;}
+  .pick-card h4{font-size:14px; line-height:1.4; margin-bottom:4px;}
+  .pick-card .pick-sub{font-size:11.5px; color:var(--sub); line-height:1.5;}
+  .pick-card .pick-cross{display:inline-block; margin-top:6px; font-size:10px; font-weight:700; color:#991b1b; background:#fef2f2; border:1px solid var(--tv-line); border-radius:4px; padding:2px 7px;}
+  .prog-empty{font-size:12.5px; color:var(--gray); padding:6px 0;}
+
+  /* ── 하단 배너 ─────────────────────── */
+  .prem-banner{border:1px solid #eadfc8; background:linear-gradient(90deg,#fdf8ee,#f9efdc); margin:10px auto 40px;}
+  .prem-banner .wrap{display:flex; align-items:center; gap:24px; padding:22px 30px;}
+  .prem-banner .brand{font-size:24px; font-weight:900; letter-spacing:1px;}
+  .prem-banner .brand sup{color:var(--red);}
+  .prem-banner .copy b{font-size:16px;}
+  .prem-banner .copy p{font-size:12.5px; color:var(--sub); margin-top:3px;}
+  .prem-banner button{margin-left:auto; background:var(--red); color:#fff; border:none; border-radius:6px; padding:11px 26px; font-size:14px; font-weight:700;}
+
+  /* ── 온보딩 모달 ───────────────────── */
+  .backdrop{position:fixed; inset:0; background:rgba(10,20,30,.55); display:none; align-items:center; justify-content:center; z-index:100;}
+  .backdrop.open{display:flex;}
+  .modal{background:#fff; width:560px; max-width:92vw; max-height:88vh; overflow-y:auto; border-radius:16px; padding:30px 32px;}
+  .modal .m-emoji{font-size:34px;}
+  .modal h2{font-size:21px; margin:8px 0 6px;}
+  .modal .m-sub{font-size:13.5px; color:var(--sub); line-height:1.6; margin-bottom:20px;}
+  .grp{margin-bottom:18px;}
+  .grp .g-title{font-size:13px; font-weight:800; color:#374151; margin-bottom:9px;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chips button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:9px 15px; font-size:13.5px; color:#374151;}
+  .chips button.sel{border-color:var(--tv); background:var(--tv-bg); color:var(--tv); font-weight:700;}
+  .modal .m-foot{margin-top:24px;}
+  .modal .m-go{width:100%; background:var(--tv); color:#fff; border:none; border-radius:10px; padding:14px; font-size:15px; font-weight:800;}
+  .modal .m-go:disabled{background:#d1d5db;}
+  .modal .m-privacy{text-align:center; font-size:11.5px; color:var(--gray); margin-top:10px;}
+
+  /* ── 미리보기 오버레이: 2개 이상 선택 시뮬레이션 ── */
+  .pv-modal{width:640px;}
+  .pv-tags-title{font-size:12.5px; font-weight:800; color:#374151; margin-bottom:8px;}
+  .pv-tags{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px;}
+  .pv-tags button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 13px; font-size:12.5px; color:#374151;}
+  .pv-tags button.sel{border-color:var(--tv); background:var(--tv-bg); color:var(--tv); font-weight:700;}
+  .pv-preview{border:1px solid var(--line); border-radius:12px; max-height:340px; overflow-y:auto; background:#fafafa;}
+  .pv-prog-mini{border-bottom:1px solid var(--line); padding:13px 16px; background:#fff;}
+  .pv-prog-mini:last-child{border-bottom:none;}
+  .pv-prog-mini-head{font-size:12.5px; font-weight:800; color:#7f1d1d; margin-bottom:7px; display:flex; align-items:center; gap:6px;}
+  .pv-prog-mini-item{font-size:12px; color:#374151; line-height:1.7; padding-left:4px;}
+  .pv-prog-mini-item.empty{color:var(--gray);}
+  .pv-empty-msg{text-align:center; color:var(--gray); font-size:12.5px; padding:30px 0;}
+
+  .poc-note{position:fixed; bottom:12px; left:12px; background:#111; color:#9ca3af; font-size:10.5px; padding:4px 9px; border-radius:5px; opacity:.75; z-index:99;}
+
+  /* ── 반응형: 태블릿 ───────────────── */
+  @media (max-width:1000px){
+    .grid-default{grid-template-columns:1fr;}
+    .logo-side{display:none;}
+  }
+
+  /* ── 반응형: 모바일 ───────────────── */
+  @media (max-width:640px){
+    .wrap{padding:0 14px;}
+
+    /* 헤더 */
+    .util{font-size:10.5px; padding:8px 0;}
+    .util .links a{margin-left:10px;}
+    .logo-row{padding:2px 0 10px;}
+    .logo{font-size:28px; letter-spacing:1px;}
+    nav.gnb .wrap{gap:16px; height:44px; font-size:13.5px;}
+    nav.gnb a.pill{padding:4px 10px; font-size:12.5px;}
+    .ticker .wrap{gap:18px; height:38px; font-size:12px;}
+
+    /* 방송 배너 */
+    .tv-banner .wrap{flex-wrap:wrap; row-gap:10px; padding:14px 16px;}
+    .tv-banner .emoji{font-size:20px;}
+    .tv-banner h3{font-size:14.5px;}
+    .tv-banner p{font-size:12px;}
+    .tv-banner button.start{margin-left:0; flex:1 1 130px; padding:10px 14px; font-size:13px;}
+    .tv-banner button.dismiss{margin-left:auto;}
+
+    /* 방송 활성 바 */
+    .tv-bar .wrap{padding:8px 14px; gap:8px;}
+    .tv-bar .title{font-size:12.5px;}
+    .tv-bar .chip{font-size:11.5px; padding:3px 9px;}
+    .tv-bar .actions{width:100%; margin-left:0; justify-content:flex-end;}
+
+    /* 메인 영역 */
+    main .wrap{padding-top:16px; padding-bottom:24px;}
+    .grid-default{gap:18px;}
+    .hero .hero-img{aspect-ratio:16/11.5;}
+    .hero .hero-scene{font-size:48px;}
+    .hero .hero-caption{padding:44px 16px 18px;}
+    .hero .hero-caption h2{font-size:18px;}
+    .hero .hero-caption p{font-size:13px;}
+    .headline-list h4, .side h4{font-size:14.5px;}
+    .side .sthumb{width:82px; font-size:20px;}
+
+    /* 방송별 모아보기 */
+    .prog-section{padding:16px 14px; border-radius:12px;}
+    .prog-emoji{width:42px; height:42px; font-size:22px;}
+    .prog-head h2{font-size:16px;}
+    .pick-card{padding:10px;}
+    .pick-card .pick-thumb{width:44px; height:44px; font-size:18px;}
+
+    /* 하단 프리미엄 배너 */
+    .prem-banner .wrap{flex-direction:column; align-items:flex-start; gap:12px; padding:18px 20px;}
+    .prem-banner button{margin-left:0; width:100%;}
+
+    /* 온보딩/미리보기 모달 */
+    .modal{width:100%; max-width:100vw; padding:22px 18px; border-radius:14px 14px 0 0;}
+    .modal h2{font-size:18px;}
+    .backdrop{align-items:flex-end;}
+
+    .poc-note{font-size:9.5px; padding:3px 7px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="wrap util">
+    <span>2026.07.06</span>
+    <span class="links"><a href="#">신문 구독</a><a href="#" class="prem">한경 프리미엄9 구독</a><a href="#">로그인</a></span>
+  </div>
+  <div class="wrap logo-row">
+    <div class="logo-side"><span>📖</span><span class="tv">한경 tv</span><span>WSJ</span><span>KED<br>GLOBAL</span></div>
+    <a class="logo" href="#">한국경제</a>
+    <div class="logo-side right">한경 프리미엄9 구독하기</div>
+  </div>
+  <nav class="gnb">
+    <div class="wrap">
+      <a href="#" class="pill">한경 프리미엄9</a>
+      <a href="#">경제</a><a href="#">산업</a><a href="#">코리아마켓</a><a href="#">글로벌마켓</a>
+      <a href="#">집코노미</a><a href="#">국제</a><a href="#">유통</a><a href="#">오피니언</a>
+      <a href="#">전문채널</a><a href="#">☰ 전체메뉴</a>
+      <span class="spacer"></span>
+      <button class="search">🔍</button>
+    </div>
+  </nav>
+  <div class="ticker">
+    <div class="wrap">
+      <span><b>코스피</b> 8,252.65 <span class="t-down">▼ -0.42%</span></span>
+      <span><b>반도체</b> 12,626.22 <span class="t-down">▼ -5.44%</span></span>
+      <span><b>독일</b> 25,779.31 <span class="t-up">▲ +0.78%</span></span>
+      <span><b>영국</b> 652.77 <span class="t-up">▲ +0.68%</span></span>
+      <span><b>프랑스</b> 8,508.07 <span class="t-up">▲ +0.39%</span></span>
+      <span><b>NIKKEI 225</b> 69,744.07 <span class="t-up">▲ +1.47%</span></span>
+      <span class="fx">환율 USD/KRW <b>1,532.64</b></span>
+    </div>
+  </div>
+</header>
+
+<!-- 오늘 방송 기사 모아보기: 최초 진입 배너 -->
+<div class="tv-banner" id="tvBanner">
+  <div class="wrap">
+    <span class="emoji">📺</span>
+    <div>
+      <h3>오늘 방송 기사 모아보기 <span style="font-size:10.5px; background:rgba(255,255,255,.2); border-radius:4px; padding:2px 6px; vertical-align:2px;">BETA</span></h3>
+      <p>즐겨보는 한경 유튜브 프로그램을 고르면, 오늘 그 방송에서 다룬 기사만 모아서 보여드려요.</p>
+    </div>
+    <button class="start" id="startBtn">프로그램 선택하기</button>
+    <button class="start" id="pvBtn" style="background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.55);">어떻게 보이나요?</button>
+    <button class="dismiss" id="bannerDismiss" title="닫기">✕</button>
+  </div>
+</div>
+
+<!-- 오늘 방송 기사 모아보기: 활성화 후 프로필 바 -->
+<div class="tv-bar" id="tvBar">
+  <div class="wrap">
+    <span class="title">📺 오늘 방송 기사 모아보기 ON</span>
+    <span id="chipArea"></span>
+    <span class="actions">
+      <button id="editBtn">프로그램 수정</button>
+      <button id="offBtn">끄기</button>
+    </span>
+  </div>
+</div>
+
+<!-- 메인 -->
+<main>
+  <div class="wrap">
+    <!-- 기본 신문 그리드 (프로그램 미선택일 때) -->
+    <div class="grid-default">
+      <section class="headline-list" id="headlineList"></section>
+      <section class="hero" id="heroSection"></section>
+      <aside class="side" id="sideList"></aside>
+    </div>
+
+    <!-- 방송별 모아보기 (프로그램 선택 시, JS로 렌더링) -->
+    <div class="collection-view" id="collectionView"></div>
+  </div>
+</main>
+
+<!-- 하단 프리미엄 배너 -->
+<div class="prem-banner">
+  <div class="wrap">
+    <span class="brand">한경PREMIUM<sup>9</sup></span>
+    <span class="copy"><b>돈버는 프로들이 선택하는 초격차 플랫폼</b><p>AI를 넘어서는 성공투자</p></span>
+    <button>구독하기</button>
+  </div>
+</div>
+
+<!-- 온보딩 모달 -->
+<div class="backdrop" id="onboard">
+  <div class="modal">
+    <div class="m-emoji">📺</div>
+    <h2>즐겨보는 프로그램을 골라주세요</h2>
+    <p class="m-sub">선택한 프로그램이 <b>오늘 방송에서 다룬 기사만 모아서</b> 보여드려요. 여러 개 선택하면 프로그램별로 쌓여서 보여요.</p>
+
+    <div class="grp">
+      <div class="g-title">📺 한경 유튜브 프로그램</div>
+      <div class="chips" data-grp>
+        <button data-prog="morning">🌅 모닝루틴 · 임현우 기자</button>
+        <button data-prog="wsnow">🗽 월스트리트나우 · 김현석 기자</button>
+        <button data-prog="jip">🏘️ 집코노미TV</button>
+        <button data-prog="ju">📊 주코노미TV</button>
+      </div>
+    </div>
+
+    <div class="m-foot">
+      <button class="m-go" id="goBtn" disabled>프로그램 저장하고 시작하기</button>
+      <p class="m-privacy">🔒 선택 정보는 이 기기(브라우저)에만 저장되며 서버로 전송되지 않아요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 미리보기 오버레이: 2개 이상 선택했을 때 어떻게 쌓이는지 시뮬레이션 -->
+<div class="backdrop" id="previewOv">
+  <div class="modal pv-modal">
+    <div class="m-emoji">👀</div>
+    <h2>2개 이상 고르면 이렇게 쌓여요</h2>
+    <p class="m-sub">아래에서 <b>프로그램을 2개 이상</b> 눌러보세요 — 선택한 방송 각각의 오늘자 Pick 기사가 순서대로 쌓여서 보여요.</p>
+
+    <div class="pv-tags-title">즐겨보는 프로그램 (여러 개 선택 가능)</div>
+    <div class="pv-tags" id="pvTags"></div>
+
+    <div class="pv-preview" id="pvPreview"></div>
+
+    <div class="m-foot" style="margin-top:14px;">
+      <button class="m-go" id="pvGo">좋아요, 프로그램 선택하러 가기</button>
+      <p class="m-privacy">미리보기 예시입니다 · 실제로는 오늘자 전체 기사 기준으로 모아드려요</p>
+    </div>
+  </div>
+</div>
+
+<span class="poc-note">PoC · 오늘 방송 기사 모아보기 — 실제 서비스 아님</span>
+
+<script>
+/* ─────────────────────────────────────────────
+   한경 유튜브 프로그램 정의
+───────────────────────────────────────────── */
+const PROGRAMS = {
+  morning:{
+    label:'모닝루틴', host:'임현우 기자', emoji:'🌅',
+    brief:'오늘 모닝루틴에서는 호남 반도체 클러스터 조성 소식과 코스피 8000선 방어전, 역대급 증시 랠리 이면의 자금조달 위축까지 짚었습니다.',
+  },
+  wsnow:{
+    label:'월스트리트나우', host:'김현석 기자', emoji:'🗽',
+    brief:'월스트리트나우에서는 외국인·기관의 동반 매도에도 코스피 8000선을 지켜낸 오늘 장 마감 상황을 정리했습니다.',
+  },
+  jip:{
+    label:'집코노미TV', host:'집코노미팀', emoji:'🏘️',
+    brief:'집코노미TV에서는 1990년 이후 최저 수준으로 떨어진 내년 서울 입주물량 이슈를 집중 조명했습니다.',
+  },
+  ju:{
+    label:'주코노미TV', host:'증권부', emoji:'📊',
+    brief:'주코노미TV에서는 삼성전자 DX노조 집회 예고 소식과, 역대급 증시 랠리 속 기업 자금조달이 반토막 난 현상을 분석했습니다.',
+  },
+};
+
+/* ─────────────────────────────────────────────
+   기사 데이터: 오늘 어느 방송에서 다뤘는지 (PoC 목업 — 실서비스에선 방송 스크립트 매칭)
+───────────────────────────────────────────── */
+const ARTICLES = {
+  cluster: {
+    title:'靑 "호남 반도체 클러스터 광주 군공항 부지에 조성"',
+    sub:'李 대통령, 메가프로젝트 점검 회의 매달 직접 주재키로',
+    emoji:'🏛️', grad:'linear-gradient(160deg,#20315f,#0e1a3a)',
+    programs:['morning'],
+  },
+  baseball: {
+    title:'배재고 야구부, 광주제일고 찾아 사과…"인성 중요성 깨달아"',
+    sub:'학생들의 자발적 사과 방문에 훈훈한 반응',
+    emoji:'🤝', grad:'linear-gradient(140deg,#8a9bb0,#5c6b7d)',
+    programs:[],
+  },
+  dxunion: {
+    title:'"성과급 격차 못참아"…삼성전자 DX노조, 대규모 집회 예고',
+    sub:'사업부간 성과급 격차 갈등, 그룹 전반 확산 조짐',
+    emoji:'✊', grad:'linear-gradient(140deg,#7c3f3f,#4a2323)',
+    programs:['ju'],
+  },
+  rally: {
+    title:'증시는 역대급 랠리…기업 자금조달은 전년대비 \'반토막\'',
+    sub:'증시로 몰린 돈, 실물 투자로는 안 흐른다는 분석',
+    emoji:'📊', grad:'linear-gradient(140deg,#2f6156,#1a3830)',
+    programs:['morning','ju'],
+  },
+  supply: {
+    title:'내년 서울 입주물량 1.3만가구…1990년 이후 최저',
+    sub:'정비사업 지연·착공 감소 겹쳐 공급 절벽 우려',
+    emoji:'🏗️', grad:'linear-gradient(140deg,#5b6b7a,#33404c)',
+    programs:['jip'],
+  },
+  kospi: {
+    title:'코스피, 외인·기관 \'팔자\'에 하락…8000선은 사수',
+    sub:'외국인·기관 동반 매도에도 8000선은 지켜내',
+    emoji:'📉', grad:'linear-gradient(140deg,#27406e,#152444)',
+    programs:['morning','wsnow'],
+  },
+  sds: {
+    title:'걷잡을 수 없는 성과급 개편 갈등…삼성SDS도 첫 노조 출범',
+    sub:'성과급 개편 갈등, IT서비스 업계로 확산',
+    emoji:'🏢', grad:'linear-gradient(140deg,#5b7fa6,#33506e)',
+    programs:[],
+  },
+  crime: {
+    title:'\'장윤기 차량 케이블 타이 인멸\'…수사팀장, 범죄 조력자로',
+    sub:'케이블타이 인멸 정황에 수사팀장도 연루 의혹',
+    emoji:'🚔', grad:'linear-gradient(140deg,#6e7b8a,#3f4a56)',
+    programs:[],
+  },
+  axsummit: {
+    title:'\'2026 한경 AX 서밋\' 첫 개최…최신 트렌드·우수사례 한자리에',
+    sub:'AI 전환 최신 트렌드와 우수사례 한자리에',
+    emoji:'🎤', grad:'linear-gradient(140deg,#3d2a6e,#1c1140)',
+    programs:[],
+  },
+};
+
+/* 기본 편집 순서: [0]=히어로, [1..4]=헤드라인, [5..8]=사이드 (프로그램 미선택일 때 그대로 사용) */
+const DEFAULT_ORDER = ['cluster','baseball','dxunion','rally','supply','kospi','sds','crime','axsummit'];
+
+let selected = JSON.parse(localStorage.getItem('tvfeed_programs') || '[]');
+
+/* ── 기본 신문 그리드 (프로그램 미선택일 때) ── */
+function heroBodyHtml(id){
+  const a = ARTICLES[id];
+  return `
+    <div class="hero-img" style="background:${a.grad};">
+      <div class="hero-scene">${a.emoji}</div>
+      <div class="hero-caption">
+        <h2>${a.title}</h2>
+        <p>${a.sub || ''}</p>
+      </div>
+    </div>`;
+}
+function headlineItemHtml(id, showThumb){
+  const a = ARTICLES[id];
+  return `
+    <article>
+      ${showThumb ? `<div class="thumb" style="background:${a.grad};">${a.emoji}</div>` : ''}
+      <h4>${a.title}</h4>
+    </article>`;
+}
+function sideItemHtml(id){
+  const a = ARTICLES[id];
+  return `
+    <article>
+      <div class="row">
+        <div class="sthumb" style="background:${a.grad};">${a.emoji}</div>
+        <h4>${a.title}</h4>
+      </div>
+    </article>`;
+}
+function renderDefaultGrid(){
+  const heroId = DEFAULT_ORDER[0];
+  const headlineIds = DEFAULT_ORDER.slice(1,5);
+  const sideIds = DEFAULT_ORDER.slice(5,9);
+  document.getElementById('heroSection').innerHTML = heroBodyHtml(heroId);
+  document.getElementById('headlineList').innerHTML =
+    headlineIds.map((id,i)=>headlineItemHtml(id, i===0)).join('');
+  document.getElementById('sideList').innerHTML =
+    sideIds.map(sideItemHtml).join('');
+}
+
+/* ── 방송별 모아보기 (오늘 다룬 기사만 필터링, 프로그램별로 쌓임) ── */
+function progPickCardHtml(id, currentProg){
+  const a = ARTICLES[id];
+  const others = a.programs.filter(p => p!==currentProg && selected.includes(p));
+  const cross = others.length
+    ? `<span class="pick-cross">${others.map(p=>`${PROGRAMS[p].emoji} ${PROGRAMS[p].label}`).join(' · ')}에서도 다룸</span>`
+    : '';
+  return `
+    <div class="pick-card">
+      <div class="pick-thumb" style="background:${a.grad};">${a.emoji}</div>
+      <div class="pick-body">
+        <h4>${a.title}</h4>
+        <p class="pick-sub">${a.sub || ''}</p>
+        ${cross}
+      </div>
+    </div>`;
+}
+
+function progSectionHtml(progKey){
+  const prog = PROGRAMS[progKey];
+  const covered = DEFAULT_ORDER.filter(id => ARTICLES[id].programs.includes(progKey));
+  const picksHtml = covered.length
+    ? covered.map(id => progPickCardHtml(id, progKey)).join('')
+    : `<p class="prog-empty">오늘 이 방송에서 다룬 기사가 없어요</p>`;
+
+  return `
+    <section class="prog-section">
+      <div class="prog-head">
+        <span class="prog-emoji">${prog.emoji}</span>
+        <div>
+          <h2><span class="prog-live">LIVE</span>${prog.label}</h2>
+          <div class="prog-meta">${prog.host} · 오늘 방송 · 2026.07.06</div>
+        </div>
+      </div>
+      <div class="prog-brief-title">🤖 ${prog.label} AI 브리핑</div>
+      <p class="prog-brief">${prog.brief}</p>
+      <div class="prog-picks-title">${prog.emoji} ${prog.label} Pick! 오늘의 기사 (${covered.length}건)</div>
+      <div class="prog-picks">${picksHtml}</div>
+    </section>`;
+}
+
+function renderCollectionView(){
+  const el = document.getElementById('collectionView');
+  if(selected.length===0){
+    el.innerHTML = `<p class="cv-empty">즐겨보는 프로그램을 선택하면 오늘 다룬 기사가 여기 모여요</p>`;
+    return;
+  }
+  el.innerHTML = Object.keys(PROGRAMS)
+    .filter(p => selected.includes(p))
+    .map(progSectionHtml)
+    .join('');
+}
+
+/* ── 온보딩 ── */
+function openOnboard(){
+  document.querySelectorAll('#onboard .chips button').forEach(b=>{
+    b.classList.toggle('sel', selected.includes(b.dataset.prog));
+  });
+  syncGoBtn();
+  document.getElementById('onboard').classList.add('open');
+}
+document.querySelectorAll('#onboard .chips button').forEach(b=>{
+  b.addEventListener('click', ()=>{ b.classList.toggle('sel'); syncGoBtn(); });
+});
+function syncGoBtn(){
+  const n = document.querySelectorAll('#onboard .chips button.sel').length;
+  const go = document.getElementById('goBtn');
+  go.disabled = n===0;
+  go.textContent = n===0 ? '프로그램 저장하고 시작하기' : `프로그램 저장하고 시작하기 (${n}개 선택)`;
+}
+document.getElementById('onboard').addEventListener('click', e=>{
+  if(e.target.id==='onboard') e.target.classList.remove('open');
+});
+
+/* ── 적용 ── */
+function applyPrograms(){
+  selected = [...document.querySelectorAll('#onboard .chips button.sel')].map(b=>b.dataset.prog);
+  localStorage.setItem('tvfeed_programs', JSON.stringify(selected));
+  document.getElementById('onboard').classList.remove('open');
+  renderChips();
+  document.body.classList.add('tv-on');
+  renderCollectionView();
+}
+function tvOff(){
+  document.body.classList.remove('tv-on');
+  document.getElementById('tvBanner').style.display='';
+}
+
+function renderChips(){
+  document.getElementById('chipArea').innerHTML =
+    selected.map(p=>`<span class="chip">${PROGRAMS[p].emoji} ${PROGRAMS[p].label}</span>`).join(' ');
+}
+
+/* ── 미리보기 오버레이: 2개 이상 선택 시뮬레이션 ── */
+let pvSelected = ['morning'];
+
+function renderPvTags(){
+  const wrap = document.getElementById('pvTags');
+  wrap.innerHTML = Object.keys(PROGRAMS).map(p=>
+    `<button data-pvprog="${p}" class="${pvSelected.includes(p)?'sel':''}">${PROGRAMS[p].emoji} ${PROGRAMS[p].label}</button>`).join('');
+  wrap.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const p = b.dataset.pvprog;
+      pvSelected = pvSelected.includes(p) ? pvSelected.filter(x=>x!==p) : [...pvSelected, p];
+      renderPvTags();
+      renderPvPreview();
+    });
+  });
+}
+
+function renderPvPreview(){
+  const el = document.getElementById('pvPreview');
+  if(pvSelected.length===0){
+    el.innerHTML = `<p class="pv-empty-msg">프로그램을 선택해보세요</p>`;
+    return;
+  }
+  el.innerHTML = Object.keys(PROGRAMS).filter(p=>pvSelected.includes(p)).map(p=>{
+    const prog = PROGRAMS[p];
+    const covered = DEFAULT_ORDER.filter(id => ARTICLES[id].programs.includes(p));
+    const itemsHtml = covered.length
+      ? covered.map(id=>`<div class="pv-prog-mini-item">· ${ARTICLES[id].title}</div>`).join('')
+      : `<div class="pv-prog-mini-item empty">오늘 다룬 기사가 없어요</div>`;
+    return `
+      <div class="pv-prog-mini">
+        <div class="pv-prog-mini-head">${prog.emoji} ${prog.label} Pick <span style="color:var(--gray); font-weight:600;">(${covered.length}건)</span></div>
+        ${itemsHtml}
+      </div>`;
+  }).join('');
+}
+
+function openPreview(){
+  renderPvTags();
+  renderPvPreview();
+  document.getElementById('previewOv').classList.add('open');
+}
+document.getElementById('previewOv').addEventListener('click', e=>{
+  if(e.target.id==='previewOv') e.target.classList.remove('open');
+});
+
+/* ── 버튼 바인딩 (인라인 onclick 차단 환경 대응) ── */
+document.getElementById('pvBtn').addEventListener('click', openPreview);
+document.getElementById('pvGo').addEventListener('click', function(){
+  document.getElementById('previewOv').classList.remove('open');
+  openOnboard();
+});
+document.getElementById('startBtn').addEventListener('click', openOnboard);
+document.getElementById('editBtn').addEventListener('click', openOnboard);
+document.getElementById('offBtn').addEventListener('click', tvOff);
+document.getElementById('goBtn').addEventListener('click', applyPrograms);
+document.getElementById('bannerDismiss').addEventListener('click', function(){
+  document.getElementById('tvBanner').style.display='none';
+});
+
+/* ── 초기화: 저장된 프로그램 있으면 모아보기 ON, 없으면 기본 신문 그리드 ── */
+renderDefaultGrid();
+if(selected.length>0){
+  renderChips();
+  document.body.classList.add('tv-on');
+  renderCollectionView();
+}
+</script>
+</body>
+</html>
