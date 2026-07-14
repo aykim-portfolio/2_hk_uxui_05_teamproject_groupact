@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FGI 그룹채팅 · 무료(Gemini) 연동판</title>
+<style>
+  :root{
+    --kakao-bg:#b2c7d9;
+    --bubble-other:#ffffff;
+    --bubble-me:#fee500;
+    --text:#1a1a1a;
+    --muted:#5b6b7b;
+    --header:#a1b6c9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;}
+  body{background:#333;display:flex;justify-content:center;align-items:center;}
+  #phone{
+    width:100%;max-width:440px;height:100vh;max-height:900px;
+    display:flex;flex-direction:column;background:var(--kakao-bg);
+    box-shadow:0 10px 40px rgba(0,0,0,.4);position:relative;overflow:hidden;
+  }
+  #header{
+    background:var(--header);padding:12px 14px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid rgba(0,0,0,.06);z-index:5;
+  }
+  #header .back{font-size:22px;color:#2b2b2b;cursor:pointer;user-select:none;}
+  #header .title{flex:1;min-width:0;}
+  #header .title h1{margin:0;font-size:16px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:6px;}
+  #header .title .count{color:#5b6b7b;font-weight:600;font-size:15px;}
+  #header .title p{margin:2px 0 0;font-size:11px;color:#48586a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #header .gear{font-size:19px;color:#2b2b2b;cursor:pointer;}
+
+  #settings{background:#eef3f7;border-bottom:1px solid #cdd8e2;padding:12px 14px;font-size:13px;color:#33404d;}
+  #settings.hidden{display:none;}
+  #settings label{display:block;font-weight:600;margin:8px 0 4px;font-size:12px;}
+  #settings input[type=password],#settings select{
+    width:100%;padding:9px 10px;border:1px solid #c2ccd6;border-radius:8px;font-size:13px;background:#fff;font-family:inherit;
+  }
+  #settings .rowchk{display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:400;font-size:12px;}
+  #settings .btnrow{display:flex;gap:8px;margin-top:12px;}
+  #settings button{flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+  #connectBtn{background:#3d5a73;color:#fff;}
+  #clearBtn{background:#e4e9ee;color:#33404d;flex:0 0 auto;padding:9px 12px;}
+  #settings .status{margin-top:8px;font-size:11px;min-height:14px;}
+  #settings .note{margin-top:10px;font-size:11px;color:#6b7885;line-height:1.5;}
+  #settings a{color:#3d5a73;}
+
+  #chat{flex:1;overflow-y:auto;padding:14px 12px 8px;scroll-behavior:smooth;}
+  .date-divider{display:flex;justify-content:center;margin:6px 0 14px;}
+  .date-divider span{background:rgba(0,0,0,.14);color:#fff;font-size:11px;padding:4px 12px;border-radius:12px;text-align:center;}
+
+  .msg{display:flex;margin-bottom:12px;gap:8px;align-items:flex-start;animation:pop .25s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .msg .avatar{width:40px;height:40px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+  .msg .body{max-width:74%;}
+  .msg .name{font-size:12px;color:#33404d;margin:0 0 4px 2px;}
+  .row{display:flex;align-items:flex-end;gap:5px;}
+  .bubble{
+    background:var(--bubble-other);padding:9px 12px;border-radius:4px 16px 16px 16px;
+    font-size:14px;line-height:1.5;color:var(--text);word-break:break-word;white-space:pre-wrap;
+    box-shadow:0 1px 1px rgba(0,0,0,.06);
+  }
+  .time{font-size:10px;color:#5c6b7a;flex-shrink:0;margin-bottom:1px;}
+
+  .msg.me{flex-direction:row-reverse;}
+  .msg.me .body{display:flex;flex-direction:column;align-items:flex-end;}
+  .msg.me .row{flex-direction:row-reverse;}
+  .msg.me .bubble{background:var(--bubble-me);border-radius:16px 4px 16px 16px;}
+
+  .sysmsg{text-align:center;margin:4px 0 12px;}
+  .sysmsg span{background:rgba(0,0,0,.16);color:#fff;font-size:11px;padding:4px 12px;border-radius:12px;}
+  .errmsg span{background:#c0392b;}
+
+  .typing .bubble{padding:12px 14px;}
+  .dots{display:inline-flex;gap:4px;}
+  .dots i{width:7px;height:7px;border-radius:50%;background:#b7c0c9;display:inline-block;animation:blink 1.2s infinite;}
+  .dots i:nth-child(2){animation-delay:.2s;}
+  .dots i:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0);}30%{opacity:1;transform:translateY(-3px);}}
+
+  #chips{display:flex;gap:7px;padding:8px 12px;overflow-x:auto;background:rgba(255,255,255,.35);border-top:1px solid rgba(0,0,0,.05);}
+  #chips::-webkit-scrollbar{display:none;}
+  .chip{white-space:nowrap;background:#fff;border:1px solid #d4dde6;color:#33404d;font-size:12px;padding:6px 11px;border-radius:16px;cursor:pointer;flex-shrink:0;transition:.15s;}
+  .chip:active{transform:scale(.95);background:#eef3f7;}
+
+  #inputbar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f7f7f7;border-top:1px solid #e2e2e2;}
+  #inputbar textarea{
+    flex:1;resize:none;border:none;outline:none;background:#fff;border-radius:18px;
+    padding:10px 14px;font-size:14px;max-height:90px;line-height:1.4;font-family:inherit;
+  }
+  #inputbar textarea:disabled{background:#ececec;}
+  #send{background:var(--bubble-me);border:none;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0;transition:.15s;}
+  #send:active{transform:scale(.9);}
+  #send:disabled{opacity:.4;cursor:default;}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="header">
+    <div class="back">‹</div>
+    <div class="title">
+      <h1>페르소나 라운지 <span class="count">4</span></h1>
+      <p>서담채 · 손승호 · 강종희 · 조기원</p>
+    </div>
+    <div class="gear" id="gearBtn" title="설정">⚙️</div>
+  </div>
+
+  <div id="settings">
+    <label for="apiKey">Google Gemini API 키 (무료)</label>
+    <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+    <label for="model">모델</label>
+    <select id="model">
+      <option value="gemini-3.1-flash-lite" selected>gemini-3.1-flash-lite — 기본(빠름·한도 넉넉)</option>
+      <option value="gemini-2.5-flash">gemini-2.5-flash — 더 똑똑(한도 빡빡)</option>
+      <option value="gemini-2.0-flash">gemini-2.0-flash — 무료·빠름</option>
+    </select>
+    <label class="rowchk"><input type="checkbox" id="saveKey"> 이 브라우저에 키 저장</label>
+    <div class="btnrow">
+      <button id="connectBtn">연결하고 시작</button>
+      <button id="clearBtn">키 삭제</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="btnrow">
+      <button id="saveTxtBtn" style="background:#5b7a52;color:#fff">💾 대화 .md 저장</button>
+      <button id="clearChatBtn" style="background:#e4e9ee;color:#33404d;flex:0 0 auto;padding:9px 12px">🗑 대화 비우기</button>
+    </div>
+    <div class="note">
+      무료 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>
+      접속 → 구글 로그인 → <b>Create API key</b> → 키 복사(신용카드 불필요).
+      무료 티어는 분당 요청수 제한이 있어 질문을 너무 빨리 연속으로 보내면 잠시 막힐 수 있어요.
+    </div>
+  </div>
+
+  <div id="chat">
+    <div class="date-divider"><span>FGI · 예비 홍보인/광고인/부동산 경리/통계 사무원 4인</span></div>
+  </div>
+
+  <div id="chips"></div>
+
+  <div id="inputbar">
+    <textarea id="input" rows="1" placeholder="먼저 상단에서 API 키를 연결하세요" disabled></textarea>
+    <button id="send" disabled>➤</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   페르소나 정의 — 각자 상세 system 프롬프트로 성격/말투 각인
+   ============================================================ */
+const PERSONAS = {
+  dam: {
+    name:"서담채", emoji:"🎀", color:"#ffd7e6",
+    system:`너는 포커스그룹 인터뷰(FGI) 참가자 '서담채'다. 실제 사람으로서 자연스럽게 대화한다.
+
+[프로필] 29세 여성, 미혼, 서울 성북구 한성대입구역 근처에서 부모님과 함께 거주(아파트). 사회과학·언론 전공 4년제 졸업, 현재 무직 취업준비생(예비 홍보 전문가). 풍족한 환경에서 자라 사교적이고 취향이 세심하지만, 취업 공백기가 길어지며 미래에 대한 불안과 고혈압 등 건강 문제를 함께 안고 있다.
+[성격/습관] 완벽주의. 자기소개서 문장 하나를 마감 직전까지 붙잡고 자신을 몰아붙인다. 아침마다 뉴스레터·마케팅 트렌드 기사를 훑어 핵심을 요약하는 루틴. 모임에서 대화를 주도하고 뜨는 전시·팝업 정보를 먼저 공유하는 '정보원' 역할.
+[라이프스타일] 미식가. 주 5회 이상 외식, 고기 뺀 정갈한 한식 정식이나 매콤한 짬뽕을 즐기고 성수·한남 예약제 식당을 탐방하며 사진·글로 기록. 여행 전 엑셀로 분 단위 일정표를 짜야 마음이 편함. 해질녘 성북천 산책으로 마음을 정리. 검색광고마케터 자격증 준비 중, 브랜드 커뮤니케이터가 목표.
+[말투] 다정하고 밝은 존댓말. 이모지(😊 ㅎㅎ 🥲)를 자주 쓴다. 취업·부모님 기대 얘기엔 은근한 불안이 묻어난다.
+
+[규칙] 답변은 1~3문장으로 짧게. 캐릭터 말투를 유지. 대사만 말하고 이름표는 붙이지 마라. 다른 참가자의 말에 자연스럽게 반응하거나 동의·반박해도 된다. 절대 AI라고 밝히지 말고 서담채 본인으로 답하라.`
+  },
+  seung: {
+    name:"손승호", emoji:"🏀", color:"#cfe6ff",
+    system:`너는 포커스그룹 인터뷰(FGI) 참가자 '손승호'다. 실제 사람으로서 자연스럽게 대화한다.
+
+[프로필] 28세 남성, 미혼, 경기 수원시 영통구 광교호수공원 인근 아파트에서 마음 맞는 친구와 함께 거주(비친족 동거). 경영·행정·법(법학) 전공 4년제 졸업, 현직 광고 전문가.
+[성격/습관] 법학도 특유의 논리적 사고 + 광고계의 유연함을 겸비. 광고주 앞에선 넉살 좋게 웃으며 요구를 조율하지만 실리는 챙긴다. 정석적인 성공 사례를 모으는 데 집착해 때로 너무 안전한 길만 택한다는 소리를 듣는다. 승부욕이 강해 농구 중 팀원과 가벼운 실랑이도.
+[라이프스타일] 주말 야외코트 3대3 농구, 겨울엔 평창 스노보드. 스트레스는 몸으로 푼다. 삼프로TV 등 경제 팟캐스트 청취, 동네 사우나 반신욕. 주 2~3회 비비큐·굽네 치킨에 맥주로 피로 해소. 외식은 적게 하지만 나갈 땐 검증된 맛집만. 회사에서 팀장으로 올라서는 게 목표.
+[말투] 캐주얼한 존댓말, "ㅋㅋ", "~하죠", "~네요". 데이터·효율·실리를 따지는 현실적인 뉘앙스.
+
+[규칙] 답변은 1~3문장으로 짧게. 캐릭터 말투를 유지. 대사만 말하고 이름표는 붙이지 마라. 다른 참가자의 말에 자연스럽게 반응하거나 동의·반박해도 된다. 절대 AI라고 밝히지 말고 손승호 본인으로 답하라.`
+  },
+  jong: {
+    name:"강종희", emoji:"🍜", color:"#ffe2c2",
+    system:`너는 포커스그룹 인터뷰(FGI) 참가자 '강종희'다. 실제 사람으로서 자연스럽게 대화한다.
+
+[프로필] 64세 남성, 배우자 있음, 경기 고양시 일산서구에서 아내와 전세 아파트 거주. 고졸, 부동산업계 경리 사무원 수십 년차. 일산 신도시의 형성과 성장을 직접 겪어온 세대.
+[성격/습관] 장부 정리·세금 계산 정확도가 타의 추종 불허. 등기부등본의 작은 특이사항도 놓치지 않는 꼼꼼함으로 사장 신뢰가 두텁다. 까다로운 임대인 성향을 파악해 능글맞게 넘기는 노련함. 겉은 무뚝뚝해도 아내가 좋아하는 간식을 슬쩍 사 들고 오는 정 많은 사람. 예의·체면을 중시하되 실리도 놓치지 않는 전형적 한국 중년.
+[라이프스타일] 해질녘 일산 호수공원 밤산책이 운동. 거실 소파에서 임영웅 공연 영상을 반복 시청하고 정치·시사 유튜브를 보며 댓글도 남긴다. 주 4~5회 외식, 단골 중국집 짬뽕에 소주 한 잔이 하루의 낙. 삼겹살에 소주도 좋아하고 귀찮으면 아내와 짜장면 배달. 승진·확장보다 무사히 정년 마치고 아내와 텃밭 있는 조용한 동네로 가는 게 목표라 매달 저축.
+[말투] 무뚝뚝하고 짧은 반말체 혼용, "허허", "~지 뭐", "~네". 요즘 젊은 것들·신문물엔 살짝 어색해한다.
+
+[규칙] 답변은 1~3문장으로 짧게. 캐릭터 말투를 유지. 대사만 말하고 이름표는 붙이지 마라. 다른 참가자의 말에 자연스럽게 반응하거나 동의·반박해도 된다. 절대 AI라고 밝히지 말고 강종희 본인으로 답하라.`
+  },
+  ki: {
+    name:"조기원", emoji:"🙏", color:"#d8ecd0",
+    system:`너는 포커스그룹 인터뷰(FGI) 참가자 '조기원'다. 실제 사람으로서 자연스럽게 대화한다.
+
+[프로필] 52세 여성, 배우자 있음, 서울 강동구 조용한 주거단지에서 남편·자녀와 거주(아파트). 2~3년제 전문대 졸업, 금융권 통계 사무원.
+[성격/습관] 수천 개 금융 데이터를 단 하나의 오차도 없이 검수하는 정밀함. 엑셀 VLOOKUP·피벗 테이블을 자유자재로 다뤄 방대한 자료를 일목요연하게 정리. 매달 가계부를 한 칸도 빼놓지 않고 기록하고 정해진 일과를 지켜야 심리적 안정을 느낀다. 자녀에겐 다정한 어머니지만 집 물건 위치가 바뀌면 못 참고 즉시 제자리에.
+[라이프스타일] 매주 일요일 오전 가족과 교회에서 기도하며 한 주를 시작. 복부·혈압 관리를 위해 집 근처 기구 필라테스, 자세·정렬의 정확함에 집착. 주말 오후엔 유튜브로 피부 관리법·중년 여성 옷차림 영상을 보고 클래식 틀고 팩. 2주에 한 번 남편과 자극 없는 나물 정식집, 가끔 초밥. 배달은 한 달 한 번. 은퇴 전 후배 누구나 이해할 체계적 업무 매뉴얼 완성이 목표.
+[말투] 단정하고 정중한 존댓말, "~해요/~네요/~더라고요". 절제되고 신중하며 검증된 정보를 중시한다.
+
+[규칙] 답변은 1~3문장으로 짧게. 캐릭터 말투를 유지. 대사만 말하고 이름표는 붙이지 마라. 다른 참가자의 말에 자연스럽게 반응하거나 동의·반박해도 된다. 절대 AI라고 밝히지 말고 조기원 본인으로 답하라.`
+  }
+};
+const ORDER = ["dam","seung","jong","ki"];
+
+let apiKey = "";
+let model = "gemini-3.1-flash-lite";
+const PREFERRED_MODEL = "gemini-3.1-flash-lite";
+let availableModels = [];
+let connected = false;
+let busy = false;
+const history = [];
+const HARD_BAD = /image|imagen|tts|audio|live|embedding|vision|gemma|learnlm|thinking|exp|preview|native|dialog|8b/i;
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+const settings = document.getElementById("settings");
+const apiKeyEl = document.getElementById("apiKey");
+const modelEl = document.getElementById("model");
+const saveKeyEl = document.getElementById("saveKey");
+const statusEl = document.getElementById("status");
+
+function nowTime(){
+  const d=new Date();let h=d.getHours();const m=String(d.getMinutes()).padStart(2,"0");
+  const ap=h<12?"오전":"오후";h=h%12||12;return `${ap} ${h}:${m}`;
+}
+function scrollDown(){chat.scrollTop=chat.scrollHeight;}
+
+function addMe(text){
+  const el=document.createElement("div");el.className="msg me";
+  el.innerHTML=`<div class="body"><div class="row"><span class="time">${nowTime()}</span><div class="bubble"></div></div></div>`;
+  el.querySelector(".bubble").textContent=text;chat.appendChild(el);scrollDown();
+}
+function addTyping(pid){
+  const p=PERSONAS[pid];
+  const el=document.createElement("div");el.className="msg typing";
+  el.innerHTML=`<div class="avatar" style="background:${p.color}">${p.emoji}</div>
+    <div class="body"><div class="name">${p.name}</div>
+    <div class="row"><div class="bubble"><span class="dots"><i></i><i></i><i></i></span></div></div></div>`;
+  chat.appendChild(el);scrollDown();return el;
+}
+function addPersona(pid,text){
+  const p=PERSONAS[pid];
+  const el=document.createElement("div");el.className="msg";
+  el.innerHTML=`<div class="avatar" style="background:${p.color}">${p.emoji}</div>
+    <div class="body"><div class="name">${p.name}</div>
+    <div class="row"><div class="bubble"></div><span class="time">${nowTime()}</span></div></div>`;
+  el.querySelector(".bubble").textContent=text;chat.appendChild(el);scrollDown();
+}
+function addSystem(text,isErr){
+  const el=document.createElement("div");el.className="sysmsg"+(isErr?" errmsg":"");
+  el.innerHTML=`<span></span>`;el.querySelector("span").textContent=text;chat.appendChild(el);scrollDown();
+}
+
+function buildTranscript(){
+  return history.map(h=>`${h.speaker}: ${h.text}`).join("\n");
+}
+
+/* ============================================================
+   대화 저장/복원 (localStorage) + .md 내보내기
+   ============================================================ */
+const NAME2PID = {"서담채":"dam","손승호":"seung","강종희":"jong","조기원":"ki"};
+function saveHistory(){ try{ localStorage.setItem("fgi_free_history", JSON.stringify(history)); }catch(_){} }
+function renderHistory(){
+  [...chat.querySelectorAll(".msg,.sysmsg")].forEach(e=>e.remove());
+  for(const h of history){
+    if(h.speaker==="진행자") addMe(h.text);
+    else { const pid=NAME2PID[h.speaker]; if(pid) addPersona(pid,h.text); }
+  }
+}
+function restoreHistory(){
+  try{
+    const s=localStorage.getItem("fgi_free_history");
+    if(!s) return false;
+    const arr=JSON.parse(s);
+    if(!Array.isArray(arr)||!arr.length) return false;
+    history.length=0; arr.forEach(x=>history.push(x));
+    renderHistory();
+    greeted=true;
+    addSystem("💾 이전 대화를 불러왔습니다");
+    return true;
+  }catch(_){ return false; }
+}
+function downloadTranscript(){
+  if(!history.length){ alert("저장할 대화가 없습니다."); return; }
+  const emoji={'진행자':'🎤','서담채':'🎀','손승호':'🏀','강종희':'🍜','조기원':'🙏'};
+  let out="# 페르소나 라운지 · FGI 대화 기록\n\n저장일: "+new Date().toLocaleString('ko-KR')+"\n\n---\n\n";
+  let prev=null;
+  for(const h of history){
+    if(prev&&prev.speaker===h.speaker&&prev.text===h.text) continue;
+    if(h.speaker==='진행자') out+="\n### 🎤 진행자\n"+h.text+"\n";
+    else out+="- "+(emoji[h.speaker]||'')+" **"+h.speaker+"**: "+h.text+"\n";
+    prev=h;
+  }
+  const blob=new Blob([out],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="FGI_대화기록_"+new Date().toISOString().slice(0,10)+".md";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+}
+
+/* ============================================================
+   Google Gemini API 호출
+   ============================================================ */
+async function callGemini(pid){
+  const p = PERSONAS[pid];
+  const transcript = buildTranscript();
+  const instruction =
+`위는 진행중인 그룹 인터뷰 대화록이다. 너는 참가자 '${p.name}'다.
+지금까지의 대화를 보고, ${p.name}로서 다음 한마디를 자연스럽게 말해라.
+- 방금 나온 진행자의 질문이나 다른 참가자들의 발언에 반응해도 좋다.
+- 1~3문장, 네 캐릭터 말투 유지, 대사만(이름표·따옴표 없이).`;
+
+  const body = {
+    system_instruction: { parts:[{ text: p.system }] },
+    contents: [{ role:"user", parts:[{ text: transcript + "\n\n---\n" + instruction }] }],
+    generationConfig: { maxOutputTokens: 400, temperature: 0.9 }
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method:"POST",
+    headers:{ "content-type":"application/json" },
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    let msg = `HTTP ${res.status}`;
+    try{ const e = await res.json(); if(e.error && e.error.message) msg = e.error.message; }catch(_){}
+    const rawMsg = msg;
+    const err = new Error(msg); err.status = res.status;
+    err.modelBad = res.status===404 || /no longer available|not found|not supported/i.test(rawMsg);
+    if(err.modelBad) err.message = "이 모델은 현재 키로 사용할 수 없습니다.";
+    else if(res.status===400||res.status===403) err.message = "API 키가 올바르지 않거나 요청이 잘못됐습니다.";
+    else if(res.status===429) err.message = "무료 한도(분당 요청수)를 초과했습니다.";
+    throw err;
+  }
+  const data = await res.json();
+  const cand = (data.candidates||[])[0];
+  const text = cand && cand.content && cand.content.parts
+      ? cand.content.parts.map(x=>x.text||"").join("").trim() : "";
+  if(!text){
+    const reason = cand && cand.finishReason ? `(${cand.finishReason})` : "";
+    throw new Error("빈 응답 "+reason);
+  }
+  return text;
+}
+
+function detectTargets(q){
+  const map={dam:["담채","서담채"],seung:["승호","손승호"],jong:["종희","강종희"],ki:["기원","조기원"]};
+  const hits=[];
+  for(const pid in map){for(const n of map[pid]){if(q.includes(n)){hits.push(pid);break;}}}
+  return hits;
+}
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function setTypingText(el, text){ const b=el.querySelector(".bubble"); if(b) b.textContent=text; }
+
+async function handleSend(){
+  const q=input.value.trim();
+  if(!q||busy||!connected)return;
+  addMe(q);
+  history.push({speaker:"진행자", text:q}); saveHistory();
+  input.value="";input.style.height="auto";
+  busy=true; setInputEnabled(false);
+
+  const targets=detectTargets(q);
+  const responders = targets.length? targets : ORDER;
+
+  for(let i=0;i<responders.length;i++){
+    const pid = responders[i];
+    const typingEl=addTyping(pid);
+    let done=false, attempt=0;
+    while(!done){
+      try{
+        const text = await callGemini(pid);
+        typingEl.remove();
+        addPersona(pid, text);
+        history.push({speaker: PERSONAS[pid].name, text}); saveHistory();
+        done=true;
+      }catch(err){
+        // 모델 사용 불가면 다른 모델로 자동 전환 후 재시도
+        if(err.modelBad){
+          const failed = model;
+          const alt = pickAltModel(model);
+          if(alt){
+            model = alt; if([...modelEl.options].some(o=>o.value===alt)) modelEl.value = alt;
+            if(saveKeyEl.checked) localStorage.setItem("fgi_free_model", model);
+            addSystem(`모델 '${failed}' 사용 불가 → '${alt}'(으)로 자동 전환`, false);
+            continue;
+          }
+        }
+        // 429(한도 초과)면 잠시 기다렸다 자동 재시도
+        if(err.status===429 && attempt<3){
+          attempt++;
+          for(let left=15; left>0; left--){
+            setTypingText(typingEl, `⏳ 무료 한도 대기… ${left}초 후 자동 재시도 (${attempt}/3)`);
+            await sleep(1000);
+          }
+          continue;
+        }
+        typingEl.remove();
+        addSystem(`⚠️ ${PERSONAS[pid].name} 응답 실패: ${err.message}`, true);
+        done=true;
+      }
+    }
+    if(i < responders.length-1) await sleep(600); // 버스트 방지: 호출 간 짧은 간격
+  }
+  busy=false; setInputEnabled(true); input.focus();
+}
+
+function setInputEnabled(on){ input.disabled=!on; sendBtn.disabled=!on; }
+
+const CHIPS=[
+  "안녕하세요, 오늘 잘 부탁드립니다. 간단한 자기소개 부탁드려요",
+  "요즘 소비할 때 제일 신경 쓰는 건 무엇인가요?",
+  "광고나 마케팅 보고 실제로 물건을 산 경험이 있으세요?",
+  "여행은 보통 어떻게 다니세요?",
+  "외식이나 음식 취향이 궁금해요",
+  "건강 관리는 어떻게 하세요?",
+  "요즘 가장 큰 고민이나 목표는 무엇인가요?",
+  "스트레스는 어떻게 푸세요?",
+  "주말엔 보통 뭐 하며 보내세요?",
+  "서로에게 궁금한 점 있으면 물어봐 주세요"
+];
+const chipBox=document.getElementById("chips");
+CHIPS.forEach(c=>{
+  const b=document.createElement("div");b.className="chip";b.textContent=c;
+  b.onclick=()=>{if(busy||!connected)return;input.value=c;handleSend();};
+  chipBox.appendChild(b);
+});
+
+document.getElementById("gearBtn").onclick=()=>settings.classList.toggle("hidden");
+
+document.getElementById("saveTxtBtn").onclick=downloadTranscript;
+document.getElementById("clearChatBtn").onclick=()=>{
+  if(confirm("현재 대화를 모두 지울까요? (저장한 .md 파일은 그대로 남아요)")){
+    history.length=0; localStorage.removeItem("fgi_free_history");
+    renderHistory(); greeted=false;
+    if(connected) greet();
+  }
+};
+
+// 이 키로 실제 사용 가능한(generateContent 지원) 모델 목록을 불러옴
+async function fetchModels(){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url);
+  if(!res.ok){
+    let msg=`HTTP ${res.status}`;
+    try{ const e=await res.json(); if(e.error&&e.error.message) msg=e.error.message; }catch(_){}
+    if(res.status===400||res.status===403) msg="API 키가 올바르지 않습니다. 키를 다시 확인하세요.";
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  return (data.models||[])
+    .filter(m => (m.supportedGenerationMethods||[]).includes("generateContent") && /gemini/i.test(m.name))
+    .map(m => m.name.replace(/^models\//,""));
+}
+
+function verNum(id){ const m=id.match(/(\d+(?:\.\d+)?)/); return m?parseFloat(m[1]):0; }
+function scoreModel(id){
+  let s=0;
+  if(/flash/i.test(id)) s+=100;   // flash 계열 우선
+  if(/lite/i.test(id))  s+=60;    // 라이트 최우선(무료 한도 넉넉·빠름)
+  if(/latest/i.test(id)) s+=15;   // latest 별칭 선호
+  s += verNum(id)*3;              // 최신 버전 선호 (3.1 > 2.5 > 2.0)
+  return s;
+}
+function bestFlash(ids, exclude){
+  // 지정 기본 모델이 목록에 있으면 최우선
+  if(PREFERRED_MODEL!==exclude && ids.includes(PREFERRED_MODEL)) return PREFERRED_MODEL;
+  const cands = ids.filter(id=>id!==exclude && !HARD_BAD.test(id));
+  if(!cands.length) return ids.find(id=>id!==exclude) || null;
+  cands.sort((a,b)=>scoreModel(b)-scoreModel(a));
+  return cands[0];
+}
+function pickAltModel(current){ return bestFlash(availableModels, current); }
+
+function populateModels(ids){
+  availableModels = ids.slice();
+  const prev = modelEl.value;
+  modelEl.innerHTML="";
+  ids.forEach(id=>{
+    const o=document.createElement("option"); o.value=id; o.textContent=id; modelEl.appendChild(o);
+  });
+  // 이전 선택이 '정상 flash'일 때만 유지, 아니면 최적 flash 자동 선택
+  let pick = (ids.includes(prev) && !HARD_BAD.test(prev)) ? prev : bestFlash(ids, null);
+  if(!pick) pick = ids[0];
+  modelEl.value = pick; model = pick;
+}
+
+document.getElementById("connectBtn").onclick=async ()=>{
+  const key = apiKeyEl.value.trim();
+  if(!key){ statusEl.style.color="#c0392b"; statusEl.textContent="API 키를 입력하세요."; return; }
+  apiKey = key;
+  statusEl.style.color="#6b7885"; statusEl.textContent="사용 가능한 모델 확인 중…";
+  let ids;
+  try{
+    ids = await fetchModels();
+    if(!ids.length) throw new Error("이 키로 쓸 수 있는 모델이 없습니다.");
+  }catch(err){
+    statusEl.style.color="#c0392b"; statusEl.textContent="연결 실패: "+err.message; return;
+  }
+  populateModels(ids);
+  connected = true;
+  if(saveKeyEl.checked){
+    localStorage.setItem("fgi_free_apiKey", key);
+    localStorage.setItem("fgi_free_model", model);
+  }
+  statusEl.style.color="#2e7d32";
+  statusEl.textContent="연결됨 · 모델: "+model+" (사용가능 "+ids.length+"종)";
+  setInputEnabled(true);
+  input.placeholder="진행자로서 질문을 입력하세요…";
+  settings.classList.add("hidden");
+  if(!restoreHistory()) greet();
+};
+
+document.getElementById("clearBtn").onclick=()=>{
+  localStorage.removeItem("fgi_free_apiKey");
+  localStorage.removeItem("fgi_free_model");
+  apiKeyEl.value="";
+  statusEl.style.color="#c0392b";
+  statusEl.textContent="저장된 키를 삭제했습니다.";
+};
+
+modelEl.onchange=()=>{ if(connected){ model=modelEl.value; if(saveKeyEl.checked) localStorage.setItem("fgi_free_model", model); statusEl.style.color="#2e7d32"; statusEl.textContent="모델 변경 · "+model; } };
+
+let greeted=false;
+function greet(){
+  if(greeted)return; greeted=true;
+  addSystem("진행자님이 서담채, 손승호, 강종희, 조기원님을 초대했습니다");
+  const hi=[
+    ["dam","안녕하세요~ 서담채예요 😊 이런 자리 좋아해요, 잘 부탁드려요!"],
+    ["seung","손승호입니다 ㅎㅎ 편하게 얘기하시죠~"],
+    ["jong","예 반갑습니다. 나이 든 사람이라 도움 될지 모르겠네 허허"],
+    ["ki","조기원입니다. 오늘 주제가 궁금하네요 🙂"]
+  ];
+  hi.forEach(([pid,text],i)=>{
+    setTimeout(()=>{ addPersona(pid,text); history.push({speaker:PERSONAS[pid].name, text}); saveHistory(); }, 500 + i*700);
+  });
+}
+
+input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,90)+"px";});
+input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleSend();}});
+sendBtn.addEventListener("click",handleSend);
+
+window.addEventListener("load",()=>{
+  const savedKey=localStorage.getItem("fgi_free_apiKey");
+  const savedModel=localStorage.getItem("fgi_free_model");
+  if(savedModel){ modelEl.value=savedModel; }
+  if(savedKey){
+    apiKeyEl.value=savedKey; saveKeyEl.checked=true;
+    statusEl.style.color="#6b7885";
+    statusEl.textContent="저장된 키를 불러왔습니다. '연결하고 시작'을 누르세요.";
+  }
+});
+</script>
+</body>
+</html>
