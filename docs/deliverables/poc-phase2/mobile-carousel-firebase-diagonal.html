@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>채널 탐색 — 모바일 대각선 캐스케이드</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.css">
+
+<style>
+  :root{
+    --bg1:#e8eef6; --bg2:#f4f6fa; --bg3:#eaf0f8;
+    --ink:#0b2040; --sub:#5a6e8a; --faint:#8a9ab5;
+
+    /* 모바일 화면 기준으로 줄인 카드 크기 / 간격 값.
+       — 이 세 값의 조합이 "우측상단 → 좌측하단" 방향을 만듭니다.
+       stepX가 음수(왼쪽), stepY가 양수(아래)라서 인덱스가 커질수록
+       왼쪽 아래로 카스케이드됩니다. */
+    --card-w:clamp(132px,40vw,168px);
+    --card-ratio:249/340;
+    --step-x:-46px;
+    --step-y:96px;
+    --focus-push:30px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%);color:var(--ink);
+    overscroll-behavior-y:contain}
+  body{font-family:"Pretendard",-apple-system,sans-serif;line-height:1.5;min-height:100vh}
+
+  /* ---------- 단일 페이지 레이아웃: 헤더 + 씬 + 패널 뿐, 여분의 섹션 없음 ---------- */
+  .scene{height:100vh;position:relative;overflow:hidden;touch-action:pan-y;user-select:none}
+  .stage{position:absolute;inset:0}
+
+  .card{
+    position:absolute;left:50%;top:46%;
+    width:var(--card-w);aspect-ratio:var(--card-ratio);
+    border-radius:14px;overflow:hidden;
+    box-shadow:4px 4px 16px rgba(0,0,0,.18);
+    will-change:transform,opacity;
+  }
+
+  .card__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+  .card__wash{position:absolute;inset:0;background:rgba(255,255,255,.5)}
+  .card__scrim{position:absolute;inset-inline:0;bottom:0;height:58%;
+    background:linear-gradient(to top, rgba(11,32,64,.58) 0%, transparent 100%)}
+
+  .card__text{position:absolute;left:12px;right:12px;bottom:12px;
+    display:flex;flex-direction:column;gap:4px;text-align:right;
+    text-shadow:0 3px 4px rgba(0,0,0,.15)}
+  .card__title{font-weight:700;color:#fff;font-size:clamp(14px,3.6vw,18px);letter-spacing:.2px;line-height:1.2;
+    word-break:break-word}
+  .card__subtitle{font-weight:500;color:rgba(255,255,255,.85);font-size:10.5px;letter-spacing:-.2px;line-height:1.35}
+
+  .status{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:0 28px}
+  .status__title{font-weight:700;font-size:17px}
+  .status__desc{font-size:12.5px;color:var(--sub)}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid rgba(11,32,64,.15);border-top-color:var(--ink);
+    animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .spinner{animation:none} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+/* ============================================================
+   1. Firebase — 이전과 동일한 스키마/시딩 로직 그대로              */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_APP.firebaseapp.com",
+  databaseURL: "https://groupactlanding-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_APP.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const SEED_DATA = [
+  { category: "한경 프리미엄9", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%91%E1%85%B3%E1%84%85%E1%85%B5%E1%84%86%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%B79.png", title: "한경 프리미엄9", subtitle: "국내주식 · 해외주식 · 자산관리" },
+  { category: "경제", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png", title: "경제", subtitle: "경제정책 · 거시경제 · 세금" },
+  { category: "산업", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%89%E1%85%A1%E1%86%AB%E1%84%8B%E1%85%A5%E1%86%B8.png", title: "산업", subtitle: "반도체 · 자동차 · 조선" },
+  { category: "코리아마켓", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8F%E1%85%A9%E1%84%85%E1%85%B5%E1%84%8B%E1%85%A1%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png", title: "코리아마켓", subtitle: "시장지표 · 컨센서스 · 종목" },
+  { category: "글로벌마켓", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png", title: "글로벌마켓", subtitle: "미국시세 · 투자의견 · 실적" },
+  { category: "집코노미(부동산)", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8C%E1%85%B5%E1%86%B8%E1%84%8F%E1%85%A9%E1%84%82%E1%85%A9%E1%84%86%E1%85%B5.png", title: "집코노미(부동산)", subtitle: "시장동향 · 분양 · 매물" },
+  { category: "오피니언", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536", title: "오피니언", subtitle: "사설 · 칼럼 · 기고" },
+  { category: "국제", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%AE%E1%86%A8%E1%84%8C%E1%85%A6.png", title: "국제", subtitle: "미국 · 중국 · 유럽" },
+  { category: "유통", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%B2%E1%84%90%E1%85%A9%E1%86%BC.png", title: "유통", subtitle: "백화점 · e커머스 · 뷰티" },
+  { category: "문화", imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%91%E1%85%B3%E1%84%85%E1%85%B5%E1%84%86%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%B79.png", title: "K문화", subtitle: "Kpop, K culture" },
+];
+
+async function fetchChannels() {
+  const channelsRef = ref(db, "channels");
+  const snapshot = await get(channelsRef);
+  if (!snapshot.exists()) {
+    await seedChannels();
+    const seeded = await get(channelsRef);
+    return toArray(seeded.val());
+  }
+  return toArray(snapshot.val());
+}
+async function seedChannels() {
+  const data = {};
+  SEED_DATA.forEach((item, i) => { data[`channel_${String(i).padStart(2, "0")}`] = { ...item, order: i }; });
+  await set(ref(db, "channels"), data);
+}
+function toArray(val) {
+  if (!val) return [];
+  return Object.entries(val).map(([id, data]) => ({ id, ...data })).sort((a, b) => a.order - b.order);
+}
+
+/* ============================================================
+   2. 렌더링                                                      */
+const appEl = document.getElementById("app");
+
+function renderStatus({ title, desc, spinner }) {
+  appEl.innerHTML = `
+    <div class="status">
+      ${spinner ? '<div class="spinner"></div>' : ''}
+      <p class="status__title">${title}</p>
+      ${desc ? `<p class="status__desc">${desc}</p>` : ''}
+    </div>`;
+}
+
+renderStatus({ title: "데이터 불러오는 중...", spinner: true });
+
+fetchChannels()
+  .then((items) => {
+    // "문화" 채널은 카드 자체를 노출하지 않음
+    items = items.filter((it) => it.category !== '문화');
+    if (items.length === 0) {
+      renderStatus({ title: "표시할 채널이 없습니다", desc: "Realtime Database의 channels 노드를 확인해 주세요" });
+      return;
+    }
+    renderCarousel(items);
+  })
+  .catch((e) => {
+    renderStatus({
+      title: "연결 실패",
+      desc: (e?.message ?? "데이터를 불러오지 못했습니다") + " — Firebase 설정값과 규칙을 확인해 주세요",
+    });
+  });
+
+function renderCarousel(items) {
+  appEl.innerHTML = `
+    <section class="scene" id="scene">
+      <div class="stage" id="stage">
+        ${items.map((item) => `
+          <article class="card" data-id="${item.id}">
+            <img class="card__img" src="${item.imageUrl}" alt="${item.title}" draggable="false">
+            <div class="card__wash"></div>
+            <div class="card__scrim"></div>
+            <div class="card__text">
+              <p class="card__title">${item.title}</p>
+              <p class="card__subtitle">${item.subtitle ?? ""}</p>
+            </div>
+          </article>`).join("")}
+      </div>
+    </section>
+  `;
+
+  initDiagonalCascade(items);
+}
+
+/* ============================================================
+   3. 대각선 캐스케이드 스킬 — 세로 스크롤, 우측상단 → 좌측하단
+      (수치만 모바일에 맞게 줄였을 뿐 로직은 스킬 그대로)
+      + 최초 1회 "뭉쳤다가 펼쳐지는" 인트로만 앞단에 추가.
+   ============================================================ */
+function initDiagonalCascade(items) {
+  gsap.registerPlugin(ScrollTrigger);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let lenis = null;
+  if (!reduced) {
+    lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((t) => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+  const scrollTo = (y) => lenis ? lenis.scrollTo(y, { immediate: true }) : window.scrollTo(0, y);
+
+  const scene = document.getElementById('scene');
+  const cards = gsap.utils.toArray('#stage .card');
+  const N = cards.length;
+
+  const css = getComputedStyle(document.documentElement);
+  const STEP_X = parseFloat(css.getPropertyValue('--step-x'));
+  const STEP_Y = parseFloat(css.getPropertyValue('--step-y'));
+  const PUSH = parseFloat(css.getPropertyValue('--focus-push'));
+  // 이전엔 고정값 3이라, 카드가 10장인데 포커스에서 3칸만 떨어져도
+  // 완전히 투명해져서 화면엔 사실상 4장 정도만 보이는 문제가 있었음.
+  // 카드 수(N)에 맞춰 몇 장이 "겹쳐서 보이는 스택"처럼 남을지 정한다.
+  const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
+  const DISTANCE_PER_CARD = 190; // 모바일이라 카드당 스크롤량을 살짝 줄임
+
+  // --- 스킬 원본과 동일한 순수 계산 함수: progress → 카드별 위치값 ---
+  function computeLayout(progress) {
+    const focusIndex = progress * (N - 1);
+    return cards.map((_, i) => {
+      const pos = i - focusIndex;
+      const dist = Math.abs(pos);
+      const near = Math.max(0, 1 - dist);
+      const falloff = Math.max(0, 1 - dist / 1.8);
+      // tanh — Math.sign()을 쓰면 포커스가 바뀌는 순간 카드가 튀므로 반드시 이 형태 유지
+      const push = Math.tanh(pos * 1.7) * PUSH * falloff;
+      const t = gsap.utils.clamp(0, 1, dist / FADE_RANGE);
+      const opacity = 1 - t * t;
+      return {
+        xPercent: -50, yPercent: -50,
+        x: pos * STEP_X + push * (STEP_X / STEP_Y),
+        y: pos * STEP_Y + push,
+        scale: 0.94 + near * 0.14,
+        opacity,
+        zIndex: Math.round((1 - dist) * 1000),
+      };
+    });
+  }
+
+  let progress = 0;
+  function layout() {
+    const targets = computeLayout(progress);
+    cards.forEach((c, i) => gsap.set(c, targets[i]));
+  }
+
+  // --- 인트로: 카드가 화면 중앙에 뭉쳐 있다가 원래 간격으로 펼쳐짐 ---
+  function playIntro(onDone) {
+    const targets = computeLayout(0);
+    gsap.set(cards, {
+      xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0.35, opacity: 0, zIndex: (i) => i,
+    });
+    gsap.to(cards, {
+      x: (i) => targets[i].x,
+      y: (i) => targets[i].y,
+      scale: (i) => targets[i].scale,
+      opacity: (i) => targets[i].opacity,
+      duration: 0.85,
+      ease: 'power3.out',
+      stagger: 0.045,
+      onStart() { cards.forEach((c, i) => (c.style.zIndex = targets[i].zIndex)); },
+      onComplete: onDone,
+    });
+  }
+
+  let st = null;
+
+  function setupScroll() {
+    const tween = gsap.to(
+      { p: 0 },
+      {
+        p: 1,
+        ease: 'none',
+        onUpdate() { progress = this.targets()[0].p; layout(); },
+        scrollTrigger: {
+          trigger: scene,
+          start: 'top top',
+          end: () => '+=' + N * DISTANCE_PER_CARD,
+          pin: true,
+          // Lenis(lerp:0.1) 위에 scrub:1(추가 1초 지연)까지 얹으면 감쇠가
+          // 두 겹으로 겹쳐서 짧게 스와이프해도 거의 안 움직이는 것처럼
+          // 느껴짐. Lenis가 이미 부드럽게 처리하므로 여기선 1:1로 추적.
+          scrub: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          snap: { snapTo: 1 / (N - 1), duration: { min: 0.12, max: 0.28 }, ease: 'power2.inOut' },
+        },
+      }
+    );
+    st = tween.scrollTrigger;
+
+    // 탭(선택) vs 스크롤 구분만 담당 — 스크롤 자체는 절대 여기서 건드리지 않는다.
+    // 이전엔 pointermove마다 scrollTo()를 직접 호출했는데, 그게 Lenis/네이티브
+    // 터치 스크롤과 같은 스크롤 위치를 두고 서로 덮어쓰며 충돌해서
+    // 사실상 스크롤이 멈춘 것처럼 보였던 원인이었음.
+    let downX = 0, downY = 0, moved = 0, downTarget = null, isDown = false;
+    scene.addEventListener('pointerdown', (e) => {
+      isDown = true; downX = e.clientX; downY = e.clientY; moved = 0;
+      downTarget = e.target.closest('.card');
+    });
+    scene.addEventListener('pointermove', (e) => {
+      if (!isDown) return;
+      moved = Math.max(moved, Math.hypot(e.clientX - downX, e.clientY - downY));
+    });
+    const endDrag = () => {
+      if (isDown && moved < 8 && downTarget) selectCard(downTarget);
+      isDown = false; downTarget = null;
+    };
+    scene.addEventListener('pointerup', endDrag);
+    scene.addEventListener('pointercancel', endDrag);
+
+    ScrollTrigger.addEventListener('refreshInit', layout);
+  }
+
+  // 카테고리 → 실제 이동할 페이지. Firebase의 category 필드 기준.
+  const CHANNEL_URLS = {
+    '경제': 'https://www.hankyung.com/economy',
+    '산업': 'https://www.hankyung.com/industry',
+    '코리아마켓': 'https://www.hankyung.com/koreamarket/',
+    '글로벌마켓': 'https://www.hankyung.com/globalmarket/',
+    '집코노미(부동산)': 'https://www.hankyung.com/realestate',
+    '국제': 'https://www.hankyung.com/international',
+    '유통': 'https://www.hankyung.com/distribution',
+    '오피니언': 'https://www.hankyung.com/opinion',
+    '한경 프리미엄9': 'https://www.hankyung.com/premium9',
+  };
+  function urlForItem(item) {
+    if (!item) return null;
+    if (CHANNEL_URLS[item.category]) return CHANNEL_URLS[item.category];
+    // DB에 괄호 없이 "집코노미"로만 저장돼 있는 경우 등을 대비한 느슨한 매칭
+    const key = Object.keys(CHANNEL_URLS).find((k) => {
+      const bare = k.replace(/\(.*\)/, '');
+      return item.category?.startsWith(bare) || item.title?.startsWith(bare);
+    });
+    return key ? CHANNEL_URLS[key] : null;
+  }
+
+  function selectCard(cardEl) {
+    const id = cardEl.dataset.id;
+    cards.forEach((c) => c.classList.remove('is-selected'));
+    cardEl.classList.add('is-selected');
+    const item = items.find((it) => it.id === id);
+    const url = urlForItem(item);
+
+    // 매핑된 페이지가 있는 채널만 이동. 없는 채널(한경 프리미엄9, 문화 등)은
+    // 자석 스크롤만 일어나고 페이지 이동은 하지 않음 — URL이 정해지면 위 표에 추가.
+    if (url) {
+      setTimeout(() => { window.location.href = url; }, 550); // 자석 스크롤이 보이도록 잠깐 대기 후 이동
+    } else if (item) {
+      console.log('[select] URL 매핑 없음:', item.category, item.title);
+    }
+
+    // 선택한 카드를 포커스(화면 중앙) 위치로 자석처럼 끌어당김.
+    // 카드 인덱스 → progress → 실제 스크롤 좌표로 환산해 그 지점까지 이동.
+    if (st) {
+      const idx = cards.indexOf(cardEl);
+      const targetProgress = idx / (N - 1);
+      const targetY = st.start + (st.end - st.start) * targetProgress;
+      if (lenis) {
+        lenis.scrollTo(targetY, {
+          duration: 0.7,
+          easing: (t) => 1 - Math.pow(1 - t, 3), // ease-out cubic — 자석에 붙듯 감속하며 도착
+        });
+      } else {
+        window.scrollTo({ top: targetY, behavior: reduced ? 'auto' : 'smooth' });
+      }
+    }
+  }
+
+  // 이미지 로드를 기다린 뒤 인트로 → 스크롤 스킬 순서로 시작
+  const imagesReady = Promise.all(cards.map((c) => {
+    const img = c.querySelector('img');
+    return img.complete ? Promise.resolve() : new Promise((res) => { img.onload = img.onerror = res; });
+  }));
+
+  if (reduced) {
+    imagesReady.then(() => { layout(); setupScroll(); ScrollTrigger.refresh(); });
+  } else {
+    imagesReady.then(() => playIntro(() => { setupScroll(); ScrollTrigger.refresh(); }));
+  }
+
+  addEventListener('load', () => ScrollTrigger.refresh());
+  document.fonts?.ready.then(() => ScrollTrigger.refresh());
+}
+</script>
+</body>
+</html>
