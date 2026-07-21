@@ -165,12 +165,16 @@ docs/
   design/         # 디자인 시스템과 UI 에셋
   meeting-notes/  # 회의록
   planning/       # 프로젝트 계획과 마일스톤
-  research/       # 사용자·시장·데이터 리서치
   deliverables/   # 스프린트별 산출물
-src/              # 서비스 소스 코드
-public/           # 정적 리소스
-CLAUDE.md          # AI 개발 지원용 프로젝트 컨텍스트
-README.md          # 프로젝트 소개
+    analysis/     # 시장·경쟁사·유입경로·사용자 리서치 분석
+    poc/          # 기능별 PoC 프로토타입 및 정리 문서
+    poc-phase2/   # 2차 PoC 프로토타입
+    persona/      # AI 페르소나 FGI 챗봇 프로토타입
+    ui/           # 와이어프레임·하이파이 목업 (Figma 링크)
+    mvp/          # 최종 작동 MVP
+    report/       # 결과보고서
+CLAUDE.md         # AI 개발 지원용 프로젝트 컨텍스트
+README.md         # 프로젝트 소개
 ```
 
 ## 14. 프로젝트 의의
