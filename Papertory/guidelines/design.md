@@ -466,7 +466,7 @@ Figma "Components / Iconography" 섹션(node 467:3402) 기준. 화면 단위가 
 | 경고 화면 | bg/surface + status/warning-bg | status/warning |
 | 오류 화면 | bg/surface + status/error-bg | status/error |
 | 드로어/사이드메뉴 | overlay/medium + bg/surface | border/accent |
-
+ 
 ---
 
 *Generated from Figma Design System — GROUP ACT / 페이퍼토리 (zNDuyelMmDqxbUhBk3Tdog), "디자인 시스템 + UI 통합본" 페이지 (Color System 467:2145 · Typography 467:3268 · Radius/Spacing/Layout 467:3312 · Effects Styles 467:3375)*
