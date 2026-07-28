@@ -12,10 +12,6 @@
   * 시장 및 경쟁 서비스 분석, 유저 유형 분석, 유입 경로 통합 분석, 웹/앱 정보 구조(IA) 및 사용자 행동 흐름(User Flow) 분석 결과 문서가 포함되어 있습니다.
 * 🧪 **[개념 검증 (Proof of Concept - POC)](file:///Users/yundabin/Desktop/groupact/docs/deliverables/poc)**
   * 개별 컴포넌트 및 기능별 프로토타입 소스 코드(.html)와 POC 요약/기능 정리 문서(.md)가 포함되어 있습니다.
-* 🎨 **[UI (와이어프레임 / 목업)](file:///Users/yundabin/Desktop/groupact/docs/deliverables/ui/README.md)**
-  * Figma 와이어프레임·하이파이 목업 링크와 화면별 설명이 정리되어 있습니다.
-* 🚀 **[MVP](file:///Users/yundabin/Desktop/groupact/docs/deliverables/mvp/README.md)**
-  * 실험용 POC와 구분되는, 실제 시연·제출용 완성형 MVP가 정리되어 있습니다.
 
 ---
 
