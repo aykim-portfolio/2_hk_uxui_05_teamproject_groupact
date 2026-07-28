@@ -279,6 +279,7 @@
       <a class="navlink" href="#d05"><span class="n">05</span>C. 도토리·상점</a>
       <a class="navlink" href="#d06"><span class="n">06</span>D. 읽기 기록</a>
       <a class="navlink" href="#d13"><span class="n">13</span>E. 스크랩 라이브러리</a>
+      <a class="navlink" href="#d15"><span class="n">15</span>F. 전체 성장 루프</a>
       <a class="navlink" href="#d07"><span class="n">07</span>전역 내비게이션</a>
     </div>
 
@@ -297,7 +298,7 @@
     <div class="hero">
       <h1>페이퍼토리 — mermaid 다이어그램 미리보기</h1>
       <p><code>docs/mermaid/</code> 폴더의 14개 .mmd 파일을 렌더링한 미리보기입니다. 각 카드 하단의 "코드 보기"에서 원본 mermaid 소스를 그대로 복사할 수 있습니다.</p>
-      <div class="meta"><span><b>14</b>개 다이어그램</span><span><b>3</b>개 그룹 — IA · 유저플로우 · 시퀀스</span></div>
+      <div class="meta"><span><b>15</b>개 다이어그램</span><span><b>3</b>개 그룹 — IA · 유저플로우 · 시퀀스</span></div>
     </div>
 
     <section class="diagram" id="d01">
@@ -755,6 +756,81 @@ flowchart TD
       </div>
     </section>
 
+    <section class="diagram" id="d15">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left"><span class="badge badge-flow">유저플로우</span><span class="card-title">F. 전체 성장 루프 (발표용 통합본)</span></div>
+          <span class="filename">15_userflow_f_growth_loop.mmd</span>
+        </div>
+        <div class="diagram-body"><pre class="mermaid">
+flowchart LR
+  subgraph ENTER["① ENTER · 진입·완독"]
+    direction TB
+    A1["앱 실행 · 오늘의 지면(피드)"] --> A2["기사 상세 열람&lt;br/&gt;원문 / AI모드+지갑번역기 / 쉽게읽기"]
+    A2 --> A3["완독"]
+  end
+
+  subgraph ARCHIVE["② ARCHIVE · 기록·자산화"]
+    direction TB
+    B1["형광펜·가위로 핵심 문장 캡처&lt;br/&gt;(도구팔레트)"] --> B2["조각함에 누적"]
+    B2 --> B3["스크랩 카드 꾸미기&lt;br/&gt;(스티커·테이프)"]
+    B3 --> B4["저장 · 도토리 적립"]
+  end
+
+  subgraph SHARE["③ SHARE · 공유·소셜 락인"]
+    direction TB
+    C1["공유 카드 생성"] --> C2["SNS 공유&lt;br/&gt;#공스타그램 #직장인공부"]
+    C2 --> C3["고유 딥링크 발급"]
+  end
+
+  subgraph GROWTH["신규 유입"]
+    direction TB
+    D1["지인이 딥링크 클릭"] --> D2{"앱 설치 여부"}
+    D2 -->|"미설치"| D3["스토어 경유 설치 후&lt;br/&gt;원래 화면으로 복귀"]
+    D2 -->|"설치됨"| D4["해당 기사·스크랩으로&lt;br/&gt;바로 진입"]
+    D3 --> D5["신규 사용자의 ENTER&lt;br/&gt;(① 루프 재시작)"]
+    D4 --> D5
+  end
+
+  A3 --> B1
+  B4 --> C1
+  C3 --> D1
+        </pre></div>
+        <details class="src"><summary>코드 보기</summary><pre class="code">flowchart LR
+  subgraph ENTER["① ENTER · 진입·완독"]
+    direction TB
+    A1["앱 실행 · 오늘의 지면(피드)"] --> A2["기사 상세 열람&lt;br/&gt;원문 / AI모드+지갑번역기 / 쉽게읽기"]
+    A2 --> A3["완독"]
+  end
+
+  subgraph ARCHIVE["② ARCHIVE · 기록·자산화"]
+    direction TB
+    B1["형광펜·가위로 핵심 문장 캡처&lt;br/&gt;(도구팔레트)"] --> B2["조각함에 누적"]
+    B2 --> B3["스크랩 카드 꾸미기&lt;br/&gt;(스티커·테이프)"]
+    B3 --> B4["저장 · 도토리 적립"]
+  end
+
+  subgraph SHARE["③ SHARE · 공유·소셜 락인"]
+    direction TB
+    C1["공유 카드 생성"] --> C2["SNS 공유&lt;br/&gt;#공스타그램 #직장인공부"]
+    C2 --> C3["고유 딥링크 발급"]
+  end
+
+  subgraph GROWTH["신규 유입"]
+    direction TB
+    D1["지인이 딥링크 클릭"] --> D2{"앱 설치 여부"}
+    D2 -->|"미설치"| D3["스토어 경유 설치 후&lt;br/&gt;원래 화면으로 복귀"]
+    D2 -->|"설치됨"| D4["해당 기사·스크랩으로&lt;br/&gt;바로 진입"]
+    D3 --> D5["신규 사용자의 ENTER&lt;br/&gt;(① 루프 재시작)"]
+    D4 --> D5
+  end
+
+  A3 --> B1
+  B4 --> C1
+  C3 --> D1</pre></details>
+      </div>
+    </section>
+
     <section class="diagram" id="d07">
       <div class="card">
         <div class="card-head">
@@ -1152,7 +1228,7 @@ sequenceDiagram
       </div>
     </section>
 
-    <footer>docs/mermaid/ · 14개 파일 · 페이퍼토리 팀 공유용 다이어그램 미리보기</footer>
+    <footer>docs/mermaid/ · 15개 파일 · 페이퍼토리 팀 공유용 다이어그램 미리보기</footer>
   </main>
 </div>
 
