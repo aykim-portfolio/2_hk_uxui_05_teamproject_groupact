@@ -6,14 +6,14 @@
 
 ## 목차
 
-1. [컬러 시스템](#1-컬러-시스템)
+1. [컬러 시스템](#1-컬러-시스템) (Primitive · Semantic · Data Visualization)
 2. [타이포그래피](#2-타이포그래피)
 3. [Spacing / Layout Grid](#3-spacing--layout-grid)
 4. [Corner Radius](#4-corner-radius)
 5. [Effect Styles (Elevation)](#5-effect-styles-elevation)
 6. [Overlay / Dimming](#6-overlay--dimming)
-7. [Data Visualization](#7-data-visualization)
-8. [컴포넌트 적용 예시](#8-컴포넌트-적용-예시)
+7. [Iconography & System UI](#7-iconography--system-ui)
+8. [컴포넌트](#8-컴포넌트)
 9. [사용 가이드](#9-사용-가이드)
 
 ---
@@ -110,7 +110,7 @@
 | Token | Primitive | 사용처 |
 |---|---|---|
 | brand/primary | primary/500 | 주 브랜드 컬러, 주요 액션·강조 |
-| brand/primary-light | primary/200 | 브랜드 라이트 배경 |
+| brand/primary-light | Blue 파생 (#D0DAFC) | 브랜드 라이트 배경 |
 | brand/secondary | lime/200 | 형광펜·하이라이트 등 가볍고 발랄한 포인트 |
 
 #### Background
@@ -118,7 +118,7 @@
 | Token | Primitive | 사용처 |
 |---|---|---|
 | bg/primary | #F8F9FB | 앱 전체 기본 화면 |
-| bg/brand | primary/100 파생 (#EDF0FD) | 브랜드 강조 영역 배경 |
+| bg/brand | Blue 파생 (#EDF0FD) | 브랜드 강조 영역 배경 |
 | bg/brand-bold | primary/500 | 강조 배너, CTA 배경 |
 | bg/accent-bold | lime/200 | 형광펜, 스피치 버블 배경 |
 | bg/inverse | gray/900 | 다크 배경, 역상 UI |
@@ -163,6 +163,39 @@
 
 ---
 
+### 1.3 Data Visualization
+
+차트/그래프용 색상 세트임. 발표 슬라이드에도 동일하게 활용함.
+
+#### Sequential — 순차 데이터
+
+**Blue** (예: 읽기 기록 히트맵) — `#EDF0FD → #D0DAFC → #AFC1FA → #809CF7 → #6083F5 → #496DE0 → #3654B8 → #263D94`
+
+| Date Cell state | 매핑 색상 |
+|---|---|
+| Empty | bg/surface (읽은 기록 없음) |
+| Future | text/disabled 톤 (아직 오지 않은 날짜) |
+| Today | border/brand 강조 (당일 표시) |
+| Level 1 | Sequential Blue 1~2단계 (`#EDF0FD`~`#D0DAFC`) |
+| Level 2 | Sequential Blue 3단계 (`#AFC1FA`) |
+| Level 3 | Sequential Blue 4~5단계 (`#809CF7`~`#6083F5`) |
+| Level 4 | Sequential Blue 6단계 (`#496DE0`) |
+| Level 5 | Sequential Blue 7~8단계 (`#3654B8`~`#263D94`, 최다 열독) |
+
+> Date Cell(→ 8.8 컴포넌트)의 Level 1~5 state는 이 Sequential Blue 8단계를 5구간으로 압축해 매핑한 것임. 읽은 기사 수가 많을수록 진한 블루로 표시됨.
+
+**Lime** (예: 진행도 뱃지) — `#FCFFF1 → #F5FCE0 → #E6F997 → #DEFF71 → #C8E54C → #A8C832 → #6A8A18 → #354B0E`
+
+#### Diverging — 증감 데이터 (하락 ↔ 상승)
+
+| 강한 하락 | 하락 | 약한 하락 | 중립 | 약한 상승 | 상승 | 강한 상승 |
+|---|---|---|---|---|---|---|
+| #0B3DA3 | #1E64E6 | #64A0F5 / #B3D1FF | #F8F9FB | #FFB3B4 | #FF383C | #CC2428 / #A31418 |
+
+> 시장 지표(코스피, 종목 등락률 등) 표시에 사용함. 파랑 계열은 하락, 붉은 계열은 상승을 의미함 — 국내 증시 관행에 맞춰 적용함.
+
+---
+
 ## 2. 타이포그래피
 
 ### 폰트 패밀리
@@ -176,11 +209,11 @@
 
 | 스타일명 | 폰트 스펙 | 사용처 |
 |---|---|---|
-| Headline 1 | Paperlogy ExtraBold(8) / 22px / LH 28px | 예: "한국은행, 기준금리 동결 결정" — 헤드라인 뉴스 타이틀 |
-| Title | Paperlogy Bold(7) / 18px / LH auto | 예: "오늘의 증시 브리핑" — 화면/섹션 타이틀 |
+| Headline 1 | Paperlogy ExtraBold(8) / 24px / LH 34px | 예: "한국은행, 기준금리 동결 결정" — 헤드라인 뉴스 타이틀 |
+| Title/Button | Paperlogy Bold(7) / 20px / LH auto | 예: "오늘의 증시 브리핑" — 화면/섹션 타이틀, 버튼 텍스트 |
 | Subtitle | Paperlogy Bold(7) / 16px / LH auto | 예: "주요 경제 지표 요약" — 서브 타이틀 |
-| Body 1 | Open Sans Regular / 16px / LH 26px / LS -2% / Indent 8px | 콘텐츠 슬라이드 메인 본문 |
-| Body 2 | Open Sans Regular / 14px / LH 24px / LS -2% / Indent 8px | 보조 본문 |
+| Body 1 (요약 view) | Open Sans Regular / 20px / LH 32px / LS -2% / Indent 8px | 뉴스 랜딩페이지 요약 모드 본문, 이해관계자 시각 본문, AI에게 질의응답하기 본문 |
+| Body 2 (원문 view) | Open Sans Regular / 16px / LH 24px / LS -2% / Indent 8px | 뉴스 원문 모드 본문 |
 | Label | Paperlogy Bold(7) / 14px / LH auto | 예: "속보 · 단독" — 뱃지·라벨 |
 | Caption | Paperlogy Medium(5) / 12px / LH auto | 예: "2026.07.24 오전 09:32 · 경제부" — 기자명, 날짜 |
 
@@ -202,6 +235,9 @@
 | 헤더 / 앱바 | 16px |
 | 드로어 콘텐츠 | 24px |
 | 카드 내부 | 16px |
+| 뉴스 카드 영역 좌우 | 20px |
+| 랜딩 좌우 | 16px |
+| 리스트 아이템 간격 | 4~12px (영역별 상이) |
 
 ### 컴포넌트별 패딩 (padding)
 
@@ -224,7 +260,7 @@
 |---|---|---|
 | radius/sm | 12px | 카드, 이미지, 홈 내비게이션 드로어, AI 카드 |
 | radius/lg | 24px | 칩, 드롭다운 탭, 스피치 버블, pill형 요소 |
-| radius/xl | 40px | 바텀시트, 화면 레벨 컨테이너 |
+| radius/xl | 36px | 바텀시트, 화면 레벨 컨테이너 |
 | radius/full | 999px | 완전 원형 |
 
 ### radius/full 세부 적용 크기
@@ -273,27 +309,105 @@
 
 ---
 
-## 7. Data Visualization
+## 7. Iconography & System UI
 
-차트/그래프용 색상 세트임. 발표 슬라이드에도 동일하게 활용함.
+### Iconography
 
-### 7.1 Sequential — 순차 데이터
+- 아이콘 라이브러리는 **Lucide Icon Library**를 추가해서 사용함
+- 디자인 시스템/화면에 정의된 아이콘과 **동일한 이름의 Lucide 아이콘**을 찾아 그대로 매칭해서 가져옴 (예: `arrow-right`, `alert-triangle`, `check-circle`, `x-circle` 등 기존 명명 규칙 그대로 유지)
+- 별도 커스텀 아이콘 세트를 새로 만들지 않고, Lucide에 없는 아이콘만 예외적으로 커스텀 제작함
 
-**Blue** (예: 읽기 기록 히트맵) — `#EDF0FD → #D0DAFC → #AFC1FA → #809CF7 → #6083F5 → #496DE0 → #3654B8 → #263D94`
+### System Status Bar
 
-**Lime** (예: 진행도 뱃지) — `#FCFFF1 → #F5FCE0 → #E6F997 → #DEFF71 → #C8E54C → #A8C832 → #6A8A18 → #354B0E`
-
-### 7.2 Diverging — 증감 데이터 (하락 ↔ 상승)
-
-| 강한 하락 | 하락 | 약한 하락 | 중립 | 약한 상승 | 상승 | 강한 상승 |
-|---|---|---|---|---|---|---|
-| #0B3DA3 | #1E64E6 | #64A0F5 / #B3D1FF | #F8F9FB | #FFB3B4 | #FF383C | #CC2428 / #A31418 |
-
-> 시장 지표(코스피, 종목 등락률 등) 표시에 사용함. 파랑 계열은 하락, 붉은 계열은 상승을 의미함 — 국내 증시 관행에 맞춰 적용함.
+- 상단 상태바(시간, 신호, 배터리 등)는 디자인 시스템 토큰을 따르지 않고 **일반적인 iOS 기본 스타일**을 그대로 사용함
+- 즉, `design.md`에 정의된 컬러/타이포/스페이싱 토큰의 영향을 받지 않는 시스템 영역으로 별도 취급함
+- 다크모드 등 상태바 색상 반전이 필요한 경우도 iOS 시스템 기본 동작을 따름 (앱 자체 토큰으로 오버라이드하지 않음)
 
 ---
 
-## 8. 컴포넌트 적용 예시
+## 8. 컴포넌트
+
+Figma "Components / Iconography" 섹션(node 467:3402) 기준. 화면 단위가 아닌 재사용 컴포넌트 라이브러리임.
+
+### 8.1 뉴스 뷰 (News)
+
+| 컴포넌트 | Variant / 구성 |
+|---|---|
+| News/TopAppBar | — |
+| News/TopBarButtonOption | Default / 2set / 1set |
+| News/MainHeader, HeroImage, NewsImage, ImageLayout | — |
+| News/CategoryChip | 카테고리칩v1 / 카테고리v2 / 썸네일 이미지 슬롯 3종 |
+| News/NewsRows | 산업 · 정치 · 경제 · 국제 · 오피니언 · 부동산 · 테크 · 코리안마켓 · 글로벌마켓 (9개 카테고리 row) |
+| News/NewsCard, NewsTitle, Date, NewsCaption, ArticleInfo | — |
+| News/DropdownTab | Default / 텍스트버전 |
+| News/NewsText | 랜딩 / 본문 |
+| News/SliderAiMode, SliderOriginal, SliderEasyRead | 원문·AI 요약·쉬운말 3가지 읽기 모드 슬라이더 |
+| News/Badge | Default / Variant2 |
+| News/AiSummaryCard, AiCardContent, CategoryChipInline, ArticleOriginalText | AI 요약 카드 세트 |
+| News/Menu, MenuHeader | — |
+
+### 8.2 토리 (AI 챗봇 마스코트)
+
+| 컴포넌트 | 설명 |
+|---|---|
+| Tori/Chat, AiChatTopBar, AiChatInput | AI 챗봇 대화 화면 뼈대 |
+| Tori/ToriMessage, UserMessage | 챗봇 응답 / 사용자 메시지 버블 |
+| Tori/RecommendedQuestion | 추천 질문 칩 |
+| Tori/AiSummary, NewsOriginalCard, ToriCard | AI 요약·원문 카드, 토리 카드 |
+| Tori/DrawerFooter, AcornSpeechBubble | 드로어 하단 영역, 도토리 스피치 버블(리워드 안내) |
+
+### 8.3 스크랩 (Scrap)
+
+| 컴포넌트 | Variant / 구성 |
+|---|---|
+| Scrap/PenBar | 원문 / 스크랩 / Variant3 |
+| Scrap/PenTool | Lucide 아이콘 21종 (highlighter, pencil, eraser, scissors, undo-2, keyboard, clipboard, picker, bold, case-sensitive, italic, list, list-todo, paperclip, pipette, save, table, text-align-* 등) |
+| Scrap/Picker, PenDetail, FloatingActionButton | 색상 피커, 펜 상세 옵션, FAB |
+| Scrap/Item | Default / Variant2 |
+| Scrap/CombinedTab, BottomSheetClipActive | 스크랩 조각 탭, 바텀시트 클립 활성 상태 |
+
+### 8.4 꾸미기 상점 (Shop) — 진행 중
+
+| 컴포넌트 | Variant / 구성 |
+|---|---|
+| Shop/Tabs | 테이프활성화 / 스티커활성화 |
+| Shop/MaskingTapeCard, ToriStickerCard | 활성화 / 비활성화 2 state |
+| Shop/ToriSticker | 웃는토리 / 안경토리 / 우는토리 / 화난토리 (감정 4종) |
+| Shop/MaskingTape | 마스킹1~6 (패턴 6종) |
+| Shop/CardItemContainer | — |
+
+> 이 섹션은 Figma 상에서 "수정중"으로 표시되어 있어 최종 스펙이 아닐 수 있음.
+
+### 8.5 아이콘 (Iconography)
+
+`Icon/Icons` 프레임에 등록된 27개 아이콘 전부 **Lucide 라이브러리 아이콘명과 1:1로 매칭됨** — `chevron-left/right/down/up`, `arrow-left/right`, `square-arrow-up-right`, `arrow-up-right`, `move-right`, `star`, `notebook-pen`, `loader`, `settings`, `share-2`, `stamp`, `heart`, `menu`, `highlighter`, `message-circle`, `message-circle-more`, `x`, `list-filter`, `paperclip`, `folder-open`, `file-pen`, `trending-up` 등. `Icon/RoundButton`에는 토리 마스코트 등 브랜드 커스텀 아이콘이 섞여 있어 이 부분만 예외적으로 커스텀 제작함 (→ 7. Iconography & System UI 원칙과 연결).
+
+### 8.6 온보딩 (Onboarding)
+
+| 컴포넌트 | 설명 |
+|---|---|
+| Onboarding/StartContent, TitleGroup, ToriMascot | 시작 화면 콘텐츠, 타이틀 그룹, 토리 마스코트 일러스트 |
+
+### 8.7 리워드 (Reward)
+
+| 컴포넌트 | Variant / 구성 |
+|---|---|
+| Reward/RoundButton | 모은도토리 / 리워드on / 리워드off |
+| Reward/RewardCard | Default / Variant2 / Variant3 + 구분선 |
+| Reward/OtherCard | Default / Variant2 |
+| Reward/AcornCollect, ShopButton | 도토리 수집 뷰, 상점 이동 버튼 |
+
+### 8.8 내비게이션 & 공통
+
+| 컴포넌트 | 설명 |
+|---|---|
+| Navigation/FullMenu, Hamburger | 전체 메뉴, 햄버거 메뉴 |
+| Common/HomeIndicator | iOS 홈 인디케이터 (→ 7. System UI 원칙 적용 대상) |
+| Common/CategoryCardExpanded | 카테고리 카드 확장 뷰 |
+| ReadingHistory/SubHeader, ReadingHistoryCard | 읽기 기록 캘린더 상세 뷰 |
+| Date Cell | 캘린더 날짜 셀 — Empty / Future / Today / Level 1~5 (8 state, Data Viz Sequential Blue와 연동) |
+
+### 8.9 컴포넌트 적용 예시
 
 | 컴포넌트 | Fill | Text | Radius / 기타 |
 |---|---|---|---|
