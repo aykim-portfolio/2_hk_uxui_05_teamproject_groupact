@@ -58,7 +58,7 @@
 
 ## 디자인 시스템
 
-> 전체 스펙: [docs/design/design.md](docs/design/design.md) (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영)
+> 전체 스펙: guidelines/design.md (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영)
 
 - **구조:** Primitive → Semantic 2단 토큰 체계. **Primitive 색상은 컴포넌트에 직접 사용 금지** — 항상 Semantic Token(`brand/primary`, `text/primary` 등)을 통해서만 참조
 - **브랜드 컬러:** Primary Blue(`primary/500 #6083F5`) + Secondary Lime(`lime/200 #E6F997`) 투톤
@@ -77,7 +77,6 @@
 
 ```
 docs/
-  design/         # design.md — 디자인 시스템, 컬러/타이포그래피, 반복 UI 에셋 정리
   meeting-notes/  # 회의록 (AI 회의록 툴 요약본, 날짜순)
   planning/       # 프로젝트 계획서, 마일스톤
   deliverables/   # 스프린트별 최종 산출물 요약 및 링크
