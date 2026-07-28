@@ -1,21 +1,8 @@
-<!-- make-kit-guidelines -->
-## Design System Setup — MANDATORY
+## Design System Setup
 
-This project depends on `@make-kits/hk-papertory` packages. Before writing
-any code:
+이 프로젝트는 `@make-kits/hk-papertory` 패키지에 더 이상 의존하지 않습니다 (Figma Make 플랫폼 전용 비공개 패키지라 공개 npm/pnpm 레지스트리에서 설치 불가 — 로컬/일반 CI 환경에서 빌드 가능하도록 의존성에서 제거함).
 
-1. Read guidelines/setup.md and guidelines/Guidelines.md by their exact
-   path (e.g. node_modules/<scope>/<package>/guidelines/setup.md).
-   This project uses pnpm, which symlinks packages — do NOT use
-   `find`, `glob`, or `file_search` to discover files as they silently
-   fail on symlinks. Instead use: reading files by exact path,
-   `ls` (follows symlinks), `find -L` (`-L` follows symlinks), or `cat`.
-2. Execute all setup instructions (config changes) against THIS project — not the package itself.
-3. Do not skip, modify, or improvise any setup steps.
-4. Read ALL other required .md files specified in guidelines/Guidelines.md.
-5. Verify that all required .md files have been read before proceeding.
-6. Read guidelines/design.md This is rules for how the AI should make generations look like.
-<!-- /make-kit-guidelines -->
+디자인 시스템 규칙은 이 저장소에 커밋된 [guidelines/design.md](design.md)를 직접 읽어서 따르면 됩니다 (Single Source of Truth — 루트 `CLAUDE.md`도 이 파일을 가리킴).
 
 **Add your own guidelines here**
 <!--
