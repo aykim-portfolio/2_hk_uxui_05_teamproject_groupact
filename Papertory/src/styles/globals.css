@@ -1,0 +1,39 @@
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Alias kit slash-named CSS variables to hyphen-only names for easy use in JSX */
+:root {
+  /* Kit variable aliases */
+  --pt-bg-primary: var(--bg\/primary);         /* #f8f9fb — app background */
+  --pt-bg-brand: var(--bg\/brand);             /* #edf0fd — brand light bg */
+  --pt-bg-accent: var(--bg\/accent-bold);      /* #e6f997 — lime accent bg */
+  --pt-brand-primary: var(--brand\/primary);   /* #6083f5 — primary blue */
+  --pt-brand-secondary: var(--brand\/secondary); /* #e6f997 — lime */
+  --pt-text-primary: var(--text\/primary);     /* #1a2535 */
+  --pt-text-secondary: var(--text\/secondary); /* #7d828a */
+  --pt-text-brand: var(--text\/brand);
+  --pt-text-brand-strong: var(--text\/brand-strong); /* #496de0 */
+  --pt-text-indigo: var(--text\/indigo);       /* #161f85 */
+  --pt-border-accent: var(--border\/accent);   /* #d6ee8d */
+  --pt-shadow-card: var(--shadow\/card);       /* #d3d8e9 */
+  --pt-chip-bg: var(--primary\/50);            /* #edf0fd — chip / category bg */
+
+  /* Additional semantic tokens from design.md */
+  --pt-bg-card: #EFF1F5;                       /* bg/card — reward & shop card bg */
+  --pt-bg-surface: #FFFFFF;                    /* bg/surface — white panels */
+  --pt-bg-accent-light: #F5FCE0;               /* lime light — quiz card bg */
+  --pt-text-dark-green: #354B0E;               /* lime CTA text, quiz description */
+  --pt-chip-inactive: #E2E5EB;                 /* completed/inactive reward button */
+  --pt-chip-inactive-text: #7B8794;            /* completed/inactive reward text */
+  --pt-border-default: #EBECEF;               /* default dividers */
+  --pt-border-menu: #AFC1FA;                   /* drawer menu item dividers */
+  --pt-tape-card-bg: rgba(178, 196, 255, 0.2); /* masking tape product card */
+  --pt-tape-handle: #4E6CDC;                   /* masking tape handle accent */
+  --pt-overlay-medium: rgba(26, 37, 53, 0.35); /* overlay/medium — drawer backdrop */
+  --pt-overlay-heavy: rgba(26, 37, 53, 0.60);  /* overlay/heavy — modal backdrop */
+}
