@@ -41,8 +41,9 @@ function CategoryChip({
 }) {
   const padding = small ? "4px 12px" : compactX ? "6px 12px" : "6px 24px";
   return (
+    // w-fit + shrink-0: 부모 레이아웃과 무관하게 항상 내용 크기로 hug (fill 방지)
     <div
-      className="flex items-center shrink-0 rounded-full"
+      className="inline-flex items-center shrink-0 w-fit rounded-full"
       style={{
         backgroundColor: "var(--pt-chip-bg)",
         padding,
