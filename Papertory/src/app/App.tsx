@@ -5,9 +5,6 @@ import { useState, useEffect } from "react";
 import StartScreenImport from "@/imports/Start/index";
 import imgArticle from "@/imports/Landing/8db2a969b7cc2690d1ad5bbc3961b54f39a56d49.png";
 import imgTori from "@/imports/Landing/209e16e9a7b0e6466a84c310cffb3fdc38787db8.png";
-import imgCat1 from "@/imports/카테고리/110bfddeaae91eacb2f5db0ec39a96970b84e586.png";
-import imgCat2 from "@/imports/카테고리/2c5879b857283ef9fd5961f1a3d68ae2bbd32ee0.png";
-import imgCat3 from "@/imports/카테고리/d55c2ecd3993cde030bd55d670ff79bf3023adf1.png";
 import imgToriChat from "@/imports/Ai모드/1036bf7c5b4c39f6cf61eba9b8b1c76e90e5dfb0.png";
 import imgToriMenu from "@/imports/햄버거메뉴활성화/9db62f1482f6077c23b2aaac03047a53e5f6f50c.png";
 import imgAcorn from "@/imports/미션리워드/8135e13e64481f72eb891bb72cb9db8c4c3a5dad.png";
@@ -26,7 +23,7 @@ type Screen =
   | "mypage";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
-type Category = "Today" | "산업" | "IT" | "금융" | "부동산";
+type Category = string;
 
 // ── Shared primitives ──
 
@@ -588,6 +585,56 @@ function CategoryCard({
   );
 }
 
+// ── Category page DB (GA_카테고리페이지템플릿db) ──
+// 카테고리,image URL,TITLE,SUBTITLE — "Today"는 홈 기본 상태라 카드 목록에서 제외
+const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] = [
+  {
+    title: "한경 프리미엄9",
+    subtitle: "국내주식 · 해외주식 · 자산관리",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%91%E1%85%B3%E1%84%85%E1%85%B5%E1%84%86%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%B79.png",
+  },
+  {
+    title: "경제",
+    subtitle: "경제정책 · 거시경제 · 세금",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png",
+  },
+  {
+    title: "산업",
+    subtitle: "반도체 · 자동차 · 조선",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%89%E1%85%A1%E1%86%AB%E1%84%8B%E1%85%A5%E1%86%B8.png",
+  },
+  {
+    title: "코리아마켓",
+    subtitle: "시장지표 · 컨센서스 · 종목",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8F%E1%85%A9%E1%84%85%E1%85%B5%E1%84%8B%E1%85%A1%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+  },
+  {
+    title: "글로벌마켓",
+    subtitle: "미국시세 · 투자의견 · 실적",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+  },
+  {
+    title: "집코노미",
+    subtitle: "시장동향 · 분양 · 매물",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8C%E1%85%B5%E1%86%B8%E1%84%8F%E1%85%A9%E1%84%82%E1%85%A9%E1%84%86%E1%85%B5.png",
+  },
+  {
+    title: "오피니언",
+    subtitle: "사설 · 칼럼 · 기고",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
+  },
+  {
+    title: "국제",
+    subtitle: "미국 · 중국 · 유럽",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%AE%E1%86%A8%E1%84%8C%E1%85%A6.png",
+  },
+  {
+    title: "유통",
+    subtitle: "백화점 · e커머스 · 뷰티",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%B2%E1%84%90%E1%85%A9%E1%86%BC.png",
+  },
+];
+
 // ── Category Screen ──
 function CategoryScreen({
   onBack,
@@ -596,13 +643,23 @@ function CategoryScreen({
   onBack: () => void;
   onCategorySelect: (cat: Category) => void;
 }) {
+  // 기존 디자인의 카드 스택 간격(세로 190px 간격, 좌측 84/80/84/90 지그재그)을 그대로 유지한 채
+  // DB 로우 수만큼 카드를 생성
+  const TOP_START = 115;
+  const TOP_STEP = 190;
+  const CARD_HEIGHT = 298;
+  const LEFT_OFFSETS = [84, 80, 84, 90];
+
   const cards: { label: Category; subtitle: string; image: string; top: number; left: number }[] =
-    [
-      { label: "산업", subtitle: "앤트로픽 IPO 추진 소식", image: imgCat2, top: 115, left: 84 },
-      { label: "IT", subtitle: "AI 반도체 전쟁 심화", image: imgCat1, top: 305, left: 80 },
-      { label: "금융", subtitle: "금리 동결 후 증시 반응", image: imgCat3, top: 490, left: 84 },
-      { label: "부동산", subtitle: "서울 아파트 상승세 지속", image: imgCat2, top: 680, left: 90 },
-    ];
+    CATEGORY_PAGE_DB.map((row, i) => ({
+      label: row.title,
+      subtitle: row.subtitle,
+      image: row.imageUrl,
+      top: TOP_START + i * TOP_STEP,
+      left: LEFT_OFFSETS[i % LEFT_OFFSETS.length],
+    }));
+
+  const stageHeight = TOP_START + (cards.length - 1) * TOP_STEP + CARD_HEIGHT + 40;
 
   return (
     <div
@@ -614,7 +671,7 @@ function CategoryScreen({
     >
       <AppHeader dropdownLabel="카테고리" showBack onBackClick={onBack} onDropdownClick={() => {}} />
       <div className="absolute inset-0 overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 40 }}>
-        <div className="relative" style={{ height: 1020 }}>
+        <div className="relative" style={{ height: stageHeight }}>
           {cards.map((c) => (
             <CategoryCard
               key={c.label}
