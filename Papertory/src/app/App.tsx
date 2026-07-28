@@ -134,6 +134,20 @@ function ChevronDownIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path
+        d="M1 1L13 13M13 1L1 13"
+        stroke="var(--pt-text-primary)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function ArrowRightIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
   return (
     <svg width="11" height="11" viewBox="0 0 10.67 10.67" fill="none">
@@ -1244,26 +1258,30 @@ function NavigationDrawer({
   onClose: () => void;
   onNavigate: (screen: Screen) => void;
 }) {
-  const sections: {
-    title: string;
-    items: { label: string; screen: Screen | null }[];
-  }[] = [
+  // Figma 706:3675 기준: 홈/마이페이지는 하위 항목 없는 flat 메뉴, 나의 기록/토리 서비스만 하위 목록을 가짐
+  type MenuEntry =
+    | { type: "flat"; label: string; screen: Screen | null }
+    | { type: "section"; title: string; items: { label: string; screen: Screen | null }[] };
+
+  const menu: MenuEntry[] = [
+    { type: "flat", label: "홈", screen: "landing" },
     {
+      type: "section",
       title: "나의 기록",
       items: [
         { label: "스크랩 라이브러리", screen: null },
-        { label: "내 서재", screen: null },
         { label: "읽기 기록 달력", screen: null },
       ],
     },
     {
+      type: "section",
       title: "토리 서비스",
       items: [
         { label: "도토리 줍기", screen: "mission" },
         { label: "상점", screen: "shop" },
       ],
     },
-    { title: "프로필", items: [] },
+    { type: "flat", label: "마이페이지", screen: null },
   ];
 
   return (
@@ -1284,22 +1302,35 @@ function NavigationDrawer({
         }}
       >
         {/* Drawer header */}
-        <div className="px-7 pt-14 pb-4">
+        <div className="flex items-center justify-between px-7 pt-14 pb-4">
           <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-            나의 메뉴
+            전체 메뉴
           </p>
+          <button onClick={onClose} className="flex items-center justify-center" style={{ width: 24, height: 24 }}>
+            <CloseIcon />
+          </button>
         </div>
 
         {/* Menu sections */}
         <div className="flex-1 overflow-y-auto px-5 no-scrollbar">
-          <div className="rounded-3xl overflow-hidden" style={{ backgroundColor: "var(--pt-chip-bg)" }}>
-            {sections.map((section) => (
-              <div key={section.title}>
-                <div className="flex items-center justify-between px-5 py-3.5">
+          <div className="rounded-3xl overflow-hidden pt-2" style={{ backgroundColor: "var(--pt-chip-bg)" }}>
+            {menu.map((entry) =>
+              entry.type === "flat" ? (
+                <button
+                  key={entry.label}
+                  className="w-full text-left flex items-center px-5 py-3.5"
+                  onClick={() => entry.screen && onNavigate(entry.screen)}
+                >
                   <span className="subtitle" style={{ color: "var(--pt-brand-primary)" }}>
-                    {section.title}
+                    {entry.label}
                   </span>
-                  {section.items.length > 0 && (
+                </button>
+              ) : (
+                <div key={entry.title}>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <span className="subtitle" style={{ color: "var(--pt-brand-primary)" }}>
+                      {entry.title}
+                    </span>
                     <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
                       <path
                         d="M1 1L7 7L13 1"
@@ -1309,28 +1340,22 @@ function NavigationDrawer({
                         strokeWidth="2"
                       />
                     </svg>
-                  )}
-                </div>
-                {section.items.map((item) => (
-                  <button
-                    key={item.label}
-                    className="w-full text-left flex items-center h-[50px] border-b"
-                    style={{ paddingLeft: 32, paddingRight: 32, borderColor: "var(--pt-border-menu)" }}
-                    onClick={() => item.screen && onNavigate(item.screen)}
-                  >
-                    <span
-                      className="caption"
-                      style={{
-                        color: item.screen ? "var(--pt-text-secondary)" : "var(--pt-text-secondary)",
-                        fontSize: 15,
-                      }}
+                  </div>
+                  {entry.items.map((item) => (
+                    <button
+                      key={item.label}
+                      className="w-full text-left flex items-center h-[50px] border-b"
+                      style={{ paddingLeft: 32, paddingRight: 32, borderColor: "var(--pt-border-menu)" }}
+                      onClick={() => item.screen && onNavigate(item.screen)}
                     >
-                      {item.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ))}
+                      <span className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 15 }}>
+                        {item.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
           </div>
         </div>
 
