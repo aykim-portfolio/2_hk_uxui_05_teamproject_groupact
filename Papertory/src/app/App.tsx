@@ -28,13 +28,22 @@ type Category = "Today" | "산업" | "IT" | "금융" | "부동산";
 
 // ── Shared primitives ──
 
-function CategoryChip({ label, small }: { label: string; small?: boolean }) {
+function CategoryChip({
+  label,
+  small,
+  compactX,
+}: {
+  label: string;
+  small?: boolean;
+  compactX?: boolean;
+}) {
+  const padding = small ? "4px 12px" : compactX ? "6px 12px" : "6px 24px";
   return (
     <div
       className="flex items-center shrink-0 rounded-full"
       style={{
         backgroundColor: "var(--pt-chip-bg)",
-        padding: small ? "4px 12px" : "6px 24px",
+        padding,
       }}
     >
       <span className="label whitespace-nowrap" style={{ color: "var(--pt-text-brand-strong)" }}>
@@ -321,6 +330,8 @@ function NewsRow({
   headline: string;
   onClick?: () => void;
 }) {
+  // 부동산/코리안마켓은 카테고리 라벨이 길어 헤드라인 공간 확보를 위해 좁은 간격을 씀 (Figma 653:3072 참고)
+  const isCompact = category === "부동산" || category === "코리안마켓";
   return (
     <button
       onClick={onClick}
@@ -330,11 +341,11 @@ function NewsRow({
         filter: "drop-shadow(0px -4px 2.4px var(--pt-shadow-card))",
       }}
     >
-      <div className="flex gap-6 items-center px-4 py-3">
-        <CategoryChip label={category} />
+      <div className={`flex items-center px-4 py-3 ${isCompact ? "gap-3" : "gap-6"}`}>
+        <CategoryChip label={category} compactX={category === "코리안마켓"} />
         <span
           className="subtitle flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-          style={{ color: "var(--pt-text-primary)" }}
+          style={{ color: "var(--pt-text-primary)", fontWeight: 600 }}
         >
           {headline}
         </span>
@@ -407,24 +418,27 @@ function FAB({
 function HeroCard({ category }: { category: Category }) {
   return (
     <div className="flex flex-col gap-5 px-5 w-full" style={{ paddingTop: 120, paddingBottom: 16 }}>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
         <CategoryChip label={category === "Today" ? "산업" : category} />
         <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
           앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
         </p>
       </div>
-      <div className="relative rounded-xl overflow-hidden shrink-0 w-full" style={{ height: 181 }}>
+      <div
+        className="relative rounded-xl overflow-hidden shrink-0 w-full"
+        style={{ height: 181, marginBottom: 10 }}
+      >
         <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
-      <p
-        className="body-2"
-        style={{ color: "var(--pt-text-primary)", textIndent: 8, letterSpacing: "-0.32px" }}
-      >
+      <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
         종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
         제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
-        안내한다.
+        안내한다. AI 요약과 형광펜 스크랩을 활용한다.
       </p>
-      <p className="caption text-center" style={{ color: "var(--pt-text-secondary)" }}>
+      <p
+        className="caption text-center"
+        style={{ color: "var(--pt-text-secondary)", paddingTop: 10 }}
+      >
         2026.07.22 &nbsp;(수)
       </p>
     </div>

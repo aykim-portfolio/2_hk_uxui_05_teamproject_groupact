@@ -6,22 +6,24 @@
   scrollbar-width: none;
 }
 
-/* Alias kit slash-named CSS variables to hyphen-only names for easy use in JSX */
+/* Design tokens — Papertory 디자인 시스템 (SSOT: guidelines/design.md, 값은 Figma 변수 기준)
+   이 값들은 원래 @make-kits/hk-papertory 스타일시트가 슬래시 이름 변수로 제공했으나,
+   해당 패키지가 공개 레지스트리에 없어 의존성에서 제거되면서 여기에 직접 정의함. */
 :root {
-  /* Kit variable aliases */
-  --pt-bg-primary: var(--bg\/primary);         /* #f8f9fb — app background */
-  --pt-bg-brand: var(--bg\/brand);             /* #edf0fd — brand light bg */
-  --pt-bg-accent: var(--bg\/accent-bold);      /* #e6f997 — lime accent bg */
-  --pt-brand-primary: var(--brand\/primary);   /* #6083f5 — primary blue */
-  --pt-brand-secondary: var(--brand\/secondary); /* #e6f997 — lime */
-  --pt-text-primary: var(--text\/primary);     /* #1a2535 */
-  --pt-text-secondary: var(--text\/secondary); /* #7d828a */
-  --pt-text-brand: var(--text\/brand);
-  --pt-text-brand-strong: var(--text\/brand-strong); /* #496de0 */
-  --pt-text-indigo: var(--text\/indigo);       /* #161f85 */
-  --pt-border-accent: var(--border\/accent);   /* #d6ee8d */
-  --pt-shadow-card: var(--shadow\/card);       /* #d3d8e9 */
-  --pt-chip-bg: var(--primary\/50);            /* #edf0fd — chip / category bg */
+  --pt-bg-primary: #f8f9fb;                    /* bg/primary — app background */
+  --pt-bg-brand: #edf0fd;                      /* bg/brand — brand light bg */
+  --pt-bg-accent: #e6f997;                     /* bg/accent-bold — lime accent bg */
+  --pt-brand-primary: #6083f5;                 /* brand/primary — primary/500 */
+  --pt-brand-secondary: #e6f997;               /* brand/secondary — lime/200 */
+  --pt-text-primary: #1a2535;                  /* text/primary */
+  --pt-text-secondary: #7d828a;                /* text/secondary */
+  --pt-text-brand: #6083f5;                    /* text/brand — primary/500 */
+  --pt-text-brand-strong: #496de0;             /* brand/primary-hover — 카테고리 칩 텍스트 */
+  --pt-text-indigo: #161f85;                   /* text/indigo — AI 요약 강조 */
+  --pt-border-accent: #d6ee8d;                 /* border/accent — 라임 액센트 */
+  --pt-border-brand: #afc1fa;                  /* border/brand */
+  --pt-shadow-card: #d3d8e9;                   /* news-row / card shadow */
+  --pt-chip-bg: #edf0fd;                       /* chip / category bg — bg/brand */
 
   /* Additional semantic tokens from design.md */
   --pt-bg-card: #EFF1F5;                       /* bg/card — reward & shop card bg */
@@ -36,4 +38,67 @@
   --pt-tape-handle: #4E6CDC;                   /* masking tape handle accent */
   --pt-overlay-medium: rgba(26, 37, 53, 0.35); /* overlay/medium — drawer backdrop */
   --pt-overlay-heavy: rgba(26, 37, 53, 0.60);  /* overlay/heavy — modal backdrop */
+
+  /* Font families — 제목·UI = Paperlogy, 본문 = Open Sans (혼용 금지) */
+  --pt-font-title: 'Paperlogy', 'Noto Sans KR', sans-serif;
+  --pt-font-body: 'Open Sans', 'Noto Sans KR', sans-serif;
+}
+
+/* Type Scale — guidelines/design.md §2
+   제목·뱃지·날짜·네비게이션 = Paperlogy 계열만, 본문·긴 단락 = Open Sans.
+   Body 1/2는 자간 -2%; 문단 들여쓰기(text-indent: 8px)는 사용처에서 지정함. */
+.headline-1 {
+  font-family: var(--pt-font-title);
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 34px;
+  letter-spacing: 0;
+}
+
+.title {
+  font-family: var(--pt-font-title);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: normal;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  font-family: var(--pt-font-title);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: normal;
+  letter-spacing: 0;
+}
+
+.body-1 {
+  font-family: var(--pt-font-body);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 32px;
+  letter-spacing: -0.4px; /* -2% */
+}
+
+.body-2 {
+  font-family: var(--pt-font-body);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.32px; /* -2% */
+}
+
+.label {
+  font-family: var(--pt-font-title);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: normal;
+  letter-spacing: 0;
+}
+
+.caption {
+  font-family: var(--pt-font-title);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: normal;
+  letter-spacing: 0;
 }
