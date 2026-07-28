@@ -586,8 +586,13 @@ function CategoryCard({
 }
 
 // ── Category page DB (GA_카테고리페이지템플릿db) ──
-// 카테고리,image URL,TITLE,SUBTITLE — "Today"는 홈 기본 상태라 카드 목록에서 제외
+// 카테고리,image URL,TITLE,SUBTITLE — "Today"는 다른 카테고리에서 전체 피드로 돌아가는 경로로 포함
 const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] = [
+  {
+    title: "Today",
+    subtitle: "오늘 주요 뉴스",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%92%E1%85%A1%E1%86%AB%E1%84%80%E1%85%AE%E1%86%A8%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png",
+  },
   {
     title: "한경 프리미엄9",
     subtitle: "국내주식 · 해외주식 · 자산관리",
