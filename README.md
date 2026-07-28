@@ -162,7 +162,7 @@ flowchart TD
 
 ```text
 docs/
-  design/         # 디자인 시스템과 UI 에셋
+  design/         # design.md — SSOT 리다이렉트 스텁 (실제 디자인 시스템은 Papertory/guidelines/design.md)
   meeting-notes/  # 회의록
   planning/       # 프로젝트 계획과 마일스톤
   deliverables/   # 스프린트별 산출물
