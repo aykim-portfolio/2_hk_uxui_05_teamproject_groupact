@@ -1,7 +1,7 @@
 // MARKER-MAKE-KIT-INVOKED
 // MARKER-MAKE-KIT-DISCOVERY-READ
 // MARKER-MAKE-KIT-TOKENS-READ
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import StartScreenImport from "@/imports/Start/index";
 import imgArticle from "@/imports/Landing/8db2a969b7cc2690d1ad5bbc3961b54f39a56d49.png";
 import imgTori from "@/imports/Landing/209e16e9a7b0e6466a84c310cffb3fdc38787db8.png";
@@ -11,6 +11,7 @@ import imgAcorn from "@/imports/미션리워드/8135e13e64481f72eb891bb72cb9db8c
 import imgToriAcorn from "@/imports/미션리워드/83c7dbb8da7027e4e62dfad831eaac2ba17cc611.png";
 import imgTape from "@/imports/상점적용예시/ea6aea2b073382a238ef9b308be47610b8745314.png";
 import imgToriMypage from "@/imports/마이페이지/tori-confetti.png";
+import imgToriEmpty from "@/imports/읽기기록달력/tori-empty.png";
 
 type Screen =
   | "start"
@@ -20,7 +21,9 @@ type Screen =
   | "article"
   | "mission"
   | "shop"
-  | "mypage";
+  | "mypage"
+  | "calendar"
+  | "reading-detail";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
 type Category = string;
@@ -170,6 +173,28 @@ function ChevronRightIcon({ color = "var(--pt-text-primary)" }: { color?: string
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+// Lucide square-pen — 카드 스크랩(노트) 아이콘
+function ScrapIcon({ color = "var(--pt-text-secondary)" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -948,12 +973,24 @@ function ArticleScreen({
   activeTab,
   onTabChange,
   onBack,
+  onComplete,
 }: {
   activeTab: ArticleTab;
   onTabChange: (t: ArticleTab) => void;
   onBack: () => void;
+  onComplete?: () => void;
 }) {
   const [showToolbar, setShowToolbar] = useState(false);
+  const completedRef = useRef(false);
+
+  // 기사를 끝까지 스크롤하면 완독 처리 → 오늘 읽기 기록에 반영 (마운트당 1회)
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!completedRef.current && el.scrollHeight - el.scrollTop - el.clientHeight < 24) {
+      completedRef.current = true;
+      onComplete?.();
+    }
+  };
 
   return (
     <div
@@ -961,7 +998,7 @@ function ArticleScreen({
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader showBack showDropdown={false} onBackClick={onBack} />
-      <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }}>
+      <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }} onScroll={handleScroll}>
         <TabSlider active={activeTab} onChange={onTabChange} />
         {activeTab === "original" && <OriginalContent />}
         {activeTab === "ai" && <AiContent />}
@@ -1423,6 +1460,395 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
   );
 }
 
+// ── Reading History data (완독 반영) ──
+// 그날 완독한 기사 수. 색 레벨 = min(count,5), count>5도 카드는 실제 개수만큼 표시.
+// 메인 피드에서 기사를 끝까지 스크롤(완독)하면 그날 카운트가 +1 되어 달력·기록에 반영됨.
+const JULY_READS: Record<number, number> = {
+  1: 1, 3: 3, 4: 2, 5: 1, 6: 2, 7: 3, 8: 4, 9: 1, 10: 5, 11: 1, 12: 5,
+  15: 2, 16: 7, 17: 1, 18: 1, 19: 5, 20: 1,
+};
+const TODAY_DAY = 21; // 오늘 = 7월 21일
+const READ_GOAL = 5; // 완성 기준(하루 5개)
+const LEVEL_BG = ["", "var(--pt-read-1)", "var(--pt-read-2)", "var(--pt-read-3)", "var(--pt-read-4)", "var(--pt-read-5)"];
+const MONTH_BAR_H = [18, 14, 22, 16, 28, 18, 48, 24, 14, 20, 16, 12]; // 연간 독서량 막대(디자인 목업 높이)
+const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
+
+function daysInMonth(y: number, m: number) {
+  return new Date(y, m, 0).getDate();
+}
+function firstWeekdayMon(y: number, m: number) {
+  // 월요일 시작 기준 선행 빈칸 수 (0~6)
+  return (new Date(y, m - 1, 1).getDay() + 6) % 7;
+}
+
+// ── Reading History Card ──
+function ReadingHistoryCard({ onClick, onScrap }: { onClick?: () => void; onScrap?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-xl border p-4 flex flex-col gap-2"
+      style={{
+        borderColor: "var(--pt-border-default)",
+        filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.06))",
+      }}
+    >
+      <div className="flex flex-col gap-3 w-full">
+        <div className="flex items-center justify-between w-full">
+          <CategoryChip label="산업" />
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onScrap?.();
+            }}
+            className="flex items-center p-0.5 cursor-pointer"
+          >
+            <ScrapIcon />
+          </span>
+        </div>
+        <p
+          className="subtitle overflow-hidden text-ellipsis whitespace-nowrap w-full"
+          style={{ color: "var(--pt-text-primary)" }}
+        >
+          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+        </p>
+        <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
+          2026.07.20 09:12
+        </p>
+      </div>
+      <span className="caption self-end" style={{ color: "var(--pt-text-secondary)" }}>
+        1시간 전
+      </span>
+    </button>
+  );
+}
+
+// ── Calendar Screen (읽기 기록 달력) ──
+function CalendarScreen({
+  year,
+  month,
+  reads,
+  todayDay,
+  onMenuOpen,
+  onOpenPicker,
+  onDateClick,
+}: {
+  year: number;
+  month: number;
+  reads: Record<number, number>;
+  todayDay: number | null;
+  onMenuOpen: () => void;
+  onOpenPicker: () => void;
+  onDateClick: (day: number) => void;
+}) {
+  const lead = firstWeekdayMon(year, month);
+  const total = daysInMonth(year, month);
+  const cells: (number | null)[] = [
+    ...Array(lead).fill(null),
+    ...Array.from({ length: total }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const readTotal = Object.values(reads).reduce((a, b) => a + b, 0);
+
+  return (
+    <div
+      className="relative size-full rounded-[40px] overflow-hidden"
+      style={{ backgroundColor: "var(--pt-bg-primary)" }}
+    >
+      <AppHeader showDropdown={false} showAvatar onMenuOpen={onMenuOpen} />
+
+      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
+        <div className="px-4 flex flex-col gap-6">
+          {/* Title + date picker trigger */}
+          <button onClick={onOpenPicker} className="flex items-center gap-2 self-start">
+            <span
+              style={{
+                fontFamily: "var(--pt-font-title)",
+                fontWeight: 700,
+                fontSize: 24,
+                color: "var(--pt-text-primary)",
+              }}
+            >
+              {month}월
+            </span>
+            <ChevronDownIcon />
+          </button>
+
+          {/* Weekday header + grid */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-7">
+              {WEEKDAYS.map((w) => (
+                <p
+                  key={w}
+                  className="text-center"
+                  style={{ fontFamily: "var(--pt-font-body)", fontSize: 12, color: "var(--pt-text-secondary)" }}
+                >
+                  {w}
+                </p>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-2" style={{ placeItems: "center" }}>
+              {cells.map((d, i) => {
+                if (d === null) return <div key={i} style={{ width: 40, height: 50 }} />;
+                const count = reads[d] || 0;
+                const lv = Math.min(count, 5);
+                const isToday = d === todayDay;
+                const bg = isToday
+                  ? "var(--pt-brand-secondary)"
+                  : lv > 0
+                  ? LEVEL_BG[lv]
+                  : "transparent";
+                const border = isToday
+                  ? "1px solid var(--pt-brand-primary)"
+                  : lv === 0
+                  ? "1px solid var(--pt-border-strong)"
+                  : "none";
+                const textColor = !isToday && lv >= 4 ? "#f8f9fb" : "var(--pt-text-primary)";
+                return (
+                  <button
+                    key={i}
+                    onClick={() => onDateClick(d)}
+                    className="rounded-xl flex items-center justify-center"
+                    style={{ width: 40, height: 50, backgroundColor: bg, border }}
+                  >
+                    <span style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 14, color: textColor }}>
+                      {d}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Yearly reading-count bar chart */}
+          <div className="flex items-end justify-between" style={{ height: 60, paddingTop: 4 }}>
+            {MONTH_BAR_H.map((h, idx) => {
+              const mm = idx + 1;
+              const isCur = mm === month;
+              return (
+                <div key={mm} className="flex flex-col items-center gap-0.5">
+                  {isCur && (
+                    <span style={{ fontFamily: "var(--pt-font-body)", fontWeight: 700, fontSize: 9, color: "var(--pt-text-primary)" }}>
+                      {readTotal}건
+                    </span>
+                  )}
+                  <div
+                    style={{
+                      width: 20,
+                      height: isCur ? 48 : h,
+                      borderRadius: 4,
+                      backgroundColor: isCur ? "var(--pt-brand-primary)" : "var(--pt-brand-secondary)",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "var(--pt-font-body)",
+                      fontWeight: isCur ? 700 : 400,
+                      fontSize: 9,
+                      color: isCur ? "var(--pt-brand-primary)" : "var(--pt-text-secondary)",
+                    }}
+                  >
+                    {mm}월
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        style={{ borderColor: "rgba(0,0,0,0.06)" }}
+      />
+    </div>
+  );
+}
+
+// ── Reading Detail Screen (날짜별 읽기 기록) ──
+function ReadingDetailScreen({
+  month,
+  day,
+  count,
+  onBack,
+  onCardClick,
+  onScrapClick,
+  onGoFeed,
+}: {
+  month: number;
+  day: number;
+  count: number;
+  onBack: () => void;
+  onCardClick: () => void;
+  onScrapClick: () => void;
+  onGoFeed: () => void;
+}) {
+  const remaining = Math.max(0, READ_GOAL - count);
+
+  return (
+    <div
+      className="relative size-full rounded-[40px] overflow-hidden"
+      style={{ backgroundColor: "var(--pt-bg-primary)" }}
+    >
+      <AppHeader showBack showDropdown={false} showAvatar={false} onBackClick={onBack} />
+
+      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
+        {/* Date header */}
+        <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
+          <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>
+            {month}월 {day}일
+          </p>
+        </div>
+
+        {count === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center gap-8 px-4" style={{ minHeight: 560 }}>
+            <div className="flex flex-col items-center gap-2.5">
+              <div className="relative" style={{ width: 187, height: 177 }}>
+                <img src={imgToriEmpty} alt="토리" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+              </div>
+              <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>
+                읽은 기사가 없어요..
+              </p>
+            </div>
+            <button
+              onClick={onGoFeed}
+              className="rounded-3xl flex items-center justify-center"
+              style={{ padding: "14px 24px", backgroundColor: "var(--pt-brand-primary)" }}
+            >
+              <span className="label" style={{ color: "#ffffff" }}>피드 확인하러가기</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-8">
+            <div className="flex flex-col gap-2 px-4 w-full">
+              {Array.from({ length: count }).map((_, i) => (
+                <ReadingHistoryCard key={i} onClick={onCardClick} onScrap={onScrapClick} />
+              ))}
+            </div>
+            {count < READ_GOAL && (
+              <div
+                className="rounded-3xl flex items-center justify-center"
+                style={{ padding: "8px 12px", backgroundColor: "var(--pt-brand-secondary)" }}
+              >
+                <span className="caption" style={{ color: "var(--pt-brand-primary)", fontWeight: 700 }}>
+                  {remaining}개만 더 보면 완성돼요!
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        style={{ borderColor: "rgba(0,0,0,0.06)" }}
+      />
+    </div>
+  );
+}
+
+// ── Date Picker Sheet (년/월/날짜 선택) ──
+function DatePickerSheet({
+  year,
+  month,
+  onChangeMonth,
+  onPickDay,
+  onClose,
+}: {
+  year: number;
+  month: number;
+  onChangeMonth: (y: number, m: number) => void;
+  onPickDay: (y: number, m: number, d: number) => void;
+  onClose: () => void;
+}) {
+  const [y, setY] = useState(year);
+  const [m, setM] = useState(month);
+  const total = daysInMonth(y, m);
+  const setYM = (ny: number, nm: number) => {
+    setY(ny);
+    setM(nm);
+    onChangeMonth(ny, nm);
+  };
+
+  return (
+    <>
+      <div
+        className="absolute inset-0 z-40"
+        style={{ backgroundColor: "var(--pt-overlay-medium)" }}
+        onClick={onClose}
+      />
+      <div
+        className="absolute left-0 right-0 bottom-0 z-50 flex flex-col"
+        style={{
+          backgroundColor: "var(--pt-bg-primary)",
+          borderRadius: "36px 36px 0 0",
+          padding: "12px 20px 28px",
+          maxHeight: "82%",
+        }}
+      >
+        <div
+          className="self-center rounded-full"
+          style={{ width: 44, height: 5, backgroundColor: "var(--pt-border-strong)", marginBottom: 16 }}
+        />
+        <p className="subtitle" style={{ color: "var(--pt-text-primary)", marginBottom: 16 }}>
+          날짜 선택
+        </p>
+
+        {/* Year stepper */}
+        <div className="flex items-center justify-center gap-8" style={{ marginBottom: 16 }}>
+          <button onClick={() => setYM(y - 1, m)} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
+            <BackArrowIcon />
+          </button>
+          <span className="title" style={{ color: "var(--pt-text-primary)" }}>{y}년</span>
+          <button onClick={() => setYM(y + 1, m)} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
+            <ChevronRightIcon />
+          </button>
+        </div>
+
+        {/* Month grid */}
+        <div className="grid grid-cols-6 gap-2" style={{ marginBottom: 16 }}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((mm) => {
+            const active = mm === m;
+            return (
+              <button
+                key={mm}
+                onClick={() => setYM(y, mm)}
+                className="rounded-lg py-2 caption"
+                style={{
+                  backgroundColor: active ? "var(--pt-brand-primary)" : "var(--pt-chip-bg)",
+                  color: active ? "#ffffff" : "var(--pt-text-brand-strong)",
+                }}
+              >
+                {mm}월
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Day grid */}
+        <div className="overflow-y-auto no-scrollbar">
+          <div className="grid grid-cols-7 gap-1.5">
+            {Array.from({ length: total }, (_, i) => i + 1).map((d) => (
+              <button
+                key={d}
+                onClick={() => onPickDay(y, m, d)}
+                className="rounded-lg flex items-center justify-center"
+                style={{ height: 40, backgroundColor: "var(--pt-bg-card)" }}
+              >
+                <span className="caption" style={{ color: "var(--pt-text-primary)" }}>{d}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Navigation Drawer ──
 function NavigationDrawer({
   onClose,
@@ -1443,7 +1869,7 @@ function NavigationDrawer({
       title: "나의 기록",
       items: [
         { label: "스크랩 라이브러리", screen: null },
-        { label: "읽기 기록 달력", screen: null },
+        { label: "읽기 기록 달력", screen: "calendar" },
       ],
     },
     {
@@ -1570,6 +1996,18 @@ export default function App() {
   const [category, setCategory] = useState<Category>("Today");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // 읽기 기록(완독) 상태 — 메인 피드 완독 시 오늘 카운트 +1 되어 달력에 반영
+  const [readsByDate, setReadsByDate] = useState<Record<number, number>>({ ...JULY_READS });
+  const [selectedDay, setSelectedDay] = useState<number>(TODAY_DAY);
+  const [calYear, setCalYear] = useState(2026);
+  const [calMonth, setCalMonth] = useState(7);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const isJuly = calYear === 2026 && calMonth === 7;
+  const monthReads: Record<number, number> = isJuly ? readsByDate : {};
+  const markTodayRead = () =>
+    setReadsByDate((prev) => ({ ...prev, [TODAY_DAY]: (prev[TODAY_DAY] || 0) + 1 }));
+
   const goTo = (s: Screen) => {
     setPrevScreen(screen);
     setScreen(s);
@@ -1630,6 +2068,7 @@ export default function App() {
             activeTab={articleTab}
             onTabChange={setArticleTab}
             onBack={() => goTo(prevScreen)}
+            onComplete={markTodayRead}
           />
         );
 
@@ -1651,6 +2090,38 @@ export default function App() {
 
       case "mypage":
         return <MyPageScreen onMenuOpen={() => setDrawerOpen(true)} />;
+
+      case "calendar":
+        return (
+          <CalendarScreen
+            year={calYear}
+            month={calMonth}
+            reads={monthReads}
+            todayDay={isJuly ? TODAY_DAY : null}
+            onMenuOpen={() => setDrawerOpen(true)}
+            onOpenPicker={() => setPickerOpen(true)}
+            onDateClick={(d) => {
+              setSelectedDay(d);
+              goTo("reading-detail");
+            }}
+          />
+        );
+
+      case "reading-detail":
+        return (
+          <ReadingDetailScreen
+            month={calMonth}
+            day={selectedDay}
+            count={monthReads[selectedDay] || 0}
+            onBack={() => goTo("calendar")}
+            onCardClick={() => {
+              setArticleTab("original");
+              goTo("article");
+            }}
+            onScrapClick={() => {}}
+            onGoFeed={() => goTo("landing")}
+          />
+        );
     }
   };
 
@@ -1672,6 +2143,24 @@ export default function App() {
           <NavigationDrawer
             onClose={() => setDrawerOpen(false)}
             onNavigate={handleDrawerNavigate}
+          />
+        )}
+        {pickerOpen && (
+          <DatePickerSheet
+            year={calYear}
+            month={calMonth}
+            onChangeMonth={(y, m) => {
+              setCalYear(y);
+              setCalMonth(m);
+            }}
+            onPickDay={(y, m, d) => {
+              setCalYear(y);
+              setCalMonth(m);
+              setSelectedDay(d);
+              setPickerOpen(false);
+              goTo("reading-detail");
+            }}
+            onClose={() => setPickerOpen(false)}
           />
         )}
       </div>
