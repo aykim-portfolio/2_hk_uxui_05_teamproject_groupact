@@ -2,6 +2,14 @@
 
 @font-face {
   font-family: 'Paperlogy';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Paperlogy';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
@@ -28,6 +36,78 @@
   font-family: 'Paperlogy';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
   font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Figma 폰트명 별칭 ──────────────────────────────────────────────
+   src/imports/* 는 Figma Make가 생성한 코드라 `font-['Paperlogy:8_ExtraBold']`
+   처럼 "패밀리:스타일" 형태의 Figma 내부 폰트명을 그대로 쓴다. 이 이름은 실제
+   CSS 패밀리가 아니라서 그대로 두면 전부 sans-serif 400으로 폴백된다.
+   호출부 175곳을 고치는 대신 그 이름을 실제 폰트 파일에 매핑해, 새로 import되는
+   Figma 코드도 수정 없이 바로 올바른 서체로 렌더링되게 한다.
+
+   주의: Tailwind는 arbitrary value의 `_`를 공백으로 변환하므로, 클래스에
+   `Paperlogy:8_ExtraBold`라고 써도 실제 CSS는 `'Paperlogy:8 ExtraBold'`가 된다.
+   따라서 아래 패밀리명은 반드시 공백으로 선언해야 매칭된다.
+
+   각 페이스는 단일 웨이트 파일이므로 font-weight 범위를 100~900으로 열어
+   요청 웨이트와 무조건 매칭시키고 합성 볼드를 방지한다. */
+@font-face {
+  font-family: 'Paperlogy:4 Regular';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Paperlogy:5 Medium';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Paperlogy:6 SemiBold';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Paperlogy:7 Bold';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Paperlogy:8 ExtraBold';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Open Sans는 한글 글리프가 없어 한글은 뒤의 sans-serif로 폴백된다 (Figma와 동일). */
+@font-face {
+  font-family: 'Open Sans:Regular';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/open-sans/files/open-sans-latin-400-normal.woff2')
+    format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sans:Bold';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/open-sans/files/open-sans-latin-700-normal.woff2')
+    format('woff2');
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
