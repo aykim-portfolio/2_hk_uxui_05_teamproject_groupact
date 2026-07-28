@@ -466,7 +466,23 @@ Figma "Components / Iconography" 섹션(node 467:3402) 기준. 화면 단위가 
 | 경고 화면 | bg/surface + status/warning-bg | status/warning |
 | 오류 화면 | bg/surface + status/error-bg | status/error |
 | 드로어/사이드메뉴 | overlay/medium + bg/surface | border/accent |
- 
+
+### 읽기 기록 히트맵 레벨 (읽기 기록 달력)
+
+읽기 기록 달력의 날짜 셀은 그날 완독한 기사 수(레벨)에 따라 Primary Blue ramp로 농도를 표현함 (위 "달력/읽기 기록 → Sequential Blue" 규칙의 구체 토큰). `globals.css`에 시맨틱 토큰으로 정의:
+
+| 토큰 | 값(primitive) | 의미 |
+|---|---|---|
+| `--pt-read-1` | primary/100 `#d0dafc` | 1개 완독 |
+| `--pt-read-2` | primary/200 `#afc1fa` | 2개 |
+| `--pt-read-3` | primary/300 `#809cf7` | 3개 |
+| `--pt-read-4` | primary/400 `#6083f5` | 4개 (텍스트 흰색) |
+| `--pt-read-5` | primary/600 `#496de0` | 5개 이상 (텍스트 흰색) |
+| `--pt-border-strong` | `#cdd2da` | 빈(안 읽음) 날짜 셀 테두리 |
+
+- 레벨 색은 `min(완독수, 5)` 로 5단계에 매핑(5개 이상도 레벨5 색), 오늘 날짜 셀은 레벨과 무관하게 `brand/secondary`(라임) + `brand/primary` 테두리로 표시.
+- 상세(날짜별 읽기 기록)의 완성 기준은 하루 5개, 미달 시 `(5−완독수)개만 더 보면 완성돼요!` 안내.
+
 ---
 
 *Generated from Figma Design System — GROUP ACT / 페이퍼토리 (zNDuyelMmDqxbUhBk3Tdog), "디자인 시스템 + UI 통합본" 페이지 (Color System 467:2145 · Typography 467:3268 · Radius/Spacing/Layout 467:3312 · Effects Styles 467:3375)*

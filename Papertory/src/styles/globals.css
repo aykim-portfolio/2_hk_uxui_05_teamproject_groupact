@@ -40,6 +40,14 @@
   --pt-overlay-medium: rgba(26, 37, 53, 0.35); /* overlay/medium — drawer backdrop */
   --pt-overlay-heavy: rgba(26, 37, 53, 0.60);  /* overlay/heavy — modal backdrop */
 
+  /* 읽기 기록 히트맵 레벨 ramp — primary/100~600 (읽은 기사 수 1~5단계, design.md §데이터 시각화) */
+  --pt-read-1: #d0dafc;                        /* primary/100 — 1개 */
+  --pt-read-2: #afc1fa;                        /* primary/200 — 2개 */
+  --pt-read-3: #809cf7;                        /* primary/300 — 3개 */
+  --pt-read-4: #6083f5;                        /* primary/400 — 4개 */
+  --pt-read-5: #496de0;                        /* primary/600 — 5개 이상 */
+  --pt-border-strong: #cdd2da;                 /* border/strong — 빈 날짜 셀 테두리 */
+
   /* Font families — 제목·UI = Paperlogy, 본문 = Open Sans (혼용 금지) */
   --pt-font-title: 'Paperlogy', 'Noto Sans KR', sans-serif;
   --pt-font-body: 'Open Sans', 'Noto Sans KR', sans-serif;
