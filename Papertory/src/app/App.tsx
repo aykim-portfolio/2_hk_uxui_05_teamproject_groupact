@@ -13,6 +13,7 @@ import imgToriMenu from "@/imports/햄버거메뉴활성화/9db62f1482f6077c23b2
 import imgAcorn from "@/imports/미션리워드/8135e13e64481f72eb891bb72cb9db8c4c3a5dad.png";
 import imgToriAcorn from "@/imports/미션리워드/83c7dbb8da7027e4e62dfad831eaac2ba17cc611.png";
 import imgTape from "@/imports/상점적용예시/ea6aea2b073382a238ef9b308be47610b8745314.png";
+import imgToriMypage from "@/imports/마이페이지/tori-confetti.png";
 
 type Screen =
   | "start"
@@ -21,7 +22,8 @@ type Screen =
   | "category-landing"
   | "article"
   | "mission"
-  | "shop";
+  | "shop"
+  | "mypage";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
 type Category = "Today" | "산업" | "IT" | "금융" | "부동산";
@@ -157,6 +159,20 @@ function ArrowRightIcon({ color = "var(--pt-text-primary)" }: { color?: string }
         strokeWidth="1.33"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
+      <path
+        d="M1 1L7 7L1 13"
+        stroke={color}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
       />
     </svg>
   );
@@ -1250,6 +1266,101 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
   );
 }
 
+// ── My Page Screen (마이페이지) ──
+function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
+  const menuItems = ["프로필", "알림", "설정", "고객센터"];
+
+  return (
+    <div
+      className="relative size-full rounded-[40px] overflow-hidden"
+      style={{ backgroundColor: "var(--pt-bg-primary)" }}
+    >
+      <AppHeader showDropdown={false} showAvatar onMenuOpen={onMenuOpen} />
+
+      <div
+        className="h-full overflow-y-auto no-scrollbar"
+        style={{ paddingTop: 110, paddingBottom: 32 }}
+      >
+        {/* Hero — 출석 인사 + 토리 일러스트 */}
+        <div
+          className="flex items-center w-full"
+          style={{ backgroundColor: "var(--pt-bg-accent-light)", padding: "32px 20px" }}
+        >
+          <div className="flex-1 flex items-center justify-between min-w-0">
+            <div className="flex flex-col items-start" style={{ gap: 60, width: 214 }}>
+              <p className="title" style={{ color: "var(--pt-text-primary)" }}>
+                송토리님 또 오셨군요!
+              </p>
+              <div className="flex flex-col items-start gap-2.5 w-full">
+                <p className="subtitle" style={{ color: "var(--pt-brand-primary)" }}>
+                  1일 연속 출석
+                </p>
+                <p
+                  className="body-2"
+                  style={{ color: "var(--pt-text-primary)" }}
+                >
+                  1일 연속으로 도토리를 주웠어요!
+                  <br />
+                  토리가 도토리를 기다리고 있어요
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center shrink-0" style={{ paddingTop: 40 }}>
+              <div className="relative shrink-0" style={{ width: 122, height: 124 }}>
+                <img
+                  src={imgToriMypage}
+                  alt="토리"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Menu list */}
+        <div className="px-5" style={{ paddingTop: 20 }}>
+          <div
+            className="rounded-xl overflow-hidden flex flex-col items-center"
+            style={{ backgroundColor: "var(--pt-bg-card)" }}
+          >
+            {menuItems.map((label, i) => (
+              <div key={label} className="w-full">
+                {i > 0 && (
+                  <div
+                    className="mx-auto"
+                    style={{ height: 1, width: 321, backgroundColor: "var(--pt-border-default)" }}
+                  />
+                )}
+                <button className="w-full flex items-center justify-between p-5 text-left">
+                  <span className="caption" style={{ color: "var(--pt-text-primary)" }}>
+                    {label}
+                  </span>
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Logout */}
+        <div className="flex justify-center" style={{ paddingTop: 20 }}>
+          <button className="flex items-center justify-center p-4">
+            <span className="label" style={{ color: "var(--pt-text-secondary)", fontSize: 15 }}>
+              로그아웃
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        style={{ borderColor: "rgba(0,0,0,0.06)" }}
+      />
+    </div>
+  );
+}
+
 // ── Navigation Drawer ──
 function NavigationDrawer({
   onClose,
@@ -1281,7 +1392,7 @@ function NavigationDrawer({
         { label: "상점", screen: "shop" },
       ],
     },
-    { type: "flat", label: "마이페이지", screen: null },
+    { type: "flat", label: "마이페이지", screen: "mypage" },
   ];
 
   return (
@@ -1475,6 +1586,9 @@ export default function App() {
             onMenuOpen={() => setDrawerOpen(true)}
           />
         );
+
+      case "mypage":
+        return <MyPageScreen onMenuOpen={() => setDrawerOpen(true)} />;
     }
   };
 
