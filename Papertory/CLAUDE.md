@@ -58,7 +58,7 @@
 
 ## 디자인 시스템
 
-> 전체 스펙: guidelines/design.md (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영)
+> 전체 스펙(SSOT): guidelines/design.md (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영). **값이 Figma와 다르면 design.md를 따름** — Figma에서 화면을 구현할 때 값이 어긋나면 design.md 기준으로 코드에 적용하고, 차이는 디자이너에게 알려 맞춤. 토큰은 `src/styles/globals.css`의 `--pt-*` 변수로 정의되어 있음
 
 - **구조:** Primitive → Semantic 2단 토큰 체계. **Primitive 색상은 컴포넌트에 직접 사용 금지** — 항상 Semantic Token(`brand/primary`, `text/primary` 등)을 통해서만 참조
 - **브랜드 컬러:** Primary Blue(`primary/500 #6083F5`) + Secondary Lime(`lime/200 #E6F997`) 투톤

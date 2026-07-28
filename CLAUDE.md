@@ -59,6 +59,8 @@
 ## 디자인 시스템
 
 > **Single Source of Truth: [Papertory/guidelines/design.md](Papertory/guidelines/design.md)** (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영). Papertory(Figma Make 앱)의 코드 생성 도구가 이 경로를 빌드 시 필수로 참조하므로, 디자인 시스템 변경은 반드시 이 파일에서만 함. `docs/design/design.md`는 과거 경로 호환용 리다이렉트 스텁일 뿐 더 이상 갱신하지 않음
+>
+> **값이 Figma와 다르면 design.md를 따름.** Figma에서 화면을 구현할 때 `get_design_context`가 돌려주는 컬러·토큰 값이 design.md와 어긋나는 경우가 있는데(예: `text/primary`를 Figma는 `#1A2535`, design.md는 gray/900 `#1C222A`로 정의), 코드에는 design.md 값을 적용하고 Figma 쪽 차이는 디자이너에게 알려 문서·파일을 맞추도록 함
 
 - **구조:** Primitive → Semantic 2단 토큰 체계. **Primitive 색상은 컴포넌트에 직접 사용 금지** — 항상 Semantic Token(`brand/primary`, `text/primary` 등)을 통해서만 참조
 - **브랜드 컬러:** Primary Blue(`primary/500 #6083F5`) + Secondary Lime(`lime/200 #E6F997`) 투톤

@@ -6,22 +6,23 @@
   scrollbar-width: none;
 }
 
-/* Design tokens — Papertory 디자인 시스템 (SSOT: guidelines/design.md, 값은 Figma 변수 기준)
+/* Design tokens — Papertory 디자인 시스템
+   SSOT는 guidelines/design.md이며, 값이 Figma 변수와 다를 경우 design.md를 따른다.
    이 값들은 원래 @make-kits/hk-papertory 스타일시트가 슬래시 이름 변수로 제공했으나,
    해당 패키지가 공개 레지스트리에 없어 의존성에서 제거되면서 여기에 직접 정의함. */
 :root {
   --pt-bg-primary: #f8f9fb;                    /* bg/primary — app background */
   --pt-bg-brand: #edf0fd;                      /* bg/brand — brand light bg */
-  --pt-bg-accent: #e6f997;                     /* bg/accent-bold — lime accent bg */
+  --pt-bg-accent: #e6f997;                     /* bg/accent-bold — lime/200 */
   --pt-brand-primary: #6083f5;                 /* brand/primary — primary/500 */
   --pt-brand-secondary: #e6f997;               /* brand/secondary — lime/200 */
-  --pt-text-primary: #1a2535;                  /* text/primary */
+  --pt-text-primary: #1c222a;                  /* text/primary — gray/900 */
   --pt-text-secondary: #7d828a;                /* text/secondary */
   --pt-text-brand: #6083f5;                    /* text/brand — primary/500 */
-  --pt-text-brand-strong: #496de0;             /* brand/primary-hover — 카테고리 칩 텍스트 */
+  --pt-text-brand-strong: #4664cb;             /* text/brand-strong — primary/600, 칩·링크 강조 */
   --pt-text-indigo: #161f85;                   /* text/indigo — AI 요약 강조 */
   --pt-border-accent: #d6ee8d;                 /* border/accent — 라임 액센트 */
-  --pt-border-brand: #afc1fa;                  /* border/brand */
+  --pt-border-brand: #6083f5;                  /* border/brand — primary/500 */
   --pt-shadow-card: #d3d8e9;                   /* news-row / card shadow */
   --pt-chip-bg: #edf0fd;                       /* chip / category bg — bg/brand */
 
