@@ -330,6 +330,8 @@ function AppHeader({
 }
 
 // ── Tab Slider ──
+// 3단계 스냅 슬라이더 — 노브를 드래그하면 AI모드/원문/쉽게읽기 중 가장 가까운 지점에 스냅됨
+// (SKILL: three-level-snap-slider — Pointer Events + 스냅 + 키보드 접근성, React controlled)
 function TabSlider({
   active,
   onChange,
@@ -343,57 +345,123 @@ function TabSlider({
     { id: "easy", label: "쉽게읽기" },
   ];
   const activeIdx = tabs.findIndex((t) => t.id === active);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [pos, setPos] = useState(activeIdx * 0.5); // 0..1 (드래그 중 노브 위치)
+
+  // 외부에서 탭이 바뀌면(드래그 중이 아닐 때) 노브를 해당 지점으로
+  useEffect(() => {
+    if (!dragging) setPos(activeIdx * 0.5);
+  }, [activeIdx, dragging]);
+
+  const fracFromEvent = (clientX: number) => {
+    const r = trackRef.current!.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  };
+  const snapIdx = (frac: number) => Math.round(frac * 2); // 0..2
+  const select = (idx: number) => onChange(tabs[idx].id);
+
+  const onDown = (e: React.PointerEvent) => {
+    setDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setPos(fracFromEvent(e.clientX));
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (dragging) setPos(fracFromEvent(e.clientX));
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    setDragging(false);
+    select(snapIdx(pos));
+  };
+  const onKey = (e: React.KeyboardEvent) => {
+    let idx = activeIdx;
+    if (e.key === "ArrowLeft") idx = Math.max(0, activeIdx - 1);
+    else if (e.key === "ArrowRight") idx = Math.min(2, activeIdx + 1);
+    else if (e.key === "Home") idx = 0;
+    else if (e.key === "End") idx = 2;
+    else return;
+    e.preventDefault();
+    select(idx);
+  };
+
+  const knobFrac = dragging ? pos : activeIdx * 0.5;
+  const shownIdx = dragging ? snapIdx(pos) : activeIdx;
 
   return (
     <div className="px-5" style={{ paddingTop: 10, paddingBottom: 12 }}>
-      <div className="relative flex justify-between mb-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className="caption"
-            style={{
-              color: active === t.id ? "var(--pt-brand-primary)" : "var(--pt-text-primary)",
-              fontWeight: active === t.id ? 700 : 500,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center px-1.5">
-        {tabs.map((t, i) => (
-          <div key={t.id} className="contents">
+      <div className="relative" style={{ height: 56 }}>
+        <div className="absolute" style={{ left: 12, right: 12, top: 0, bottom: 0 }}>
+          {/* Labels above each stop */}
+          {tabs.map((t, i) => (
             <button
-              onClick={() => onChange(t.id)}
-              className="shrink-0 rounded-full transition-all duration-200"
-              style={
-                active === t.id
-                  ? {
-                      width: 20,
-                      height: 20,
-                      backgroundColor: "var(--pt-brand-primary)",
-                      boxShadow: "0 0 0 6px var(--pt-brand-secondary)",
-                    }
-                  : {
-                      width: 8,
-                      height: 8,
-                      backgroundColor: "var(--pt-brand-secondary)",
-                    }
-              }
+              key={t.id}
+              onClick={() => select(i)}
+              className="absolute caption"
+              style={{
+                left: `${i * 50}%`,
+                top: 0,
+                transform: "translateX(-50%)",
+                whiteSpace: "nowrap",
+                color: shownIdx === i ? "var(--pt-brand-primary)" : "var(--pt-text-secondary)",
+                fontWeight: shownIdx === i ? 700 : 500,
+                transition: "color 150ms",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+
+          {/* Track (draggable) */}
+          <div
+            ref={trackRef}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            className="absolute"
+            style={{ left: 0, right: 0, top: 32, height: 24, touchAction: "none", cursor: "pointer" }}
+          >
+            {/* rail */}
+            <div
+              className="absolute rounded-full"
+              style={{ left: 0, right: 0, top: "50%", transform: "translateY(-50%)", height: 6, backgroundColor: "var(--pt-brand-secondary)" }}
             />
-            {i < tabs.length - 1 && (
-              <div
-                className="flex-1 transition-colors duration-200"
-                style={{
-                  height: 2,
-                  backgroundColor:
-                    i < activeIdx ? "var(--pt-brand-primary)" : "var(--pt-brand-secondary)",
-                }}
-              />
+            {/* inactive stop dots */}
+            {[0, 1, 2].map((i) =>
+              i === shownIdx ? null : (
+                <span
+                  key={i}
+                  className="absolute rounded-full"
+                  style={{ left: `${i * 50}%`, top: "50%", transform: "translate(-50%,-50%)", width: 8, height: 8, backgroundColor: "var(--pt-border-strong)" }}
+                />
+              )
             )}
+            {/* knob */}
+            <div
+              role="slider"
+              tabIndex={0}
+              aria-valuemin={0}
+              aria-valuemax={2}
+              aria-valuenow={shownIdx}
+              aria-valuetext={tabs[shownIdx].label}
+              aria-label="읽기 모드 선택"
+              onKeyDown={onKey}
+              className="absolute rounded-full"
+              style={{
+                left: `${knobFrac * 100}%`,
+                top: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 22,
+                height: 22,
+                backgroundColor: "var(--pt-brand-primary)",
+                boxShadow: "0 0 0 8px rgba(230,249,151,0.7)",
+                transition: dragging ? "none" : "left 180ms ease-out",
+                outline: "none",
+              }}
+            />
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -539,6 +607,11 @@ type NewsItem = {
   image: string;
   byline: string;
   summary: string;
+  body?: string[];
+  ai?: {
+    easyBody?: string[];
+    suggestedQuestions?: string[];
+  };
 };
 
 // 기사 썸네일은 카테고리 지면과 동일한 ImageKit 소스를 재사용
@@ -554,28 +627,31 @@ const NEWS_IMG = {
     "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
 };
 
-const ALL_NEWS: NewsItem[] = articlesData.articles
-  .filter(a => a.category === 'Today')
-  .map(a => ({
+function toNewsItem(a: (typeof articlesData.articles)[number]): NewsItem {
+  return {
     id: a.id,
     category: a.category,
     headline: a.headline,
     image: a.imageUrl || "",
     byline: `${a.author} · ${a.date}`,
-    summary: a.ai.summary
-  }));
+    summary: a.ai.summary,
+    body: a.body,
+    ai: {
+      easyBody: a.ai.easyBody,
+      suggestedQuestions: a.ai.suggestedQuestions
+    }
+  };
+}
 
-const INDUSTRY_NEWS: NewsItem[] = articlesData.articles
-  .filter(a => a.category !== 'Today')
-  .slice(0, 20)
-  .map(a => ({
-    id: a.id,
-    category: a.category,
-    headline: a.headline,
-    image: a.imageUrl || "",
-    byline: `${a.author} · ${a.date}`,
-    summary: a.ai.summary
-  }));
+// Today 피드는 카테고리와 무관하게 편집부가 선별한 5개 기사 — id 접두사로 판별하고, 카드에는 각자의 실제 카테고리를 표시
+const ALL_NEWS: NewsItem[] = articlesData.articles
+  .filter(a => a.id.startsWith('today-'))
+  .map(toNewsItem);
+
+// 카테고리별 실제 기사만 필터링 (드롭다운에서 고른 카테고리와 정확히 일치하는 기사만 노출)
+function getNewsByCategory(category: string): NewsItem[] {
+  return articlesData.articles.filter(a => a.category === category).map(toNewsItem);
+}
 
 // ── Landing Screen ──
 function LandingScreen({
@@ -594,7 +670,7 @@ function LandingScreen({
 
   // items[0] = 히어로(요약본), 나머지 = 하단 카드 목록
   const [items, setItems] = useState<NewsItem[]>(() =>
-    category === "Today" ? ALL_NEWS : INDUSTRY_NEWS
+    category === "Today" ? ALL_NEWS : getNewsByCategory(category)
   );
   const hero = items[0];
   const cards = items.slice(1);
@@ -607,7 +683,7 @@ function LandingScreen({
 
   useEffect(() => {
     demotedIdxRef.current = null;
-    setItems(category === "Today" ? ALL_NEWS : INDUSTRY_NEWS);
+    setItems(category === "Today" ? ALL_NEWS : getNewsByCategory(category));
   }, [category]);
 
   // 카드를 누르면 그 기사를 히어로로 끌어올리고, 기존 히어로는 그 카드 자리로 내려보냄
@@ -655,9 +731,17 @@ function LandingScreen({
         showAvatar={false}
       />
       <div ref={scrollRef} className="h-full overflow-y-auto pb-24">
-        <div ref={heroRef}>
-          <HeroCard article={hero} onClick={() => onNewsClick(hero)} />
-        </div>
+        {hero ? (
+          <div ref={heroRef}>
+            <HeroCard article={hero} onClick={() => onNewsClick(hero)} />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center px-5" style={{ paddingTop: 160 }}>
+            <p className="body-1" style={{ color: "var(--pt-text-secondary)" }}>
+              아직 준비된 기사가 없어요
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-2 pt-8">
           <div className="px-5">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)", fontSize: 18 }}>
@@ -1000,12 +1084,7 @@ function CategoryScreen({
 
 // ── Original Tab Content ──
 function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggleClip?: (text: string, on: boolean) => void }) {
-  const paras = [
-    // 첫 문단은 선택한 기사의 요약, 이후 문단은 원문 연동 전까지 공통 목업 텍스트
-    article.summary,
-    "한국경제 뉴스 랜딩페이지는 종이신문이 갖고 있던 정보 위계를 디지털 환경에서 재현하지 못했다. 무한 스크롤과 배너 광고는 정돈된 지면 몰입감을 지웠다.",
-    "한경 페이퍼는 하루치 뉴스를 메인기사 1개와 스택형 카드로 편집해, 정보 위계가 살아있는 지면형 레이아웃을 되살린다. 광고는 지면처럼 약속된 위치에만 배치해 피로도를 낮춘다.",
-  ];
+  const paras = article.body || [];
   const [hl, setHl] = useState<Set<number>>(new Set());
   const toggle = (i: number) => {
     const on = !hl.has(i);
@@ -1091,7 +1170,7 @@ function AiContent({ article }: { article: NewsItem }) {
     setMessage("");
   };
 
-  const suggested = ["IPO가 뭐야?", "앤트로픽이 어떤 회사야?", "투자자 미팅은 왜 해?", "AI 기업 주가는?"];
+  const suggested = article && 'ai' in article && article.ai?.suggestedQuestions ? article.ai.suggestedQuestions : [];
 
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
@@ -1264,7 +1343,9 @@ function AiContent({ article }: { article: NewsItem }) {
 }
 
 // ── Easy Tab Content ──
-function EasyContent() {
+function EasyContent({ article }: { article: NewsItem }) {
+  const easyTexts = article && 'ai' in article && article.ai?.easyBody ? article.ai.easyBody : [];
+
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
       <div
@@ -1284,23 +1365,19 @@ function EasyContent() {
         </div>
       </div>
       <div className="flex flex-col gap-2" style={{ minHeight: 144 }}>
-        <CategoryChip label="산업" />
+        <CategoryChip label={article.category} />
         <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+          {article.headline}
         </p>
         <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
-          한경 산업부 기자 · 2026.07.20 09:12
+          {article.byline}
         </p>
       </div>
       <div className="relative rounded-xl overflow-hidden w-full" style={{ height: 181 }}>
-        <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
       <div className="flex flex-col gap-4">
-        {[
-          "앤트로픽이라는 AI 회사가 있어요. 이 회사는 주식시장에 상장하려고 해요. 상장이란 회사의 주식을 누구나 사고팔 수 있게 만드는 거예요.",
-          "앤트로픽은 10월에 투자자들을 만나서 \"우리 회사에 투자해 주세요\"라고 설명할 예정이에요. 이런 만남을 '투자자 미팅'이라고 해요.",
-          "상장에 성공하면 앤트로픽은 더 많은 돈을 모아서 더 좋은 AI를 만들 수 있어요. 마치 토리가 도토리를 많이 모으면 더 많은 것을 할 수 있는 것처럼요! 🌰",
-        ].map((text, i) => (
+        {easyTexts.map((text, i) => (
           <p
             key={i}
             className="body-2"
@@ -1357,7 +1434,7 @@ function ArticleScreen({
         <TabSlider active={activeTab} onChange={onTabChange} />
         {activeTab === "original" && <OriginalContent article={article} onToggleClip={onToggleClip} />}
         {activeTab === "ai" && <AiContent article={article} />}
-        {activeTab === "easy" && <EasyContent />}
+        {activeTab === "easy" && <EasyContent article={article} />}
       </div>
       <FAB
         onPress={() => setShowToolbar((v) => !v)}
