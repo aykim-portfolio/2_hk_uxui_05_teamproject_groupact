@@ -1585,10 +1585,30 @@ function MissionScreen({
 }
 
 // ── Shop Screen (상점적용예시) ──
-function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: () => void }) {
-  const [activeTab, setActiveTab] = useState<ShopTab>("sticker");
+// ── Shop items ──
+// 테이프는 마스킹테이프 시트(2열 x 5행) 스프라이트에서 칸을 골라 쓰고, 스티커는 토리 표정 에셋을 사용
+type ShopItem = { name: string; price: number; col?: number; row?: number; img?: string };
 
-  const tapeItems = Array(6).fill({ name: "원형무늬 테이프", price: 100 });
+const TAPE_ITEMS: ShopItem[] = [
+  { name: "올리브 패턴 테이프", price: 100, col: 0, row: 0 },
+  { name: "베리 도트 테이프", price: 120, col: 1, row: 0 },
+  { name: "블루 체크 테이프", price: 100, col: 0, row: 1 },
+  { name: "코랄 퍼즐 테이프", price: 140, col: 1, row: 1 },
+  { name: "민트 버블 테이프", price: 110, col: 0, row: 2 },
+  { name: "머스터드 스트라이프 테이프", price: 130, col: 1, row: 2 },
+];
+
+const STICKER_ITEMS: ShopItem[] = [
+  { name: "방긋 토리", price: 80, img: imgSticker1 },
+  { name: "안경 토리", price: 90, img: imgSticker2 },
+  { name: "눈물 토리", price: 90, img: imgSticker3 },
+  { name: "뾰루퉁 토리", price: 100, img: imgSticker4 },
+  { name: "인사하는 토리", price: 150, img: imgToriDeco },
+];
+
+function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: () => void }) {
+  const [activeTab, setActiveTab] = useState<ShopTab>("tape");
+  const items = activeTab === "tape" ? TAPE_ITEMS : STICKER_ITEMS;
 
   return (
     <div
@@ -1649,110 +1669,106 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
 
         {/* Product grid — 3 columns */}
         <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-8 px-2 pt-2 pb-4">
-          {tapeItems.map((item, i) => (
-            <div
-              key={i}
-              className="flex flex-col items-center isolate"
-              style={{ width: 114, height: 165 }}
-            >
-              {/* Tape handle */}
+          {items.map((item, i) => {
+            const isTape = activeTab === "tape";
+            return (
               <div
-                className="z-10 flex items-center justify-center"
-                style={{ width: 18.5, height: 32.9, marginBottom: -12 }}
+                key={`${activeTab}-${i}`}
+                className="flex flex-col items-center isolate"
+                style={{ width: 114, height: 165 }}
               >
+                {/* Handle — 테이프는 블루, 스티커는 라임 */}
                 <div
-                  className="rounded-sm"
-                  style={{
-                    width: 9,
-                    height: 31.7,
-                    backgroundColor: "var(--pt-tape-handle)",
-                    transform: "rotate(18.39deg)",
-                    boxShadow: "2px 2px 4px rgba(0,0,0,0.15)",
-                  }}
-                />
-              </div>
-
-              {/* Tape card */}
-              <div
-                className="relative rounded-3xl w-full flex-1 flex flex-col overflow-hidden"
-                style={{
-                  backgroundColor: "var(--pt-tape-card-bg)",
-                  boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
-                  zIndex: 1,
-                }}
-              >
-                <div className="flex-1 flex flex-col items-center gap-2 p-3.5">
-                  <p
-                    className="caption text-center w-full"
-                    style={{ color: "var(--pt-text-primary)", fontSize: 11, fontWeight: 600 }}
-                  >
-                    {item.name}
-                  </p>
-
-                  {/* Tape image */}
+                  className="z-10 flex items-center justify-center"
+                  style={{ width: 18.5, height: 32.9, marginBottom: -12 }}
+                >
                   <div
-                    className="rounded-xl overflow-hidden w-full relative shrink-0"
-                    style={{ height: 79, backgroundColor: "var(--pt-bg-primary)" }}
-                  >
-                    <div
-                      className="absolute"
-                      style={{
-                        inset: "14.01% 9.72% 15.65% 10.47%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                    className="rounded-sm"
+                    style={{
+                      width: 9,
+                      height: 31.7,
+                      backgroundColor: isTape
+                        ? "var(--pt-tape-handle)"
+                        : "var(--pt-border-accent)",
+                      transform: "rotate(18.39deg)",
+                      boxShadow: "2px 2px 4px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                </div>
+
+                {/* Product card */}
+                <div
+                  className="relative rounded-3xl w-full flex-1 flex flex-col overflow-hidden"
+                  style={{
+                    backgroundColor: isTape
+                      ? "var(--pt-tape-card-bg)"
+                      : "var(--pt-bg-accent-light)",
+                    boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
+                    zIndex: 1,
+                  }}
+                >
+                  <div className="flex-1 flex flex-col items-center gap-2 p-3.5">
+                    <p
+                      className="caption text-center w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                      style={{ color: "var(--pt-text-primary)", fontSize: 11, fontWeight: 600 }}
                     >
-                      <div
+                      {item.name}
+                    </p>
+
+                    {/* Product image */}
+                    <div
+                      className="rounded-xl overflow-hidden w-full relative shrink-0 flex items-center justify-center"
+                      style={{ height: 79, backgroundColor: "var(--pt-bg-primary)" }}
+                    >
+                      {isTape ? (
+                        // 시트에서 해당 칸만 잘라 비스듬히 배치
+                        <div
+                          style={{
+                            width: "112%",
+                            height: 40,
+                            transform: "rotate(-18deg)",
+                            backgroundImage: `url(${imgTape})`,
+                            backgroundSize: "200% 500%",
+                            backgroundPosition: `${(item.col ?? 0) * 100}% ${(item.row ?? 0) * 25}%`,
+                            backgroundRepeat: "no-repeat",
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={item.img}
+                          alt={item.name}
+                          className="pointer-events-none"
+                          style={{ width: 58, height: 58, objectFit: "contain" }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-center gap-0.5">
+                      <span
                         style={{
-                          width: "hypot(82.33%, 66.75%)",
-                          height: "hypot(-17.67%, 33.25%)",
-                          transform: "rotate(33.28deg)",
-                          position: "relative",
-                          overflow: "hidden",
+                          fontFamily: "Paperlogy",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          color: "var(--pt-text-primary)",
+                          lineHeight: "9.6px",
                         }}
                       >
+                        {item.price}
+                      </span>
+                      <div style={{ width: 9.855, height: 11.737, position: "relative" }}>
                         <img
-                          src={imgTape}
-                          alt="마스킹 테이프"
-                          className="absolute max-w-none pointer-events-none"
-                          style={{
-                            width: "240.38%",
-                            height: "723.81%",
-                            top: "-180.72%",
-                            left: "-122.58%",
-                            objectFit: "cover",
-                          }}
+                          src={imgAcorn}
+                          alt="도토리"
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                         />
                       </div>
                     </div>
                   </div>
-
-                  {/* Price */}
-                  <div className="flex items-center gap-0.5">
-                    <span
-                      style={{
-                        fontFamily: "Paperlogy",
-                        fontWeight: 600,
-                        fontSize: 11,
-                        color: "var(--pt-text-primary)",
-                        lineHeight: "9.6px",
-                      }}
-                    >
-                      {item.price}
-                    </span>
-                    <div style={{ width: 9.855, height: 11.737, position: "relative" }}>
-                      <img
-                        src={imgAcorn}
-                        alt="도토리"
-                        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
