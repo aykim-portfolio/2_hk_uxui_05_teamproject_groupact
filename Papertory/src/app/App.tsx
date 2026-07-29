@@ -41,6 +41,14 @@ type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
 type Category = string;
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+}
+
 // ── Shared primitives ──
 
 const APP_HEADER_HEIGHT = "var(--pt-header-height, 52px)";
@@ -175,6 +183,179 @@ function CloseIcon() {
         strokeWidth="1.5"
       />
     </svg>
+  );
+}
+
+function InstallIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3V15M7 10L12 15L17 10M5 20H19"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PwaInstallControl({ visible }: { visible: boolean }) {
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [installed, setInstalled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigatorWithStandalone.standalone === true
+    );
+  });
+
+  const isIos =
+    typeof navigator !== "undefined" &&
+    /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigatorWithStandalone.standalone === true;
+    setInstalled(standalone);
+
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const handleInstalled = () => {
+      setInstalled(true);
+      setInstallPrompt(null);
+      setGuideOpen(false);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [guideOpen]);
+
+  const requestInstall = async () => {
+    if (!installPrompt) {
+      setGuideOpen(true);
+      return;
+    }
+
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    setInstallPrompt(null);
+    if (outcome === "accepted") setInstalled(true);
+  };
+
+  if (!visible || installed) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        className="pt-install-button fixed z-30 flex items-center gap-2 rounded-full px-4 py-3 label"
+        style={{
+          left: `calc(16px + ${APP_SAFE_LEFT})`,
+          bottom: `calc(16px + ${APP_SAFE_BOTTOM})`,
+          color: "#ffffff",
+          backgroundColor: "var(--pt-brand-primary)",
+          boxShadow: "0 8px 24px rgba(70,100,203,0.3)",
+        }}
+        onClick={requestInstall}
+        aria-haspopup={installPrompt ? undefined : "dialog"}
+      >
+        <InstallIcon />
+        앱 설치
+      </button>
+
+      {guideOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center p-3 min-[480px]:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pwa-install-guide-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0"
+            style={{ backgroundColor: "var(--pt-overlay-heavy)" }}
+            onClick={() => setGuideOpen(false)}
+            aria-label="설치 안내 닫기"
+          />
+          <div
+            className="relative z-10 w-full max-w-[420px] rounded-[28px] px-6 py-6"
+            style={{
+              marginBottom: APP_SAFE_BOTTOM,
+              backgroundColor: "var(--pt-bg-surface)",
+              boxShadow: "0 16px 48px rgba(26,37,53,0.24)",
+            }}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p
+                  id="pwa-install-guide-title"
+                  className="title"
+                  style={{ color: "var(--pt-text-primary)" }}
+                >
+                  페이퍼토리 앱 설치
+                </p>
+                <p className="caption mt-2" style={{ color: "var(--pt-text-secondary)" }}>
+                  {isIos
+                    ? "Safari에서 아래 순서대로 홈 화면에 추가해 주세요."
+                    : "브라우저 메뉴에서 페이퍼토리를 앱으로 설치할 수 있어요."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: "var(--pt-bg-card)" }}
+                onClick={() => setGuideOpen(false)}
+                aria-label="설치 안내 닫기"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            <ol className="flex flex-col gap-3">
+              {(isIos
+                ? ["Safari 하단의 공유 버튼을 누르기", "‘홈 화면에 추가’를 선택하기", "‘웹 앱으로 열기’를 켜고 추가하기"]
+                : ["브라우저의 더보기 메뉴(⋮) 열기", "‘앱 설치’ 또는 ‘홈 화면에 추가’ 선택하기", "설치 확인 버튼 누르기"]
+              ).map((step, index) => (
+                <li key={step} className="flex items-center gap-3">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full label"
+                    style={{
+                      color: "var(--pt-brand-primary)",
+                      backgroundColor: "var(--pt-chip-bg)",
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="body-1" style={{ color: "var(--pt-text-primary)" }}>
+                    {step}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -320,7 +501,7 @@ function AppHeader({
 }) {
   return (
     <div
-      className="absolute left-0 right-0 flex min-w-0 items-center gap-2 z-10"
+      className="pt-app-header absolute left-0 right-0 flex min-w-0 items-center gap-2 z-10"
       style={{
         top: APP_HEADER_TOP,
         height: APP_HEADER_HEIGHT,
@@ -537,10 +718,10 @@ function FAB({
 }) {
   return (
     <>
-      {showToolbar && <div className="absolute inset-0 z-20" onClick={onCloseToolbar} />}
+      {showToolbar && <div className="pt-fab-overlay absolute inset-0 z-20" onClick={onCloseToolbar} />}
       {showToolbar && (
         <div
-          className="absolute flex items-center gap-2 rounded-full px-4 py-2 z-30 overflow-x-auto no-scrollbar"
+          className="pt-fab-toolbar absolute flex items-center gap-2 rounded-full px-4 py-2 z-30 overflow-x-auto no-scrollbar"
           style={{
             bottom: `calc(${APP_SAFE_BOTTOM} + 96px)`,
             right: APP_INLINE_END,
@@ -577,7 +758,7 @@ function FAB({
         onClick={onPress}
         aria-label={showToolbar ? "스크랩 도구 닫기" : "스크랩 도구 열기"}
         aria-expanded={showToolbar}
-        className="absolute z-30 flex items-center justify-center rounded-full"
+        className="pt-fab-button absolute z-30 flex items-center justify-center rounded-full"
         style={{
           bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
           right: APP_INLINE_END,
@@ -732,7 +913,12 @@ function LandingScreen({
       [next[0], next[cardIdx + 1]] = [next[cardIdx + 1], next[0]];
       return next;
     });
-    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    const scroller = scrollRef.current;
+    if (scroller && scroller.scrollHeight > scroller.clientHeight + 1) {
+      scroller.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
@@ -1507,6 +1693,20 @@ function ArticleScreen({
       viewport.removeEventListener("scroll", updateInset);
     };
   }, []);
+
+  useEffect(() => {
+    const handleDocumentScroll = () => {
+      const remaining =
+        document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+      if (!completedRef.current && remaining < 24) {
+        completedRef.current = true;
+        onComplete?.();
+      }
+    };
+
+    window.addEventListener("scroll", handleDocumentScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleDocumentScroll);
+  }, [onComplete]);
 
   // 기사를 끝까지 스크롤하면 완독 처리 → 오늘 읽기 기록에 반영 (마운트당 1회)
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -2390,12 +2590,12 @@ function DatePickerSheet({
   return (
     <>
       <div
-        className="absolute inset-0 z-40"
+        className="fixed inset-0 z-40"
         style={{ backgroundColor: "var(--pt-overlay-medium)" }}
         onClick={onClose}
       />
       <div
-        className="absolute left-0 right-0 bottom-0 z-50 flex min-h-0 flex-col overflow-hidden"
+        className="fixed left-0 right-0 bottom-0 z-50 flex min-h-0 flex-col overflow-hidden"
         style={{
           backgroundColor: "var(--pt-bg-primary)",
           borderRadius: "36px 36px 0 0",
@@ -3404,7 +3604,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
   return (
     <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       <div
-        className="absolute left-0 right-0 flex items-center z-10"
+        className="pt-app-header absolute left-0 right-0 flex items-center z-10"
         style={{
           top: APP_HEADER_TOP,
           height: APP_HEADER_HEIGHT,
@@ -3462,7 +3662,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
         <div
           role="status"
           aria-live="polite"
-          className="absolute left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2"
+          className="fixed left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2"
           style={{
             bottom: `calc(24px + ${APP_SAFE_BOTTOM})`,
             backgroundColor: "rgba(26,37,53,0.9)",
@@ -3486,7 +3686,7 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
     <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       {/* Inbound banner */}
       <div
-        className="absolute left-0 right-0 z-10 flex items-center gap-2"
+        className="pt-app-header absolute left-0 right-0 z-10 flex items-center gap-2"
         style={{
           top: APP_HEADER_TOP,
           height: APP_HEADER_HEIGHT,
@@ -3581,13 +3781,13 @@ function NavigationDrawer({
     <>
       {/* Dim overlay */}
       <div
-        className="absolute inset-0 z-40"
+        className="fixed inset-0 z-40"
         style={{ backgroundColor: "var(--pt-overlay-medium)" }}
         onClick={onClose}
       />
       {/* Drawer panel */}
       <div
-        className="absolute top-0 bottom-0 z-50 flex flex-col overflow-hidden"
+        className="fixed top-0 bottom-0 z-50 flex flex-col overflow-hidden"
         style={{
           left: APP_SAFE_LEFT,
           width: `min(312px, calc(100% - ${APP_SAFE_LEFT} - 16px))`,
@@ -3711,6 +3911,8 @@ export default function App() {
   const [scrapNew, setScrapNew] = useState(false);
   const [clippings, setClippings] = useState<string[]>([]);
   const [scrapSnapshot, setScrapSnapshot] = useState<ScrapDoc | null>(null);
+  const usesViewportScroller =
+    screen === "start" || screen === "category" || screen === "scrapbook";
   const toggleClip = (t: string, on: boolean) =>
     setClippings((prev) => (on ? (prev.includes(t) ? prev : [...prev, t]) : prev.filter((x) => x !== t)));
 
@@ -3718,6 +3920,25 @@ export default function App() {
   useEffect(() => {
     if (/^#\/s\//.test(window.location.hash)) setScreen("shared-scrap");
   }, []);
+
+  useEffect(() => {
+    if (usesViewportScroller) return;
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  }, [screen, usesViewportScroller]);
+
+  useEffect(() => {
+    document.body.classList.toggle("pt-body--locked", usesViewportScroller);
+    return () => document.body.classList.remove("pt-body--locked");
+  }, [usesViewportScroller]);
+
+  useEffect(() => {
+    if (!drawerOpen && !pickerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen, pickerOpen]);
 
   const isJuly = calYear === 2026 && calMonth === 7;
   const monthReads: Record<number, number> = isJuly ? readsByDate : {};
@@ -3876,14 +4097,17 @@ export default function App() {
 
   return (
     <div
-      className="h-full w-full overflow-hidden"
+      className={`pt-app-shell h-full w-full overflow-hidden ${
+        usesViewportScroller ? "pt-app-shell--locked" : "pt-app-shell--document"
+      }`}
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <div
-        className="relative h-full w-full overflow-hidden"
+        className="pt-app-viewport relative h-full w-full overflow-hidden"
         style={{ backgroundColor: "var(--pt-bg-primary)" }}
       >
-        {renderScreen()}
+        <main className="pt-screen-host h-full w-full">{renderScreen()}</main>
+        <PwaInstallControl visible={screen !== "start"} />
         {drawerOpen && (
           <NavigationDrawer
             onClose={() => setDrawerOpen(false)}

@@ -82,6 +82,81 @@ button {
   margin-inline: auto;
 }
 
+/*
+ * 모바일 브라우저에서는 문서(body)가 스크롤되어야 주소창과 하단 툴바가
+ * 브라우저의 기본 동작에 따라 접힌다. 카테고리 카드 스택과 스크랩 편집기는
+ * 화면 좌표 기반 인터랙션을 사용하므로 pt-body--locked 상태를 유지한다.
+ */
+@media (max-width: 768px) {
+  html {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  body.pt-body--locked {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body.pt-body--locked #root,
+  .pt-app-shell--locked,
+  .pt-app-shell--locked .pt-app-viewport,
+  .pt-app-shell--locked .pt-screen-host {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pt-app-shell--document,
+  .pt-app-shell--document .pt-app-viewport,
+  .pt-app-shell--document .pt-screen-host {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .pt-app-shell--document .pt-screen-host > * {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .pt-app-shell--document .pt-screen-host .pt-scroll {
+    height: auto;
+    overflow-y: visible;
+    overscroll-behavior-y: auto;
+    scrollbar-gutter: auto;
+  }
+
+  .pt-app-shell--document .pt-app-header,
+  .pt-app-shell--document .pt-fab-overlay,
+  .pt-app-shell--document .pt-fab-toolbar,
+  .pt-app-shell--document .pt-fab-button {
+    position: fixed;
+  }
+}
+
 /* Design tokens — Papertory 디자인 시스템
    SSOT는 guidelines/design.md이며, 값이 Figma 변수와 다를 경우 design.md를 따른다.
    이 값들은 원래 @make-kits/hk-papertory 스타일시트가 슬래시 이름 변수로 제공했으나,
