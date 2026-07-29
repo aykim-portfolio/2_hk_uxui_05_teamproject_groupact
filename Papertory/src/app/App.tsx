@@ -2773,7 +2773,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
         {/* Share template card — 실제 스크랩 내용 */}
         <div className="rounded-[24px] overflow-hidden" style={{ width: 300, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
           <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
-            <div style={{ width: 22, height: 26 }}><img src={imgTori} alt="Tori" className="w-full h-full object-contain" /></div>
+            <div style={{ width: 26, height: 26 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
             <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
             <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>나의 스크랩</span>
           </div>
