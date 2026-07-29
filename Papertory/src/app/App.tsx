@@ -1412,15 +1412,19 @@ function MissionScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showBack showDropdown={false} onBackClick={onBack} showAvatar={false} />
+      <AppHeader
+        dropdownLabel="도토리 줍기"
+        showBack
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        onBackClick={onBack}
+        showAvatar={false}
+      />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
-        {/* 도토리 줍기 section */}
+        {/* 도토리 줍기 section — 페이지명은 헤더 라벨에 있으므로 본문에서는 생략 */}
         <div className="flex flex-col gap-4 px-5 pt-6">
-          <p className="title" style={{ color: "var(--pt-text-primary)" }}>
-            도토리 줍기
-          </p>
-
           {/* Collected acorns */}
           <div
             className="rounded-xl p-4 flex items-center justify-between"
@@ -1724,7 +1728,14 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
+      <AppHeader
+        dropdownLabel="마이페이지"
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+        onMenuOpen={onMenuOpen}
+      />
 
       <div
         className="h-full overflow-y-auto no-scrollbar"
@@ -1906,7 +1917,14 @@ function CalendarScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
+      <AppHeader
+        dropdownLabel="읽기 기록 달력"
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+        onMenuOpen={onMenuOpen}
+      />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
         <div className="px-4 flex flex-col gap-6">
@@ -2312,7 +2330,7 @@ function ScrapLibraryScreen({
         showDropdown
         showDropdownChevron={false}
         onDropdownClick={() => {}}
-        showAvatar
+        showAvatar={false}
         onMenuOpen={onMenuOpen}
       />
 
