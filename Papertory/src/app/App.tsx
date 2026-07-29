@@ -874,6 +874,7 @@ function CategoryScreen({
     const DISTANCE_PER_CARD = 220;
     const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
     const DIM_PER_STEP = 0.35; // 뒤에 가려진 카드일수록 투명도·명도를 낮추는 정도
+    const INTRO_DROP = 380; // 진입 인트로에서 카드가 최종 위치까지 내려오는 거리
 
     const els = Array.from(content.querySelectorAll<HTMLElement>(".cascade-card"));
 
@@ -888,9 +889,10 @@ function CategoryScreen({
       gsap.ticker.lagSmoothing(0);
     }
 
-    function layout(progress: number) {
+    // 스크롤 진행도(progress)만으로 카드별 최종 배치값을 계산하는 순수 함수
+    function computeLayout(progress: number) {
       const focusIndex = progress * (N - 1);
-      els.forEach((el, i) => {
+      return els.map((_, i) => {
         const pos = i - focusIndex;
         const dist = Math.abs(pos);
         const near = Math.max(0, 1 - dist);
@@ -903,7 +905,7 @@ function CategoryScreen({
         // 바로 뒤에 가려진 카드부터 곧바로 살짝 어둡고 흐리게 — 카드 한 장 거리(dist=1)면 최대로 적용
         const depthT = gsap.utils.clamp(0, 1, dist);
         const dim = 1 - depthT * DIM_PER_STEP;
-        gsap.set(el, {
+        return {
           xPercent: -50,
           yPercent: -50,
           x: 0,
@@ -912,9 +914,19 @@ function CategoryScreen({
           opacity: dim * farFade,
           filter: `brightness(${dim})`,
           zIndex: Math.round((1 - dist) * 1000),
-        });
+        };
       });
     }
+
+    function layout(progress: number) {
+      const targets = computeLayout(progress);
+      els.forEach((el, i) => gsap.set(el, targets[i]));
+    }
+
+    // 진입 인트로가 예약/재생 중인지. 스크롤이 실제로 시작되면 해제하고 스크롤에 제어를 넘김
+    let introActive = !reduced;
+    let introTween: gsap.core.Tween | null = null;
+    let cancelled = false;
 
     const proxy = { p: 0 };
     const tween = gsap.to(proxy, {
@@ -935,14 +947,66 @@ function CategoryScreen({
         },
       },
       onUpdate() {
+        // 인트로가 카드를 쥐고 있는 동안에는 스크롤 갱신이 배치를 덮어쓰지 않도록 무시
+        // (마운트 직후 refresh·snap이 progress를 미세하게 건드려 인트로가 끊기던 문제)
+        if (introActive) return;
         layout(proxy.p);
       },
     });
 
-    layout(0);
+    // 실제 사용자 입력이 들어오면 인트로를 접고 스크롤에 제어를 넘김
+    function cancelIntro() {
+      if (!introActive) return;
+      introActive = false;
+      introTween?.kill();
+      layout(proxy.p);
+    }
+    container.addEventListener("wheel", cancelIntro, { passive: true });
+    container.addEventListener("touchstart", cancelIntro, { passive: true });
+
     ScrollTrigger.refresh();
 
+    if (reduced) {
+      layout(0);
+    } else {
+      // 인트로: 카드가 화면 위에서 순서대로 내려와 아래로 쌓이고,
+      // 끝나면 progress 0의 기본 배치(첫 카드가 가운데)에 그대로 안착 — 최종 모습은 기존과 동일
+      const targets = computeLayout(0);
+      // 최종 배치가 한 프레임 비쳤다 사라지지 않도록 시작 상태(화면 위·투명)를 먼저 세팅
+      els.forEach((el, i) =>
+        gsap.set(el, { ...targets[i], y: targets[i].y - INTRO_DROP, opacity: 0 })
+      );
+
+      // 썸네일이 뜨기 전 빈 카드가 떨어지지 않도록 이미지 로드를 잠깐 기다림(최대 600ms)
+      const imagesReady = Promise.all(
+        els.map((el) => {
+          const img = el.querySelector("img");
+          if (!img || img.complete) return Promise.resolve();
+          return new Promise<void>((res) => {
+            img.onload = img.onerror = () => res();
+          });
+        })
+      );
+      Promise.race([imagesReady, new Promise((res) => setTimeout(res, 300))]).then(() => {
+        if (cancelled || !introActive) return;
+        introTween = gsap.to(els, {
+          y: (i: number) => targets[i].y,
+          opacity: (i: number) => targets[i].opacity,
+          duration: 0.55,
+          ease: "power3.out",
+          stagger: 0.07,
+          onComplete() {
+            introActive = false;
+          },
+        });
+      });
+    }
+
     return () => {
+      cancelled = true;
+      introTween?.kill();
+      container.removeEventListener("wheel", cancelIntro);
+      container.removeEventListener("touchstart", cancelIntro);
       tween.scrollTrigger?.kill();
       tween.kill();
       lenis?.destroy();
