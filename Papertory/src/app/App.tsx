@@ -43,6 +43,17 @@ type Category = string;
 
 // ── Shared primitives ──
 
+const APP_HEADER_HEIGHT = "var(--pt-header-height, 52px)";
+const APP_HEADER_TOP = "var(--pt-header-top, 16px)";
+const APP_CONTENT_TOP = "var(--pt-header-space, 80px)";
+const APP_SAFE_BOTTOM = "var(--pt-safe-bottom, 0px)";
+const APP_SAFE_LEFT = "var(--pt-safe-left, 0px)";
+const APP_SAFE_RIGHT = "var(--pt-safe-right, 0px)";
+const APP_INLINE_START = "var(--pt-page-inline-start, 16px)";
+const APP_INLINE_END = "var(--pt-page-inline-end, 16px)";
+const APP_PANEL_START = `calc(8px + ${APP_SAFE_LEFT})`;
+const APP_PANEL_END = `calc(8px + ${APP_SAFE_RIGHT})`;
+
 function CategoryChip({
   label,
   small,
@@ -73,14 +84,17 @@ function GlassBtn({
   onClick,
   children,
   size = 40,
+  ariaLabel,
 }: {
   onClick?: () => void;
   children: React.ReactNode;
   size?: number;
+  ariaLabel?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      aria-label={ariaLabel}
       className="relative flex items-center justify-center rounded-full shrink-0 overflow-hidden"
       style={{
         width: size,
@@ -240,7 +254,7 @@ function DropdownTab({
   return (
     <button
       onClick={onClick}
-      className="relative flex gap-2 items-center justify-center rounded-3xl"
+      className="relative flex min-w-0 max-w-full gap-2 items-center justify-center rounded-3xl"
       // chevron이 없으면 좌우 여백을 같게 맞춰 라벨이 가운데 오도록 함
       style={{ height: 40, paddingLeft: 24, paddingRight: showChevron ? 20 : 24 }}
     >
@@ -258,7 +272,10 @@ function DropdownTab({
             "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
         }}
       />
-      <span className="title relative whitespace-nowrap" style={{ color: "var(--pt-text-primary)" }}>
+      <span
+        className="title relative min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+        style={{ color: "var(--pt-text-primary)" }}
+      >
         {label}
       </span>
       {showChevron && <ChevronDownIcon />}
@@ -275,7 +292,7 @@ function DropdownTab({
 
 function ToriAvatar({ onClick }: { onClick?: () => void }) {
   return (
-    <GlassBtn onClick={onClick}>
+    <GlassBtn onClick={onClick} ariaLabel="스크랩 라이브러리 열기">
       <ScrapIcon color="var(--pt-text-primary)" />
     </GlassBtn>
   );
@@ -303,26 +320,33 @@ function AppHeader({
 }) {
   return (
     <div
-      className="absolute left-0 right-0 flex items-center justify-between px-4 z-10"
+      className="absolute left-0 right-0 flex min-w-0 items-center gap-2 z-10"
       style={{
-        top: 58,
-        height: 52,
+        top: APP_HEADER_TOP,
+        height: APP_HEADER_HEIGHT,
+        paddingLeft: APP_INLINE_START,
+        paddingRight: APP_INLINE_END,
         filter: "drop-shadow(0px 2px 1px rgba(181,181,181,0.25))",
       }}
     >
-      <GlassBtn onClick={showBack ? onBackClick : onMenuOpen}>
+      <GlassBtn
+        onClick={showBack ? onBackClick : onMenuOpen}
+        ariaLabel={showBack ? "뒤로 가기" : "전체 메뉴 열기"}
+      >
         {showBack ? <BackArrowIcon /> : <HamburgerIcon />}
       </GlassBtn>
 
-      {showDropdown ? (
-        <DropdownTab
-          label={dropdownLabel}
-          onClick={onDropdownClick}
-          showChevron={showDropdownChevron}
-        />
-      ) : (
-        <div style={{ width: 40 }} />
-      )}
+      <div className="flex min-w-0 flex-1 justify-center">
+        {showDropdown ? (
+          <DropdownTab
+            label={dropdownLabel}
+            onClick={onDropdownClick}
+            showChevron={showDropdownChevron}
+          />
+        ) : (
+          <div className="w-10" />
+        )}
+      </div>
 
       {showAvatar ? <ToriAvatar /> : <div style={{ width: 40 }} />}
     </div>
@@ -516,33 +540,47 @@ function FAB({
       {showToolbar && <div className="absolute inset-0 z-20" onClick={onCloseToolbar} />}
       {showToolbar && (
         <div
-          className="absolute flex items-center gap-2 rounded-full px-4 py-2 z-30"
+          className="absolute flex items-center gap-2 rounded-full px-4 py-2 z-30 overflow-x-auto no-scrollbar"
           style={{
-            bottom: 120,
-            right: 20,
+            bottom: `calc(${APP_SAFE_BOTTOM} + 96px)`,
+            right: APP_INLINE_END,
+            maxWidth: "calc(100% - 24px)",
             backgroundColor: "rgba(255,255,255,0.95)",
             boxShadow:
               "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.15)",
             backdropFilter: "blur(12px)",
           }}
         >
-          {["✏️", "🖊️", "🧹", "✂️", "↩️", "🎨"].map((icon) => (
-            <button key={icon} onClick={(e) => e.stopPropagation()}>
+          {[
+            ["✏️", "연필"],
+            ["🖊️", "형광펜"],
+            ["🧹", "지우개"],
+            ["✂️", "클리핑"],
+            ["↩️", "실행 취소"],
+            ["🎨", "색상"],
+          ].map(([icon, label]) => (
+            <button
+              key={icon}
+              aria-label={label}
+              onClick={(e) => e.stopPropagation()}
+            >
               <span className="text-xl leading-none">{icon}</span>
             </button>
           ))}
           <div className="w-px h-6 mx-1" style={{ backgroundColor: "var(--pt-border-default)" }} />
-          <button onClick={(e) => e.stopPropagation()}>
+          <button aria-label="북마크" onClick={(e) => e.stopPropagation()}>
             <BookmarkIcon />
           </button>
         </div>
       )}
       <button
         onClick={onPress}
+        aria-label={showToolbar ? "스크랩 도구 닫기" : "스크랩 도구 열기"}
+        aria-expanded={showToolbar}
         className="absolute z-30 flex items-center justify-center rounded-full"
         style={{
-          bottom: 56,
-          right: 20,
+          bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
+          right: APP_INLINE_END,
           width: 64,
           height: 64,
           boxShadow:
@@ -564,7 +602,10 @@ function FAB({
 // ── Hero Card ──
 function HeroCard({ article, onClick }: { article: NewsItem; onClick?: () => void }) {
   return (
-    <div className="flex flex-col gap-5 px-5 w-full" style={{ paddingTop: 120, paddingBottom: 16 }}>
+    <div
+      className="flex flex-col gap-5 px-4 min-[360px]:px-5 w-full"
+      style={{ paddingTop: `calc(${APP_CONTENT_TOP} + 10px)`, paddingBottom: 16 }}
+    >
       {/* 헤드라인·썸네일·요약 클릭 시 기사 원문으로 이동 */}
       <button onClick={onClick} className="flex flex-col gap-5 w-full text-left">
         <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
@@ -573,10 +614,7 @@ function HeroCard({ article, onClick }: { article: NewsItem; onClick?: () => voi
             {article.headline}
           </p>
         </div>
-        <div
-          className="relative rounded-xl overflow-hidden shrink-0 w-full"
-          style={{ height: 181, marginBottom: 10 }}
-        >
+        <div className="relative rounded-xl overflow-hidden shrink-0 w-full aspect-[353/181]" style={{ marginBottom: 10 }}>
           <img
             src={article.image}
             alt=""
@@ -730,7 +768,11 @@ function LandingScreen({
         onMenuOpen={onMenuOpen}
         showAvatar={false}
       />
-      <div ref={scrollRef} className="h-full overflow-y-auto pb-24">
+      <div
+        ref={scrollRef}
+        className="pt-content-column pt-scroll h-full overflow-y-auto pb-24"
+        style={{ paddingLeft: APP_SAFE_LEFT, paddingRight: APP_SAFE_RIGHT }}
+      >
         {hero ? (
           <div ref={heroRef}>
             <HeroCard article={hero} onClick={() => onNewsClick(hero)} />
@@ -790,8 +832,8 @@ function CategoryCard({
       onClick={onClick}
       className={`absolute rounded-xl overflow-hidden text-left${className ? ` ${className}` : ""}`}
       style={{
-        width: 208,
-        height: 298,
+        width: "min(208px, calc(100% - 32px))",
+        height: "min(298px, calc(100% - 32px))",
         border: "1px solid var(--pt-brand-primary)",
         opacity: 0.9,
         boxShadow: "0px 8px 8px rgba(26,37,53,0.25)",
@@ -874,10 +916,6 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
   },
 ];
 
-// ── Category Screen ──
-// 프레임 고정 크기(App()의 393×852 폰 목업)에 맞춰 스크롤 캐스케이드 스테이지 높이를 정함
-const FRAME_HEIGHT = 852;
-
 function CategoryScreen({
   onCategorySelect,
 }: {
@@ -890,11 +928,24 @@ function CategoryScreen({
 
   const containerRef = useRef<HTMLDivElement>(null); // Lenis wrapper / ScrollTrigger scroller
   const contentRef = useRef<HTMLDivElement>(null); // Lenis content / scroll-length spacer
+  const [stageHeight, setStageHeight] = useState(0);
+  const distancePerCard = Math.min(220, Math.max(140, stageHeight * 0.28));
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateHeight = () => setStageHeight(container.clientHeight);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     const content = contentRef.current;
-    if (!container || !content) return;
+    if (!container || !content || stageHeight <= 0) return;
 
     // 브라우저가 리로드 시 이전 스크롤 위치를 복원하는 경우가 있어, 항상 첫 카드(Today)부터 시작하도록 고정
     container.scrollTop = 0;
@@ -902,13 +953,12 @@ function CategoryScreen({
     gsap.registerPlugin(ScrollTrigger);
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // 세로 방향 고정 캐스케이드 상수(기존 디자인과 동일하게 좌우 이동 없음)
-    const STEP_Y = 132;
-    const PUSH = 46;
-    const DISTANCE_PER_CARD = 220;
+    // 현재 컨테이너 높이에 맞춰 캐스케이드 간격과 진입 거리를 조정한다.
+    const STEP_Y = Math.min(132, Math.max(56, stageHeight * 0.16));
+    const PUSH = Math.min(46, Math.max(28, stageHeight * 0.06));
     const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
     const DIM_PER_STEP = 0.35; // 뒤에 가려진 카드일수록 투명도·명도를 낮추는 정도
-    const INTRO_DROP = 380; // 진입 인트로에서 카드가 최종 위치까지 내려오는 거리
+    const INTRO_DROP = Math.min(380, Math.max(140, stageHeight * 0.45));
 
     const els = Array.from(content.querySelectorAll<HTMLElement>(".cascade-card"));
 
@@ -970,7 +1020,7 @@ function CategoryScreen({
         scroller: container,
         trigger: content,
         start: "top top",
-        end: () => "+=" + N * DISTANCE_PER_CARD,
+        end: () => "+=" + N * distancePerCard,
         scrub: true,
         anticipatePin: 1,
         invalidateOnRefresh: true,
@@ -1046,7 +1096,7 @@ function CategoryScreen({
       lenis?.destroy();
       gsap.ticker.remove(raf);
     };
-  }, [N]);
+  }, [N, distancePerCard, stageHeight]);
 
   return (
     <div
@@ -1056,9 +1106,19 @@ function CategoryScreen({
           "linear-gradient(162.946deg, #ffffff 2.5%, var(--pt-bg-primary) 50%, #EFF1F5 103%)",
       }}
     >
-      <div ref={containerRef} className="absolute inset-0 overflow-y-auto">
-        <div ref={contentRef} style={{ height: FRAME_HEIGHT + N * 220 }}>
-          <div className="relative" style={{ position: "sticky", top: 0, height: FRAME_HEIGHT }}>
+      <div
+        ref={containerRef}
+        className="pt-scroll absolute inset-0 overflow-y-auto"
+        style={{ paddingLeft: APP_SAFE_LEFT, paddingRight: APP_SAFE_RIGHT }}
+      >
+        <div
+          ref={contentRef}
+          style={{
+            height: stageHeight > 0 ? stageHeight + N * distancePerCard : "100%",
+            opacity: stageHeight > 0 ? 1 : 0,
+          }}
+        >
+          <div className="relative" style={{ position: "sticky", top: 0, height: stageHeight || "100%" }}>
             {cards.map((c) => (
               <CategoryCard
                 key={c.label}
@@ -1107,7 +1167,7 @@ function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggl
           {article.byline}
         </p>
       </div>
-      <div className="relative rounded-xl overflow-hidden w-full" style={{ height: 181 }}>
+      <div className="relative rounded-xl overflow-hidden w-full aspect-[353/181]">
         <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
       <div
@@ -1373,7 +1433,7 @@ function EasyContent({ article }: { article: NewsItem }) {
           {article.byline}
         </p>
       </div>
-      <div className="relative rounded-xl overflow-hidden w-full" style={{ height: 181 }}>
+      <div className="relative rounded-xl overflow-hidden w-full aspect-[353/181]">
         <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
       <div className="flex flex-col gap-4">
@@ -1413,7 +1473,40 @@ function ArticleScreen({
   onToggleClip?: (text: string, on: boolean) => void;
 }) {
   const [showToolbar, setShowToolbar] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const completedRef = useRef(false);
+  const screenRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const screenEl = screenRef.current;
+    if (!viewport || !screenEl) return;
+
+    const updateInset = () => {
+      const visibleBottom = viewport.offsetTop + viewport.height;
+      const overlap = Math.max(0, screenEl.getBoundingClientRect().bottom - visibleBottom);
+      setKeyboardInset(overlap);
+
+      if (
+        overlap > 0 &&
+        document.activeElement instanceof HTMLInputElement &&
+        screenEl.contains(document.activeElement)
+      ) {
+        requestAnimationFrame(() => {
+          document.activeElement?.scrollIntoView({ block: "center", behavior: "smooth" });
+        });
+      }
+    };
+
+    updateInset();
+    viewport.addEventListener("resize", updateInset);
+    viewport.addEventListener("scroll", updateInset);
+    return () => {
+      viewport.removeEventListener("resize", updateInset);
+      viewport.removeEventListener("scroll", updateInset);
+    };
+  }, []);
 
   // 기사를 끝까지 스크롤하면 완독 처리 → 오늘 읽기 기록에 반영 (마운트당 1회)
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -1426,11 +1519,22 @@ function ArticleScreen({
 
   return (
     <div
+      ref={screenRef}
       className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader showBack showDropdown={false} onBackClick={onBack} />
-      <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }} onScroll={handleScroll}>
+      <div
+        ref={scrollRef}
+        className="pt-content-column pt-scroll h-full overflow-y-auto"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(100px + ${APP_SAFE_BOTTOM} + ${keyboardInset}px)`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+        onScroll={handleScroll}
+      >
         <TabSlider active={activeTab} onChange={onTabChange} />
         {activeTab === "original" && <OriginalContent article={article} onToggleClip={onToggleClip} />}
         {activeTab === "ai" && <AiContent article={article} />}
@@ -1479,7 +1583,15 @@ function MissionScreen({
         onMenuOpen={onMenuOpen}
       />
 
-      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
+      <div
+        className="pt-content-column pt-scroll h-full overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
         {/* 도토리 줍기 section — 페이지명은 헤더 라벨에 있으므로 본문에서는 생략 */}
         <div className="flex flex-col gap-4 px-5 pt-6">
           {/* Collected acorns */}
@@ -1510,8 +1622,8 @@ function MissionScreen({
               <div key={m.label}>
                 {i > 0 && (
                   <div
-                    className="mx-auto"
-                    style={{ height: 1, width: 321, backgroundColor: "var(--pt-border-menu)" }}
+                    className="mx-4"
+                    style={{ height: 1, backgroundColor: "var(--pt-border-menu)" }}
                   />
                 )}
                 <div className="flex items-center justify-between p-4">
@@ -1645,7 +1757,15 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
         showAvatar={false}
       />
 
-      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
+      <div
+        className="pt-content-column pt-scroll h-full overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(24px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
         {/* Tab pills */}
         <div className="flex gap-2.5 px-5 py-2">
           {(["tape", "sticker"] as ShopTab[]).map((tab) => {
@@ -1688,8 +1808,11 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
           </div>
         </div>
 
-        {/* Product grid — 3 columns */}
-        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-8 px-2 pt-2 pb-4">
+        {/* Product grid — 사용 가능한 폭에 따라 열 수를 자동 조정 */}
+        <div
+          className="grid justify-center gap-x-2.5 gap-y-8 px-2 pt-2 pb-4"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 114px))" }}
+        >
           {items.map((item, i) => {
             const isTape = activeTab === "tape";
             // 잘라낸 영역을 그대로 카드 안에 채우도록 스케일 — 비율 유지라 늘어남/쏠림이 없음
@@ -1697,8 +1820,8 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
             return (
               <div
                 key={`${activeTab}-${i}`}
-                className="flex flex-col items-center isolate"
-                style={{ width: 114, height: 165 }}
+                className="flex w-full max-w-[114px] flex-col items-center isolate"
+                style={{ height: 165 }}
               >
                 {/* Handle — 테이프는 블루, 스티커는 라임 */}
                 <div
@@ -1823,16 +1946,24 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
       />
 
       <div
-        className="h-full overflow-y-auto no-scrollbar"
-        style={{ paddingTop: 110, paddingBottom: 32 }}
+        className="pt-content-column pt-scroll h-full overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
       >
         {/* Hero — 출석 인사 + 토리 일러스트 */}
         <div
           className="flex items-center w-full"
-          style={{ backgroundColor: "var(--pt-bg-accent-light)", padding: "32px 20px" }}
+          style={{
+            backgroundColor: "var(--pt-bg-accent-light)",
+            padding: "clamp(24px, 7vw, 32px) clamp(16px, 5vw, 20px)",
+          }}
         >
-          <div className="flex-1 flex items-center justify-between min-w-0">
-            <div className="flex flex-col items-start" style={{ gap: 60, width: 214 }}>
+          <div className="flex-1 flex items-center justify-between min-w-0" style={{ gap: "clamp(8px, 3vw, 20px)" }}>
+            <div className="flex min-w-0 flex-1 flex-col items-start" style={{ gap: "clamp(28px, 8vh, 60px)" }}>
               <p className="title" style={{ color: "var(--pt-text-primary)" }}>
                 송토리님 또 오셨군요!
               </p>
@@ -1851,7 +1982,10 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
               </div>
             </div>
             <div className="flex items-center shrink-0" style={{ paddingTop: 40 }}>
-              <div className="relative shrink-0" style={{ width: 122, height: 124 }}>
+              <div
+                className="relative shrink-0"
+                style={{ width: "clamp(72px, 28vw, 122px)", aspectRatio: "122 / 124" }}
+              >
                 <img
                   src={imgToriMypage}
                   alt="토리"
@@ -1872,8 +2006,8 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
               <div key={label} className="w-full">
                 {i > 0 && (
                   <div
-                    className="mx-auto"
-                    style={{ height: 1, width: 321, backgroundColor: "var(--pt-border-default)" }}
+                    className="mx-4"
+                    style={{ height: 1, backgroundColor: "var(--pt-border-default)" }}
                   />
                 )}
                 <button className="w-full flex items-center justify-between p-5 text-left">
@@ -2011,8 +2145,16 @@ function CalendarScreen({
         onMenuOpen={onMenuOpen}
       />
 
-      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
-        <div className="px-4 flex flex-col gap-6">
+      <div
+        className="pt-content-column pt-scroll h-full overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(24px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
+        <div className="px-3 min-[340px]:px-4 flex flex-col gap-6">
           {/* Title + date picker trigger */}
           <button onClick={onOpenPicker} className="flex items-center gap-2 self-start">
             <span
@@ -2043,7 +2185,8 @@ function CalendarScreen({
             </div>
             <div className="grid grid-cols-7 gap-y-2" style={{ placeItems: "center" }}>
               {cells.map((d, i) => {
-                if (d === null) return <div key={i} style={{ width: 40, height: 50 }} />;
+                if (d === null)
+                  return <div key={i} style={{ width: "min(40px, 100%)", aspectRatio: "4 / 5" }} />;
                 const count = reads[d] || 0;
                 const lv = Math.min(count, 5);
                 const isToday = d === todayDay;
@@ -2062,8 +2205,8 @@ function CalendarScreen({
                   <button
                     key={i}
                     onClick={() => onDateClick(d)}
-                    className="rounded-xl flex items-center justify-center"
-                    style={{ width: 40, height: 50, backgroundColor: bg, border }}
+                    className="flex w-full max-w-10 items-center justify-center rounded-xl"
+                    style={{ aspectRatio: "4 / 5", backgroundColor: bg, border }}
                   >
                     <span style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 14, color: textColor }}>
                       {d}
@@ -2075,20 +2218,28 @@ function CalendarScreen({
           </div>
 
           {/* Yearly reading-count bar chart */}
-          <div className="flex items-end justify-between" style={{ height: 60, paddingTop: 4 }}>
+          <div className="grid grid-cols-12 items-end gap-px" style={{ minHeight: 72, paddingTop: 4 }}>
             {MONTH_BAR_H.map((h, idx) => {
               const mm = idx + 1;
               const isCur = mm === month;
               return (
-                <div key={mm} className="flex flex-col items-center gap-0.5">
+                <div key={mm} className="flex min-w-0 flex-col items-center gap-0.5">
                   {isCur && (
-                    <span style={{ fontFamily: "var(--pt-font-body)", fontWeight: 700, fontSize: 9, color: "var(--pt-text-primary)" }}>
+                    <span
+                      className="whitespace-nowrap"
+                      style={{
+                        fontFamily: "var(--pt-font-body)",
+                        fontWeight: 700,
+                        fontSize: "clamp(7px, 2.4vw, 9px)",
+                        color: "var(--pt-text-primary)",
+                      }}
+                    >
                       {readTotal}건
                     </span>
                   )}
                   <div
                     style={{
-                      width: 20,
+                      width: "min(20px, 70%)",
                       height: isCur ? 48 : h,
                       borderRadius: 4,
                       backgroundColor: isCur ? "var(--pt-brand-primary)" : "var(--pt-brand-secondary)",
@@ -2098,9 +2249,10 @@ function CalendarScreen({
                     style={{
                       fontFamily: "var(--pt-font-body)",
                       fontWeight: isCur ? 700 : 400,
-                      fontSize: 9,
+                      fontSize: "clamp(7px, 2.4vw, 9px)",
                       color: isCur ? "var(--pt-brand-primary)" : "var(--pt-text-secondary)",
                     }}
+                    className="whitespace-nowrap"
                   >
                     {mm}월
                   </span>
@@ -2147,7 +2299,15 @@ function ReadingDetailScreen({
     >
       <AppHeader showBack showDropdown={false} showAvatar={false} onBackClick={onBack} />
 
-      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
+      <div
+        className="pt-content-column pt-scroll flex h-full flex-col overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
         {/* Date header */}
         <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
           <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>
@@ -2157,9 +2317,9 @@ function ReadingDetailScreen({
 
         {count === 0 ? (
           /* Empty state */
-          <div className="flex flex-col items-center justify-center gap-8 px-4" style={{ minHeight: 560 }}>
+          <div className="flex min-h-[300px] flex-1 flex-col items-center justify-center gap-8 px-4 py-8">
             <div className="flex flex-col items-center gap-2.5">
-              <div className="relative" style={{ width: 187, height: 177 }}>
+              <div className="relative" style={{ width: "min(187px, 58vw)", aspectRatio: "187 / 177" }}>
                 <img src={imgToriEmpty} alt="토리" className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
               </div>
               <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>
@@ -2235,12 +2395,19 @@ function DatePickerSheet({
         onClick={onClose}
       />
       <div
-        className="absolute left-0 right-0 bottom-0 z-50 flex flex-col"
+        className="absolute left-0 right-0 bottom-0 z-50 flex min-h-0 flex-col overflow-hidden"
         style={{
           backgroundColor: "var(--pt-bg-primary)",
           borderRadius: "36px 36px 0 0",
-          padding: "12px 20px 28px",
-          maxHeight: "82%",
+          paddingTop: 12,
+          paddingRight: `calc(clamp(12px, 5vw, 20px) + ${APP_SAFE_RIGHT})`,
+          paddingBottom: `calc(20px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: `calc(clamp(12px, 5vw, 20px) + ${APP_SAFE_LEFT})`,
+          width: "100%",
+          maxWidth: 768,
+          marginInline: "auto",
+          maxHeight:
+            "min(82%, calc(100% - var(--pt-safe-top, 0px) - 8px))",
         }}
       >
         <div
@@ -2283,14 +2450,14 @@ function DatePickerSheet({
         </div>
 
         {/* Day grid */}
-        <div className="overflow-y-auto no-scrollbar">
-          <div className="grid grid-cols-7 gap-1.5">
+        <div className="min-h-0 overflow-y-auto no-scrollbar">
+          <div className="grid grid-cols-7 gap-1 min-[340px]:gap-1.5">
             {Array.from({ length: total }, (_, i) => i + 1).map((d) => (
               <button
                 key={d}
                 onClick={() => onPickDay(y, m, d)}
                 className="rounded-lg flex items-center justify-center"
-                style={{ height: 40, backgroundColor: "var(--pt-bg-card)" }}
+                style={{ minHeight: 36, height: "min(40px, 10vw)", backgroundColor: "var(--pt-bg-card)" }}
               >
                 <span className="caption" style={{ color: "var(--pt-text-primary)" }}>{d}</span>
               </button>
@@ -2419,34 +2586,55 @@ function ScrapLibraryScreen({
         onMenuOpen={onMenuOpen}
       />
 
-      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
+      <div
+        className="pt-content-column pt-scroll h-full overflow-y-auto no-scrollbar"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(24px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
         <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
           <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>7월 20일</p>
         </div>
 
-        <div className="flex flex-wrap gap-2 px-4">
+        <div
+          className="grid justify-center gap-2 px-4"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 114px))" }}
+        >
           {SCRAP_ITEMS.map((it) => (
-            <button
+            <article
               key={it.id}
-              onClick={() => onOpen(it.id)}
-              className="bg-white rounded-xl border flex flex-col items-end text-left"
-              style={{ width: 114, padding: "20px 12px", borderColor: "var(--pt-border-default)", filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.06))", gap: 10 }}
+              className="bg-white rounded-xl border flex w-full max-w-[114px] flex-col items-end text-left"
+              style={{ padding: "20px 12px", borderColor: "var(--pt-border-default)", filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.06))", gap: 10 }}
             >
-              <div className="flex flex-col items-center gap-8 w-full">
+              <button
+                onClick={() => onOpen(it.id)}
+                className="flex w-full flex-col items-center gap-8 text-left"
+              >
                 <p className="subtitle overflow-hidden w-full" style={{ color: "var(--pt-text-primary)", height: 75, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}>
                   {it.title}
                 </p>
                 <p className="caption w-full text-right" style={{ color: "var(--pt-text-secondary)" }}>{it.date}</p>
-              </div>
+              </button>
               <div className="flex gap-1.5 items-center">
-                <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleLike(it.id); }} className="flex items-center cursor-pointer">
+                <button
+                  aria-label={liked.has(it.id) ? `${it.title} 좋아요 취소` : `${it.title} 좋아요`}
+                  onClick={() => toggleLike(it.id)}
+                  className="flex items-center"
+                >
                   <HeartIcon filled={liked.has(it.id)} />
-                </span>
-                <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onShare(it.id); }} className="flex items-center cursor-pointer">
+                </button>
+                <button
+                  aria-label={`${it.title} 공유`}
+                  onClick={() => onShare(it.id)}
+                  className="flex items-center"
+                >
                   <ShareIcon />
-                </span>
+                </button>
               </div>
-            </button>
+            </article>
           ))}
         </div>
       </div>
@@ -2454,8 +2642,16 @@ function ScrapLibraryScreen({
       {/* FAB → 새 스크랩북 */}
       <button
         onClick={onNew}
+        aria-label="새 스크랩북 만들기"
         className="absolute z-30 flex items-center justify-center rounded-full"
-        style={{ bottom: 68, right: 27, width: 60, height: 60, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
+        style={{
+          bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
+          right: APP_INLINE_END,
+          width: 60,
+          height: 60,
+          backgroundColor: "var(--pt-bg-surface)",
+          boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
+        }}
       >
         <ScrapIcon color="var(--pt-brand-primary)" />
       </button>
@@ -2476,6 +2672,10 @@ const scrapUid = () => Math.random().toString(36).slice(2, 9);
 const PEN_COLORS = ["#1a2535", "#6083f5", "#496de0", "#e6f997", "#ff6b6b", "#ffa94d", "#51cf66", "#845ef7"];
 const STICKERS = [imgSticker1, imgSticker2, imgSticker3, imgSticker4, imgToriDeco];
 const ERASE_R = 18;
+// 편집·미리보기·이미지 저장이 모두 같은 좌표계를 사용한다.
+// 화면에서는 이 393×742 문서를 기기 너비에 맞춰 축소하고, 포인터 좌표는 다시 이 좌표계로 환산한다.
+const SCRAP_CANVAS_WIDTH = 393;
+const SCRAP_CANVAS_HEIGHT = 742;
 const BG_OPTIONS: { id: ScrapBg; label: string }[] = [
   { id: "none", label: "기본" },
   { id: "paper", label: "원본" },
@@ -2519,7 +2719,11 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
         ]
   );
   const [history, setHistory] = useState<ScrapAction[]>([]);
+  const [canvasScale, setCanvasScale] = useState(1);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const [, force] = useState(0);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const canvasViewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef<ScrapStroke | null>(null);
   const dragRef = useRef<{ id: string; ox: number; oy: number } | null>(null);
@@ -2529,6 +2733,44 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
   const isDraw = tool === "pencil" || tool === "highlighter";
   const activeColor = tool === "highlighter" ? hlColor : penColor;
   const selectedEl = elements.find((el) => el.id === selectedId) || null;
+
+  // 문서 좌표는 항상 393×742로 유지하고, 화면 너비에 맞춰 보이는 크기만 조절한다.
+  useEffect(() => {
+    const viewport = canvasViewportRef.current;
+    if (!viewport) return;
+    const updateScale = () => {
+      const next = Math.min(1, viewport.clientWidth / SCRAP_CANVAS_WIDTH);
+      if (next > 0) setCanvasScale(next);
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  // iOS Safari와 최신 Android Chrome은 키보드가 Layout Viewport 대신 Visual Viewport만
+  // 줄일 수 있으므로, 편집기와 보이는 화면 하단의 겹침만큼 입력 바를 올린다.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const updateKeyboardInset = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const visibleBottom = viewport.offsetTop + viewport.height;
+      const overlap = Math.max(0, editor.getBoundingClientRect().bottom - visibleBottom);
+      const next = overlap > 1 ? Math.round(overlap) : 0;
+      setKeyboardInset((current) => (current === next ? current : next));
+    };
+    updateKeyboardInset();
+    viewport.addEventListener("resize", updateKeyboardInset);
+    viewport.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("resize", updateKeyboardInset);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardInset);
+      viewport.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("resize", updateKeyboardInset);
+    };
+  }, []);
 
   // 키보드 도구 선택 시 입력창 포커스 → 모바일 키보드 올라옴
   useEffect(() => {
@@ -2540,7 +2782,10 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
 
   const pt = (e: React.PointerEvent) => {
     const r = canvasRef.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+    return {
+      x: ((e.clientX - r.left) / r.width) * SCRAP_CANVAS_WIDTH,
+      y: ((e.clientY - r.top) / r.height) * SCRAP_CANVAS_HEIGHT,
+    };
   };
   const pushHist = (a: ScrapAction) => setHistory((h) => [...h, a]);
 
@@ -2662,18 +2907,43 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
   const drawLive = drawingRef.current;
 
   return (
-    <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+    <div
+      ref={editorRef}
+      className="relative size-full overflow-hidden"
+      style={{ backgroundColor: "var(--pt-bg-primary)" }}
+    >
       {/* Header */}
-      <div className="absolute left-0 right-0 flex items-center justify-between px-4 z-30" style={{ top: 58, height: 52 }}>
-        <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
-        <div className="flex gap-2">
-          <button onClick={() => setBgOpen((v) => !v)} className="flex items-center justify-center rounded-full px-3" style={{ height: 40, backgroundColor: bgOpen ? "var(--pt-brand-secondary)" : "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+      <div
+        className="absolute left-0 right-0 flex items-center justify-between z-30"
+        style={{
+          top: APP_HEADER_TOP,
+          height: APP_HEADER_HEIGHT,
+          paddingLeft: APP_INLINE_START,
+          paddingRight: APP_INLINE_END,
+        }}
+      >
+        <GlassBtn onClick={onBack} ariaLabel="스크랩 라이브러리로 돌아가기"><BackArrowIcon /></GlassBtn>
+        <div className="flex min-w-0 gap-1.5" style={{ maxWidth: "calc(100% - 48px)" }}>
+          <button
+            onClick={() => setBgOpen((v) => !v)}
+            className="flex items-center justify-center rounded-full px-2.5 shrink-0"
+            style={{ height: 40, backgroundColor: bgOpen ? "var(--pt-brand-secondary)" : "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
+          >
             <span className="label" style={{ color: "var(--pt-brand-primary)", fontSize: 12 }}>배경</span>
           </button>
-          <button onClick={() => onShare({ elements, strokes, bg })} className="flex items-center justify-center rounded-full px-4" style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+          <button
+            aria-label="스크랩 공유"
+            onClick={() => onShare({ elements, strokes, bg })}
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{ width: 40, height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
+          >
             <ShareIcon color="var(--pt-brand-primary)" />
           </button>
-          <button onClick={onBack} className="flex items-center justify-center rounded-full px-4" style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+          <button
+            onClick={onBack}
+            className="flex items-center justify-center rounded-full px-3 shrink-0"
+            style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
+          >
             <span className="label" style={{ color: "var(--pt-brand-primary)" }}>저장</span>
           </button>
         </div>
@@ -2681,9 +2951,23 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
 
       {/* Background picker */}
       {bgOpen && (
-        <div className="absolute right-4 z-40 rounded-2xl p-2 flex gap-2" style={{ top: 116, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+        <div
+          className="absolute z-40 rounded-2xl p-2 flex justify-end gap-2"
+          style={{
+            top: `calc(${APP_CONTENT_TOP} + 6px)`,
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+          }}
+        >
           {BG_OPTIONS.map((o) => (
-            <button key={o.id} onClick={() => { setBg(o.id); setBgOpen(false); }} className="rounded-lg flex items-center justify-center overflow-hidden" style={{ width: 44, height: 44, border: bg === o.id ? "2px solid var(--pt-brand-primary)" : "1px solid var(--pt-border-default)", ...(o.id === "paper" ? {} : scrapBgStyle(o.id)) }}>
+            <button
+              key={o.id}
+              onClick={() => { setBg(o.id); setBgOpen(false); }}
+              className="rounded-lg flex-1 max-w-[44px] min-w-0 aspect-square flex items-center justify-center overflow-hidden"
+              style={{ border: bg === o.id ? "2px solid var(--pt-brand-primary)" : "1px solid var(--pt-border-default)", ...(o.id === "paper" ? {} : scrapBgStyle(o.id)) }}
+            >
               {o.id === "paper" ? <img src={imgBgPaper} alt="원본" className="w-full h-full object-cover" /> : <span className="caption" style={{ fontSize: 9, color: "var(--pt-text-secondary)" }}>{o.label}</span>}
             </button>
           ))}
@@ -2692,57 +2976,101 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
 
       {/* Canvas */}
       <div
-        ref={canvasRef}
-        className="absolute inset-0 overflow-hidden"
-        style={{ top: 110, touchAction: isDraw || tool === "eraser" ? "none" : "auto" }}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerLeave={onUp}
+        ref={canvasViewportRef}
+        className="absolute left-0 right-0 bottom-0 overflow-x-hidden overflow-y-auto no-scrollbar"
+        style={{
+          top: APP_CONTENT_TOP,
+          paddingBottom: `calc(112px + ${APP_SAFE_BOTTOM})`,
+          overscrollBehavior: "contain",
+        }}
       >
-        {/* background layer */}
-        <div className="absolute inset-0 pointer-events-none" style={scrapBgStyle(bg)} />
-        {bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ opacity: 0.4 }} />}
-
-        {/* strokes */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: "visible" }}>
-          {strokes.map((s) => (
-            <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
-          ))}
-          {drawLive && (
-            <polyline points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={drawLive.color} strokeWidth={drawLive.width} strokeLinecap="round" strokeLinejoin="round" opacity={drawLive.tool === "highlighter" ? 0.4 : 1} />
-          )}
-        </svg>
-
-        {/* elements */}
-        {elements.map((el) => (
+        <div
+          className="relative shrink-0"
+          style={{
+            width: "100%",
+            height: SCRAP_CANVAS_HEIGHT * canvasScale,
+          }}
+        >
           <div
-            key={el.id}
-            onPointerDown={(e) => elDown(e, el)}
-            className="absolute"
-            style={{ left: el.x, top: el.y, touchAction: "none", cursor: tool === "none" ? "grab" : tool === "eraser" ? "pointer" : "default", outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none", outlineOffset: 2, borderRadius: 6 }}
+            ref={canvasRef}
+            className="absolute top-0 overflow-hidden"
+            style={{
+              left: "50%",
+              marginLeft: -SCRAP_CANVAS_WIDTH / 2,
+              width: SCRAP_CANVAS_WIDTH,
+              height: SCRAP_CANVAS_HEIGHT,
+              transform: `scale(${canvasScale})`,
+              transformOrigin: "top center",
+              touchAction: isDraw || tool === "eraser" ? "none" : "auto",
+            }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            onPointerLeave={onUp}
           >
-            {el.kind === "sticker" ? (
-              <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
-            ) : (
-              <div className="rounded-3xl" style={{ maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
-                <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap" }}>{el.text}</p>
+            {/* background layer */}
+            <div className="absolute inset-0 pointer-events-none" style={scrapBgStyle(bg)} />
+            {bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ opacity: 0.4 }} />}
+
+            {/* strokes */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              viewBox={`0 0 ${SCRAP_CANVAS_WIDTH} ${SCRAP_CANVAS_HEIGHT}`}
+              preserveAspectRatio="none"
+              style={{ overflow: "visible" }}
+            >
+              {strokes.map((s) => (
+                <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
+              ))}
+              {drawLive && (
+                <polyline points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={drawLive.color} strokeWidth={drawLive.width} strokeLinecap="round" strokeLinejoin="round" opacity={drawLive.tool === "highlighter" ? 0.4 : 1} />
+              )}
+            </svg>
+
+            {/* elements */}
+            {elements.map((el) => (
+              <div
+                key={el.id}
+                onPointerDown={(e) => elDown(e, el)}
+                className="absolute"
+                style={{ left: el.x, top: el.y, touchAction: "none", cursor: tool === "none" ? "grab" : tool === "eraser" ? "pointer" : "default", outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none", outlineOffset: 2, borderRadius: 6 }}
+              >
+                {el.kind === "sticker" ? (
+                  <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
+                ) : (
+                  <div className="rounded-3xl" style={{ maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
+                    <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap" }}>{el.text}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* empty hint */}
+            {isNew && elements.length === 0 && strokes.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6 text-center">
+                <p className="body-2" style={{ color: "var(--pt-text-secondary)" }}>아래 도구로 나만의 스크랩북을 꾸며보세요</p>
               </div>
             )}
           </div>
-        ))}
-
-        {/* empty hint */}
-        {isNew && elements.length === 0 && strokes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="body-2" style={{ color: "var(--pt-text-secondary)" }}>아래 도구로 나만의 스크랩북을 꾸며보세요</p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Selected sticker control (크기 조절) */}
       {selectedEl && selectedEl.kind === "sticker" && tool === "none" && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full px-3 py-2" style={{ bottom: 108, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.18)" }}>
+        <div
+          className="absolute z-40 flex items-center gap-2 rounded-full px-3 py-2 overflow-x-auto no-scrollbar"
+          style={{
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            bottom: `calc(108px + ${APP_SAFE_BOTTOM})`,
+            width: "fit-content",
+            maxWidth: "calc(100% - 16px)",
+            marginInline: "auto",
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px 4px 16px rgba(0,0,0,0.18)",
+          }}
+        >
           <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>크기</span>
           <button onClick={() => resizeSel(-16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
           <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>{selectedEl.size}px</span>
@@ -2754,7 +3082,19 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
 
       {/* Picker (내 색상 팔레트) */}
       {isDraw && pickerOpen && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-3xl p-3 flex flex-wrap gap-2 justify-center" style={{ bottom: 168, width: 260, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+        <div
+          className="absolute z-40 rounded-3xl p-3 flex flex-wrap gap-2 justify-center"
+          style={{
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            bottom: `calc(168px + ${APP_SAFE_BOTTOM})`,
+            width: 260,
+            maxWidth: "calc(100% - 16px)",
+            marginInline: "auto",
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+          }}
+        >
           {PEN_COLORS.map((c) => (
             <button key={c} onClick={() => { tool === "highlighter" ? setHlColor(c) : setPenColor(c); setPickerOpen(false); }} className="rounded-full" style={{ width: 32, height: 32, backgroundColor: c, border: activeColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
           ))}
@@ -2762,7 +3102,19 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
       )}
       {/* Pen detail (형광펜/펜 선택 시) */}
       {isDraw && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-full px-4 py-2 flex items-center gap-3" style={{ bottom: 110, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+        <div
+          className="absolute z-40 rounded-full px-4 py-2 flex items-center gap-3"
+          style={{
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            bottom: `calc(110px + ${APP_SAFE_BOTTOM})`,
+            width: "fit-content",
+            maxWidth: "calc(100% - 16px)",
+            marginInline: "auto",
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+          }}
+        >
           {[3, 6, 10].map((w) => (
             <button key={w} onClick={() => setPenWidth(w)} className="flex items-center justify-center" style={{ width: 28, height: 28 }}>
               <span className="rounded-full" style={{ width: w + 4, height: w + 4, backgroundColor: penWidth === w && tool === "pencil" ? "var(--pt-text-primary)" : "var(--pt-text-secondary)" }} />
@@ -2774,7 +3126,19 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
       )}
       {/* Eraser mode submenu */}
       {tool === "eraser" && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-full px-2 py-2 flex items-center gap-1.5" style={{ bottom: 110, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+        <div
+          className="absolute z-40 rounded-full px-2 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+          style={{
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            bottom: `calc(110px + ${APP_SAFE_BOTTOM})`,
+            width: "fit-content",
+            maxWidth: "calc(100% - 16px)",
+            marginInline: "auto",
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+          }}
+        >
           {([["stroke", "펜 지우기"], ["area", "닿는 곳"], ["all", "전체 지우기"]] as [EraserMode, string][]).map(([m, label]) => (
             <button key={m} onClick={() => (m === "all" ? eraseAll() : setEraserMode(m))} className="rounded-full px-3 py-1.5 caption" style={{ backgroundColor: m !== "all" && eraserMode === m ? "var(--pt-brand-primary)" : "var(--pt-bg-card)", color: m === "all" ? "#ff6b6b" : eraserMode === m ? "#fff" : "var(--pt-text-secondary)" }}>
               {label}
@@ -2784,25 +3148,46 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
       )}
       {/* Text compose (키보드 선택 시) — 실제 모바일 키보드가 올라옴 */}
       {tool === "keyboard" && (
-        <div className="absolute left-0 right-0 bottom-0 z-40" style={{ backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px -4px 16px rgba(0,0,0,0.12)" }}>
-          <div className="flex items-center gap-2 px-4 pt-2">
+        <div
+          className="absolute left-0 right-0 z-40"
+          style={{
+            bottom: keyboardInset,
+            paddingBottom: keyboardInset > 0 ? 0 : APP_SAFE_BOTTOM,
+            backgroundColor: "var(--pt-bg-surface)",
+            boxShadow: "0px -4px 16px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div
+            className="flex items-center gap-2 pt-2"
+            style={{
+              paddingLeft: APP_INLINE_START,
+              paddingRight: APP_INLINE_END,
+            }}
+          >
             {["#1a2535", "#6083f5", "#ff6b6b", "#51cf66"].map((c) => (
               <button key={c} onClick={() => setTextColor(c)} className="rounded-full" style={{ width: 22, height: 22, backgroundColor: c, border: textColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff" }} />
             ))}
             <span className="caption ml-auto" style={{ color: "var(--pt-text-secondary)" }}>텍스트 서식</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-3">
+          <div
+            className="flex items-center gap-2 py-3"
+            style={{
+              paddingLeft: APP_INLINE_START,
+              paddingRight: APP_INLINE_END,
+            }}
+          >
             <input
               ref={inputRef}
               autoFocus
+              enterKeyHint="done"
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addText()}
               placeholder="메모를 입력하세요"
-              className="flex-1 rounded-full px-4 bg-white outline-none caption"
-              style={{ height: 40, border: "1.4px solid var(--pt-border-default)", color: "var(--pt-text-primary)" }}
+              className="flex-1 min-w-0 rounded-full px-4 bg-white outline-none"
+              style={{ height: 40, border: "1.4px solid var(--pt-border-default)", color: "var(--pt-text-primary)", fontFamily: "var(--pt-font-title)", fontSize: 16, lineHeight: "20px" }}
             />
-            <button onClick={addText} className="rounded-full px-4 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
+            <button onClick={addText} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
               <span className="label" style={{ color: "#fff" }}>추가</span>
             </button>
             <button onClick={() => { setText(""); setTool("none"); }} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-bg-card)" }}>
@@ -2816,9 +3201,28 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
 
       {/* Pen bar (툴바) */}
       {tool !== "keyboard" && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 rounded-full px-4 py-3 border border-white" style={{ bottom: 40, backgroundColor: "rgba(255,255,255,0.85)", backdropFilter: "blur(12px)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+        <div
+          className="absolute z-40 flex items-center justify-between gap-1 rounded-full py-3 border border-white"
+          style={{
+            left: APP_PANEL_START,
+            right: APP_PANEL_END,
+            bottom: `calc(40px + ${APP_SAFE_BOTTOM})`,
+            maxWidth: 348,
+            marginInline: "auto",
+            paddingLeft: "clamp(8px, 3vw, 16px)",
+            paddingRight: "clamp(8px, 3vw, 16px)",
+            backgroundColor: "rgba(255,255,255,0.85)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
+          }}
+        >
           {(["keyboard", "highlighter", "pencil", "eraser", "clipboard", "scissors", "undo"] as PenTool[]).map((t) => (
-            <button key={t} onClick={() => selectTool(t)} className="flex items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: tool === t ? "var(--pt-brand-secondary)" : "transparent" }}>
+            <button
+              key={t}
+              onClick={() => selectTool(t)}
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{ width: "clamp(24px, 8vw, 28px)", height: "clamp(24px, 8vw, 28px)", backgroundColor: tool === t ? "var(--pt-brand-secondary)" : "transparent" }}
+            >
               <PenToolIcon name={t} color={tool === t ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
             </button>
           ))}
@@ -2834,8 +3238,20 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
   const [tab, setTab] = useState<"clip" | "sticker" | "tape">("clip");
   const tabs: [typeof tab, string][] = [["clip", "클리핑"], ["sticker", "스티커"], ["tape", "테이프"]];
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-xl border border-white overflow-hidden" style={{ bottom: 110, width: 335, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
-      <div className="flex">
+    <div
+      className="absolute z-40 rounded-xl border border-white overflow-hidden flex flex-col"
+      style={{
+        left: APP_PANEL_START,
+        right: APP_PANEL_END,
+        bottom: `calc(110px + ${APP_SAFE_BOTTOM})`,
+        maxWidth: 335,
+        maxHeight: `calc(100% - 126px - ${APP_SAFE_BOTTOM})`,
+        marginInline: "auto",
+        backgroundColor: "var(--pt-bg-surface)",
+        boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+      }}
+    >
+      <div className="flex shrink-0">
         {tabs.map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} className="flex-1 py-3.5 caption" style={{ backgroundColor: tab === t ? "var(--pt-bg-accent-light)" : "transparent", borderBottom: tab === t ? "1px solid var(--pt-brand-primary)" : "1px solid var(--pt-border-strong)", color: tab === t ? "var(--pt-text-primary)" : "var(--pt-text-secondary)" }}>
             {label}
@@ -2843,7 +3259,7 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
         ))}
       </div>
       {tab === "clip" ? (
-        <div className="flex flex-col gap-2 p-4 max-h-[220px] overflow-y-auto no-scrollbar">
+        <div className="flex flex-col gap-2 p-4 min-h-0 max-h-[220px] overflow-y-auto no-scrollbar">
           {clippings.length === 0 ? (
             <p className="caption text-center py-6" style={{ color: "var(--pt-text-secondary)" }}>원문에서 형광펜으로 문장을 스크랩하면 여기에 담겨요</p>
           ) : (
@@ -2855,7 +3271,7 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
           )}
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2.5 p-4">
+        <div className="flex flex-wrap justify-center gap-2.5 p-4 min-h-0 max-h-[220px] overflow-y-auto no-scrollbar">
           {(tab === "sticker" ? STICKERS : [imgTape, imgTape, imgTape]).map((src, i) => (
             <button key={i} onClick={() => onPick(src)} className="rounded-lg overflow-hidden" style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)" }}>
               <img src={src} alt="스티커" className="w-full h-full object-contain pointer-events-none" />
@@ -2863,7 +3279,7 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
           ))}
         </div>
       )}
-      <button onClick={onClose} className="w-full py-2 caption" style={{ color: "var(--pt-text-secondary)" }}>닫기</button>
+      <button onClick={onClose} className="w-full py-2 caption shrink-0" style={{ color: "var(--pt-text-secondary)" }}>닫기</button>
     </div>
   );
 }
@@ -2880,13 +3296,33 @@ const SAMPLE_DOC: ScrapDoc = {
 };
 const bgHex = (bg: string | undefined) => (bg?.includes("brand-primary") ? "#6083f5" : bg?.includes("brand-secondary") ? "#e6f997" : "#e6f997");
 
-function ScrapPreview({ doc, scale }: { doc: ScrapDoc; scale: number }) {
-  const W = 393, H = 742;
+function ScrapPreview({ doc }: { doc: ScrapDoc }) {
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(300 / SCRAP_CANVAS_WIDTH);
+
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (!preview) return;
+    const updateScale = () => {
+      const next = preview.clientWidth / SCRAP_CANVAS_WIDTH;
+      if (next > 0) setScale(next);
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(preview);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div style={{ width: W * scale, height: H * scale, overflow: "hidden", position: "relative" }}>
-      <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "relative", ...scrapBgStyle(doc.bg) }}>
+    <div ref={previewRef} className="relative size-full overflow-hidden">
+      <div style={{ width: SCRAP_CANVAS_WIDTH, height: SCRAP_CANVAS_HEIGHT, transform: `scale(${scale})`, transformOrigin: "top left", position: "relative", ...scrapBgStyle(doc.bg) }}>
         {doc.bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.4 }} />}
-        <svg className="absolute inset-0 w-full h-full" style={{ overflow: "visible" }}>
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox={`0 0 ${SCRAP_CANVAS_WIDTH} ${SCRAP_CANVAS_HEIGHT}`}
+          preserveAspectRatio="none"
+          style={{ overflow: "visible" }}
+        >
           {doc.strokes.map((s) => (
             <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
           ))}
@@ -2932,7 +3368,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
     if (cur) lines.push(cur); return lines;
   };
   const saveImage = async () => {
-    const W = 393, H = 742, S = 2;
+    const W = SCRAP_CANVAS_WIDTH, H = SCRAP_CANVAS_HEIGHT, S = 2;
     const cv = document.createElement("canvas"); cv.width = W * S; cv.height = H * S;
     const ctx = cv.getContext("2d"); if (!ctx) return; ctx.scale(S, S);
     ctx.fillStyle = d.bg === "lime" ? "#F5FCE0" : d.bg === "blue" ? "#edf0fd" : "#f8f9fb"; ctx.fillRect(0, 0, W, H);
@@ -2967,32 +3403,48 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
 
   return (
     <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
-      <div className="absolute left-0 right-0 flex items-center px-4 z-10" style={{ top: 58, height: 52 }}>
-        <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
+      <div
+        className="absolute left-0 right-0 flex items-center z-10"
+        style={{
+          top: APP_HEADER_TOP,
+          height: APP_HEADER_HEIGHT,
+          paddingLeft: APP_INLINE_START,
+          paddingRight: APP_INLINE_END,
+        }}
+      >
+        <GlassBtn onClick={onBack} ariaLabel="이전 화면으로 돌아가기"><BackArrowIcon /></GlassBtn>
         <p className="title flex-1 text-center pr-10" style={{ color: "var(--pt-text-primary)" }}>공유하기</p>
       </div>
 
-      <div className="h-full overflow-y-auto no-scrollbar flex flex-col items-center" style={{ paddingTop: 124, paddingBottom: 32 }}>
+      <div
+        className="pt-scroll h-full overflow-y-auto no-scrollbar flex flex-col items-center"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
         {/* Share template card — 실제 스크랩 내용 */}
-        <div className="rounded-[24px] overflow-hidden" style={{ width: 300, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
+        <div className="rounded-[24px] overflow-hidden" style={{ width: `min(${SCRAP_CANVAS_WIDTH}px, calc(100% - 24px))`, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
           <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
             <div style={{ width: 26, height: 26 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
             <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
             <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>나의 스크랩</span>
           </div>
-          <div style={{ height: 300, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
-            <ScrapPreview doc={d} scale={300 / 393} />
+          <div style={{ aspectRatio: `${SCRAP_CANVAS_WIDTH} / ${SCRAP_CANVAS_HEIGHT}`, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
+            <ScrapPreview doc={d} />
           </div>
           <div className="px-4 py-3 flex flex-col gap-1">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
             <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>2026.07.20 · 나의 경제공부 기록</p>
             <p className="caption" style={{ color: "var(--pt-brand-primary)" }}>#직장인공부 #공스타그램 #페이퍼토리</p>
-            <p className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 10, marginTop: 2 }}>🔗 {shareUrl.replace(/^https?:\/\//, "")}</p>
+            <p className="caption break-all" style={{ color: "var(--pt-text-secondary)", fontSize: 10, marginTop: 2 }}>🔗 {shareUrl.replace(/^https?:\/\//, "")}</p>
           </div>
         </div>
 
         {/* Share targets */}
-        <div className="flex gap-2.5 mt-8">
+        <div className="flex flex-wrap justify-center gap-2.5 mt-8 px-3">
           {targets.map((t) => (
             <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1.5">
               <span className="rounded-full flex items-center justify-center" style={{ width: 48, height: 48, backgroundColor: t.bg }}>
@@ -3007,8 +3459,18 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
       </div>
 
       {toast && (
-        <div className="absolute left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2" style={{ bottom: 40, backgroundColor: "rgba(26,37,53,0.9)", maxWidth: 320 }}>
-          <span className="caption" style={{ color: "#fff" }}>{toast}</span>
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2"
+          style={{
+            bottom: `calc(24px + ${APP_SAFE_BOTTOM})`,
+            backgroundColor: "rgba(26,37,53,0.9)",
+            width: "max-content",
+            maxWidth: "calc(100% - 24px)",
+          }}
+        >
+          <span className="caption break-all" style={{ color: "#fff" }}>{toast}</span>
         </div>
       )}
 
@@ -3023,20 +3485,36 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
   return (
     <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       {/* Inbound banner */}
-      <div className="absolute left-0 right-0 z-10 flex items-center gap-2 px-5" style={{ top: 58, height: 52 }}>
+      <div
+        className="absolute left-0 right-0 z-10 flex items-center gap-2"
+        style={{
+          top: APP_HEADER_TOP,
+          height: APP_HEADER_HEIGHT,
+          paddingLeft: `calc(20px + ${APP_SAFE_LEFT})`,
+          paddingRight: `calc(20px + ${APP_SAFE_RIGHT})`,
+        }}
+      >
         <div style={{ width: 28, height: 28 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
         <span className="label" style={{ color: "var(--pt-text-primary)" }}>송토리님이 공유한 스크랩</span>
       </div>
 
-      <div className="h-full overflow-y-auto no-scrollbar flex flex-col items-center" style={{ paddingTop: 122, paddingBottom: 32 }}>
-        <div className="rounded-[24px] overflow-hidden" style={{ width: 300, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
+      <div
+        className="pt-scroll h-full overflow-y-auto no-scrollbar flex flex-col items-center"
+        style={{
+          paddingTop: APP_CONTENT_TOP,
+          paddingRight: APP_SAFE_RIGHT,
+          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingLeft: APP_SAFE_LEFT,
+        }}
+      >
+        <div className="rounded-[24px] overflow-hidden" style={{ width: `min(${SCRAP_CANVAS_WIDTH}px, calc(100% - 24px))`, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
           <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
             <div style={{ width: 26, height: 26 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
             <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
             <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>공유된 스크랩</span>
           </div>
-          <div style={{ height: 300, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
-            <ScrapPreview doc={d} scale={300 / 393} />
+          <div style={{ aspectRatio: `${SCRAP_CANVAS_WIDTH} / ${SCRAP_CANVAS_HEIGHT}`, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
+            <ScrapPreview doc={d} />
           </div>
           <div className="px-4 py-3 flex flex-col gap-1">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
@@ -3046,7 +3524,7 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
         </div>
 
         {/* Circulation CTAs */}
-        <div className="flex flex-col gap-3 mt-8 w-full px-8">
+        <div className="flex flex-col gap-3 mt-8 w-full max-w-[393px] px-8">
           <button onClick={onArticle} className="rounded-3xl py-4 flex items-center justify-center gap-2" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
             <span className="label" style={{ color: "#fff" }}>원문 기사 보기</span>
             <ArrowRightIcon color="#fff" />
@@ -3109,25 +3587,29 @@ function NavigationDrawer({
       />
       {/* Drawer panel */}
       <div
-        className="absolute top-0 left-0 bottom-0 z-50 flex flex-col overflow-hidden"
+        className="absolute top-0 bottom-0 z-50 flex flex-col overflow-hidden"
         style={{
-          width: 312,
+          left: APP_SAFE_LEFT,
+          width: `min(312px, calc(100% - ${APP_SAFE_LEFT} - 16px))`,
           backgroundColor: "var(--pt-bg-primary)",
           borderRadius: "36px 12px 12px 36px",
         }}
       >
         {/* Drawer header */}
-        <div className="flex items-center justify-between px-7 pt-14 pb-4">
+        <div
+          className="flex items-center justify-between px-5 min-[340px]:px-7 pb-4"
+          style={{ paddingTop: `calc(20px + var(--pt-safe-top, 0px))` }}
+        >
           <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
             전체 메뉴
           </p>
-          <button onClick={onClose} className="flex items-center justify-center" style={{ width: 24, height: 24 }}>
+          <button aria-label="전체 메뉴 닫기" onClick={onClose} className="flex items-center justify-center" style={{ width: 24, height: 24 }}>
             <CloseIcon />
           </button>
         </div>
 
         {/* Menu sections */}
-        <div className="flex-1 overflow-y-auto px-5 no-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 min-[340px]:px-5 no-scrollbar">
           <div className="rounded-3xl overflow-hidden pt-2" style={{ backgroundColor: "var(--pt-chip-bg)" }}>
             {menu.map((entry) =>
               entry.type === "flat" ? (
@@ -3175,8 +3657,14 @@ function NavigationDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 px-4 py-5">
-          <div className="-scale-x-100 shrink-0" style={{ width: 94, height: 93 }}>
+        <div
+          className="flex items-center gap-2 px-3 min-[340px]:px-4 pt-5"
+          style={{ paddingBottom: `calc(20px + ${APP_SAFE_BOTTOM})` }}
+        >
+          <div
+            className="-scale-x-100 shrink-0"
+            style={{ width: "clamp(72px, 30vw, 94px)", aspectRatio: "94 / 93" }}
+          >
             <img src={imgToriMenu} alt="Tori" className="w-full h-full object-contain" />
           </div>
           <div className="rounded-3xl px-3 py-2" style={{ backgroundColor: "var(--pt-brand-secondary)" }}>
@@ -3388,18 +3876,12 @@ export default function App() {
 
   return (
     <div
-      className="min-h-dvh flex items-center justify-center"
-      style={{ backgroundColor: "#D8DCE8" }}
+      className="h-full w-full overflow-hidden"
+      style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <div
-        className="relative overflow-hidden"
-        style={{
-          // 393×852은 iPhone 14 Pro 목업 기준 크기. 뷰포트가 더 작은 기기(안드로이드 등)에서
-          // 하단이 잘리지 않도록 뷰포트를 넘지 않는 선에서만 그 크기를 씀.
-          width: "min(393px, 100vw)",
-          height: "min(852px, 100dvh)",
-          boxShadow: "0 40px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)",
-        }}
+        className="relative h-full w-full overflow-hidden"
+        style={{ backgroundColor: "var(--pt-bg-primary)" }}
       >
         {renderScreen()}
         {drawerOpen && (

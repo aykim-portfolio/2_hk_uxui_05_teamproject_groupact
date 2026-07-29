@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="페이퍼토리">
+  <rect width="512" height="512" fill="#6083f5"/>
+  <path d="M132 144c0-17.7 14.3-32 32-32h184c17.7 0 32 14.3 32 32v224c0 17.7-14.3 32-32 32H164c-17.7 0-32-14.3-32-32V144Z" fill="#edf0fd"/>
+  <path d="M174 180h164v24H174zm0 54h116v24H174zm0 54h164v24H174z" fill="#6083f5"/>
+  <path d="m189 348 35 35 91-100" fill="none" stroke="#7f9f1f" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="364" cy="126" r="52" fill="#e6f997"/>
+</svg>

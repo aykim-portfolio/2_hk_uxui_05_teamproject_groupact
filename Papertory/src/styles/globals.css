@@ -6,11 +6,99 @@
   scrollbar-width: none;
 }
 
+html {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--pt-bg-primary, #f8f9fb);
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--pt-bg-primary, #f8f9fb);
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@supports (height: -webkit-fill-available) {
+  body {
+    min-height: -webkit-fill-available;
+  }
+
+  #root {
+    height: -webkit-fill-available;
+  }
+}
+
+@supports (height: 100svh) {
+  body {
+    min-height: 100svh;
+  }
+
+  #root {
+    height: 100svh;
+  }
+}
+
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+
+  #root {
+    height: 100dvh;
+  }
+}
+
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+.pt-scroll {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.pt-content-column {
+  width: 100%;
+  max-width: 768px;
+  margin-inline: auto;
+}
+
 /* Design tokens — Papertory 디자인 시스템
    SSOT는 guidelines/design.md이며, 값이 Figma 변수와 다를 경우 design.md를 따른다.
    이 값들은 원래 @make-kits/hk-papertory 스타일시트가 슬래시 이름 변수로 제공했으나,
    해당 패키지가 공개 레지스트리에 없어 의존성에서 제거되면서 여기에 직접 정의함. */
 :root {
+  --pt-safe-top: 0px;
+  --pt-safe-right: 0px;
+  --pt-safe-bottom: 0px;
+  --pt-safe-left: 0px;
+  --pt-header-top: 16px;
+  --pt-header-height: 52px;
+  --pt-header-gap: 12px;
+  --pt-header-space: 80px;
+  --pt-page-inline-start: 16px;
+  --pt-page-inline-end: 16px;
+  --pt-page-bottom: 24px;
+
   --pt-bg-primary: #f8f9fb;                    /* bg/primary — app background */
   --pt-bg-brand: #edf0fd;                      /* bg/brand — brand light bg */
   --pt-bg-accent: #e6f997;                     /* bg/accent-bold — lime/200 */
@@ -53,6 +141,25 @@
   --pt-font-body: 'Open Sans', 'Noto Sans KR', sans-serif;
 }
 
+@supports (padding-top: env(safe-area-inset-top)) {
+  :root {
+    --pt-safe-top: env(safe-area-inset-top, 0px);
+    --pt-safe-right: env(safe-area-inset-right, 0px);
+    --pt-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --pt-safe-left: env(safe-area-inset-left, 0px);
+  }
+}
+
+@supports (top: max(1px, 2px)) {
+  :root {
+    --pt-header-top: max(16px, calc(var(--pt-safe-top) + 8px));
+    --pt-header-space: calc(var(--pt-header-top) + var(--pt-header-height) + var(--pt-header-gap));
+    --pt-page-inline-start: max(16px, calc(var(--pt-safe-left) + 8px));
+    --pt-page-inline-end: max(16px, calc(var(--pt-safe-right) + 8px));
+    --pt-page-bottom: max(24px, calc(var(--pt-safe-bottom) + 8px));
+  }
+}
+
 /* Type Scale — guidelines/design.md §2
    제목·뱃지·날짜·네비게이션 = Paperlogy 계열만, 본문·긴 단락 = Open Sans.
    Body 1/2는 자간 -2%; 문단 들여쓰기(text-indent: 8px)는 사용처에서 지정함. */
@@ -84,7 +191,7 @@
   font-family: var(--pt-font-body);
   font-weight: 400;
   font-size: 20px;
-  line-height: 32px;
+  line-height: 1.6;
   letter-spacing: -0.4px; /* -2% */
 }
 
@@ -110,4 +217,53 @@
   font-size: 12px;
   line-height: normal;
   letter-spacing: 0;
+}
+
+@supports (font-size: clamp(1px, 2vw, 3px)) {
+  .headline-1 {
+    font-size: clamp(20px, 6.1vw, 24px);
+    line-height: 1.42;
+  }
+
+  .title {
+    font-size: clamp(18px, 5.1vw, 20px);
+  }
+
+  .body-1 {
+    font-size: clamp(18px, 5.1vw, 20px);
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    /* iOS Safari의 16px 미만 입력 요소 자동 확대 방지 */
+    font-size: 16px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --pt-header-top: 8px;
+    --pt-header-height: 44px;
+    --pt-header-gap: 8px;
+  }
+
+  @supports (top: max(1px, 2px)) {
+    :root {
+      --pt-header-top: max(8px, calc(var(--pt-safe-top) + 4px));
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

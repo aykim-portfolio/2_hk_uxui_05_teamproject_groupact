@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">페이퍼토리</title>
+  <rect width="512" height="512" rx="112" fill="#6083f5"/>
+  <path d="M142 118h228a36 36 0 0 1 36 36v204a36 36 0 0 1-36 36H142a36 36 0 0 1-36-36V154a36 36 0 0 1 36-36Z" fill="#f8f9fb"/>
+  <path d="M158 184h196M158 242h196M158 300h120" fill="none" stroke="#6083f5" stroke-linecap="round" stroke-width="28"/>
+  <circle cx="348" cy="326" r="54" fill="#e6f997"/>
+  <path d="M328 327l15 15 30-34" fill="none" stroke="#4664cb" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+</svg>
