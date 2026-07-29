@@ -226,12 +226,21 @@ function BookmarkIcon({ colorVar = "var(--pt-brand-primary)" }: { colorVar?: str
   );
 }
 
-function DropdownTab({ label, onClick }: { label: string; onClick?: () => void }) {
+function DropdownTab({
+  label,
+  onClick,
+  showChevron = true,
+}: {
+  label: string;
+  onClick?: () => void;
+  showChevron?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
       className="relative flex gap-2 items-center justify-center rounded-3xl"
-      style={{ height: 40, paddingLeft: 24, paddingRight: 20 }}
+      // chevron이 없으면 좌우 여백을 같게 맞춰 라벨이 가운데 오도록 함
+      style={{ height: 40, paddingLeft: 24, paddingRight: showChevron ? 20 : 24 }}
     >
       <div
         className="absolute inset-0 rounded-3xl pointer-events-none"
@@ -250,7 +259,7 @@ function DropdownTab({ label, onClick }: { label: string; onClick?: () => void }
       <span className="title relative whitespace-nowrap" style={{ color: "var(--pt-text-primary)" }}>
         {label}
       </span>
-      <ChevronDownIcon />
+      {showChevron && <ChevronDownIcon />}
       <div
         className="absolute inset-0 pointer-events-none rounded-3xl"
         style={{
@@ -275,6 +284,7 @@ function AppHeader({
   dropdownLabel = "Today",
   showBack = false,
   showDropdown = true,
+  showDropdownChevron = true,
   showAvatar = true,
   onDropdownClick,
   onBackClick,
@@ -283,6 +293,7 @@ function AppHeader({
   dropdownLabel?: string;
   showBack?: boolean;
   showDropdown?: boolean;
+  showDropdownChevron?: boolean;
   showAvatar?: boolean;
   onDropdownClick?: () => void;
   onBackClick?: () => void;
@@ -302,7 +313,11 @@ function AppHeader({
       </GlassBtn>
 
       {showDropdown ? (
-        <DropdownTab label={dropdownLabel} onClick={onDropdownClick} />
+        <DropdownTab
+          label={dropdownLabel}
+          onClick={onDropdownClick}
+          showChevron={showDropdownChevron}
+        />
       ) : (
         <div style={{ width: 40 }} />
       )}
@@ -1397,15 +1412,19 @@ function MissionScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showBack showDropdown={false} onBackClick={onBack} showAvatar={false} />
+      <AppHeader
+        dropdownLabel="도토리 줍기"
+        showBack
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        onBackClick={onBack}
+        showAvatar={false}
+      />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
-        {/* 도토리 줍기 section */}
+        {/* 도토리 줍기 section — 페이지명은 헤더 라벨에 있으므로 본문에서는 생략 */}
         <div className="flex flex-col gap-4 px-5 pt-6">
-          <p className="title" style={{ color: "var(--pt-text-primary)" }}>
-            도토리 줍기
-          </p>
-
           {/* Collected acorns */}
           <div
             className="rounded-xl p-4 flex items-center justify-between"
@@ -1533,6 +1552,7 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
       <AppHeader
         dropdownLabel="상점"
         showDropdown
+        showDropdownChevron={false}
         onDropdownClick={() => {}}
         onMenuOpen={onMenuOpen}
         showAvatar={false}
@@ -1708,7 +1728,14 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
+      <AppHeader
+        dropdownLabel="마이페이지"
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+        onMenuOpen={onMenuOpen}
+      />
 
       <div
         className="h-full overflow-y-auto no-scrollbar"
@@ -1890,7 +1917,14 @@ function CalendarScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
+      <AppHeader
+        dropdownLabel="읽기 기록 달력"
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+        onMenuOpen={onMenuOpen}
+      />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
         <div className="px-4 flex flex-col gap-6">
@@ -2291,7 +2325,14 @@ function ScrapLibraryScreen({
 
   return (
     <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
-      <AppHeader dropdownLabel="스크랩 라이브러리" showDropdown onDropdownClick={() => {}} showAvatar onMenuOpen={onMenuOpen} />
+      <AppHeader
+        dropdownLabel="스크랩 라이브러리"
+        showDropdown
+        showDropdownChevron={false}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+        onMenuOpen={onMenuOpen}
+      />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
         <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
