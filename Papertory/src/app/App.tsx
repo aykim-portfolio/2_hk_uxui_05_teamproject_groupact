@@ -34,7 +34,8 @@ type Screen =
   | "reading-detail"
   | "scrap-library"
   | "scrapbook"
-  | "scrap-share";
+  | "scrap-share"
+  | "shared-scrap";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
 type Category = string;
@@ -2870,10 +2871,19 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
   const [toast, setToast] = useState("");
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1800); };
 
+  // 공유 딥링크 — 이 링크를 누르면 앱의 '공유 스크랩 뷰'로 돌아와 순환됨
+  const [shareId] = useState(() => Math.random().toString(36).slice(2, 8));
+  const shareUrl = `${window.location.origin}${window.location.pathname}#/s/${shareId}`;
+  const shareText = "페이퍼토리에서 내 경제공부 스크랩을 공유했어요 #직장인공부 #공스타그램 #페이퍼토리";
+
   const copyLink = async () => {
-    const url = "https://papertory.app/s/" + Math.random().toString(36).slice(2, 8);
-    try { await navigator.clipboard.writeText(url); showToast("링크를 복사했어요 " + url); }
-    catch { showToast("링크: " + url); }
+    try { await navigator.clipboard.writeText(shareUrl); showToast("링크를 복사했어요"); }
+    catch { showToast(shareUrl); }
+  };
+  const openShare = (intentUrl: string, name: string) => {
+    const w = window.open(intentUrl, "_blank", "noopener");
+    if (!w) { navigator.clipboard?.writeText(shareUrl).catch(() => {}); showToast(`${name} 공유 링크를 복사했어요`); }
+    else showToast(`${name}(으)로 공유해요`);
   };
 
   const loadImg = (src: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
@@ -2902,12 +2912,16 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
         ctx.fillStyle = el.color || "#1a1a1a"; lines.forEach((l, i) => ctx.fillText(l, x + pad, y + pad + 12 + i * 18));
       }
     }
+    // 딥링크 URL을 이미지 하단에 찍어, 이미지를 본 사람도 앱으로 돌아올 수 있게 함
+    ctx.globalAlpha = 0.9; ctx.fillStyle = "#6083f5"; ctx.font = "600 12px sans-serif";
+    ctx.fillText("📌 " + shareUrl.replace(/^https?:\/\//, ""), 16, H - 20); ctx.globalAlpha = 1;
     cv.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "papertory-scrap.png"; a.click(); URL.revokeObjectURL(a.href); showToast("이미지를 저장했어요"); });
   };
 
   const targets = [
-    { label: "카카오", bg: "#FEE500", fg: "#3C1E1E", onClick: () => showToast("카카오 공유는 준비 중이에요") },
-    { label: "인스타", bg: "#E1306C", fg: "#ffffff", onClick: () => showToast("인스타 공유는 준비 중이에요") },
+    { label: "카카오", bg: "#FEE500", fg: "#3C1E1E", onClick: () => { navigator.clipboard?.writeText(shareUrl).catch(() => {}); showToast("카카오 공유 링크를 복사했어요"); } },
+    { label: "X", bg: "#000000", fg: "#ffffff", onClick: () => openShare(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "X") },
+    { label: "스레드", bg: "#101010", fg: "#ffffff", onClick: () => openShare(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "스레드") },
     { label: "링크복사", bg: "var(--pt-bg-card)", fg: "var(--pt-text-primary)", onClick: copyLink },
     { label: "이미지저장", bg: "var(--pt-bg-card)", fg: "var(--pt-text-primary)", onClick: saveImage },
   ];
@@ -2934,21 +2948,22 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
             <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
             <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>2026.07.20 · 나의 경제공부 기록</p>
             <p className="caption" style={{ color: "var(--pt-brand-primary)" }}>#직장인공부 #공스타그램 #페이퍼토리</p>
+            <p className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 10, marginTop: 2 }}>🔗 {shareUrl.replace(/^https?:\/\//, "")}</p>
           </div>
         </div>
 
         {/* Share targets */}
-        <div className="flex gap-3 mt-8">
+        <div className="flex gap-2.5 mt-8">
           {targets.map((t) => (
             <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1.5">
-              <span className="rounded-full flex items-center justify-center" style={{ width: 56, height: 56, backgroundColor: t.bg }}>
+              <span className="rounded-full flex items-center justify-center" style={{ width: 48, height: 48, backgroundColor: t.bg }}>
                 <span className="caption" style={{ color: t.fg, fontSize: 10 }}>{t.label}</span>
               </span>
             </button>
           ))}
         </div>
         <p className="caption mt-4 px-8 text-center" style={{ color: "var(--pt-text-secondary)" }}>
-          내 스크랩이 그대로 공유 카드로 만들어져요
+          링크를 받은 사람이 누르면 이 스크랩으로 돌아와요 🔁
         </p>
       </div>
 
@@ -2957,6 +2972,54 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
           <span className="caption" style={{ color: "#fff" }}>{toast}</span>
         </div>
       )}
+
+      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+    </div>
+  );
+}
+
+// ── Shared Scrap View (딥링크 착지 — 공유로 들어온 화면) ──
+function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onArticle: () => void; onFeed: () => void }) {
+  const d = doc && (doc.elements.length || doc.strokes.length) ? doc : SAMPLE_DOC;
+  return (
+    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+      {/* Inbound banner */}
+      <div className="absolute left-0 right-0 z-10 flex items-center gap-2 px-5" style={{ top: 58, height: 52 }}>
+        <div style={{ width: 28, height: 28 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
+        <span className="label" style={{ color: "var(--pt-text-primary)" }}>송토리님이 공유한 스크랩</span>
+      </div>
+
+      <div className="h-full overflow-y-auto no-scrollbar flex flex-col items-center" style={{ paddingTop: 122, paddingBottom: 32 }}>
+        <div className="rounded-[24px] overflow-hidden" style={{ width: 300, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
+          <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
+            <div style={{ width: 26, height: 26 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
+            <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
+            <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>공유된 스크랩</span>
+          </div>
+          <div style={{ height: 300, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
+            <ScrapPreview doc={d} scale={300 / 393} />
+          </div>
+          <div className="px-4 py-3 flex flex-col gap-1">
+            <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
+            <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>2026.07.20 · 송토리님의 경제공부 기록</p>
+            <p className="caption" style={{ color: "var(--pt-brand-primary)" }}>#직장인공부 #공스타그램 #페이퍼토리</p>
+          </div>
+        </div>
+
+        {/* Circulation CTAs */}
+        <div className="flex flex-col gap-3 mt-8 w-full px-8">
+          <button onClick={onArticle} className="rounded-3xl py-4 flex items-center justify-center gap-2" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
+            <span className="label" style={{ color: "#fff" }}>원문 기사 보기</span>
+            <ArrowRightIcon color="#fff" />
+          </button>
+          <button onClick={onFeed} className="rounded-3xl py-4 flex items-center justify-center" style={{ backgroundColor: "var(--pt-brand-secondary)" }}>
+            <span className="label" style={{ color: "var(--pt-brand-primary)" }}>페이퍼토리 둘러보기</span>
+          </button>
+        </div>
+        <p className="caption mt-4 text-center px-8" style={{ color: "var(--pt-text-secondary)" }}>
+          친구의 스크랩을 보고 원문·피드로 이어서 둘러보세요
+        </p>
+      </div>
 
       <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
@@ -3124,6 +3187,11 @@ export default function App() {
   const toggleClip = (t: string, on: boolean) =>
     setClippings((prev) => (on ? (prev.includes(t) ? prev : [...prev, t]) : prev.filter((x) => x !== t)));
 
+  // 딥링크 진입: 공유 링크(#/s/{id})로 들어오면 스플래시를 건너뛰고 '공유 스크랩 뷰'로 순환 진입
+  useEffect(() => {
+    if (/^#\/s\//.test(window.location.hash)) setScreen("shared-scrap");
+  }, []);
+
   const isJuly = calYear === 2026 && calMonth === 7;
   const monthReads: Record<number, number> = isJuly ? readsByDate : {};
   const markTodayRead = () =>
@@ -3267,6 +3335,15 @@ export default function App() {
 
       case "scrap-share":
         return <ScrapShareScreen doc={scrapSnapshot} onBack={() => goTo(prevScreen)} />;
+
+      case "shared-scrap":
+        return (
+          <SharedScrapView
+            doc={scrapSnapshot}
+            onArticle={() => { setArticleTab("original"); goTo("article"); }}
+            onFeed={() => goTo("landing")}
+          />
+        );
     }
   };
 
