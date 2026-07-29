@@ -3377,14 +3377,16 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center"
+      className="min-h-dvh flex items-center justify-center"
       style={{ backgroundColor: "#D8DCE8" }}
     >
       <div
         className="relative overflow-hidden rounded-[44px]"
         style={{
-          width: 393,
-          height: 852,
+          // 393×852은 iPhone 14 Pro 목업 기준 크기. 뷰포트가 더 작은 기기(안드로이드 등)에서
+          // 하단이 잘리지 않도록 뷰포트를 넘지 않는 선에서만 그 크기를 씀.
+          width: "min(393px, 100vw)",
+          height: "min(852px, 100dvh)",
           boxShadow: "0 40px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)",
         }}
       >
