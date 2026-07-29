@@ -20,6 +20,7 @@ import imgSticker3 from "@/imports/스크랩북/sticker-3.png";
 import imgSticker4 from "@/imports/스크랩북/sticker-4.png";
 import imgToriDeco from "@/imports/스크랩북/tori-deco.png";
 import imgBgPaper from "@/imports/스크랩북/bg-paper.png";
+import articlesData from "./articles.json";
 
 type Screen =
   | "start"
