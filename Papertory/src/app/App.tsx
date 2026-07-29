@@ -836,10 +836,8 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
 const FRAME_HEIGHT = 852;
 
 function CategoryScreen({
-  onBack,
   onCategorySelect,
 }: {
-  onBack: () => void;
   onCategorySelect: (cat: Category) => void;
 }) {
   const cards: { label: Category; subtitle: string; image: string }[] = CATEGORY_PAGE_DB.map(
@@ -951,13 +949,6 @@ function CategoryScreen({
           "linear-gradient(162.946deg, #ffffff 2.5%, var(--pt-bg-primary) 50%, #EFF1F5 103%)",
       }}
     >
-      <AppHeader
-        dropdownLabel="카테고리"
-        showBack
-        onBackClick={onBack}
-        onDropdownClick={() => {}}
-        showAvatar={false}
-      />
       <div ref={containerRef} className="absolute inset-0 overflow-y-auto">
         <div ref={contentRef} style={{ height: FRAME_HEIGHT + N * 220 }}>
           <div className="relative" style={{ position: "sticky", top: 0, height: FRAME_HEIGHT }}>
@@ -1398,31 +1389,6 @@ function MissionScreen({
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Quiz card */}
-        <div
-          className="mx-5 mt-4 rounded-xl p-4 flex items-center justify-between"
-          style={{ backgroundColor: "var(--pt-bg-accent-light)" }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="shrink-0" style={{ width: 40, height: 40, position: "relative" }}>
-              <img
-                src={imgToriAcorn}
-                alt="토리"
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-              />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <p className="label" style={{ color: "var(--pt-text-primary)" }}>
-                오늘의 경제 퀴즈
-              </p>
-              <p className="caption" style={{ color: "var(--pt-text-dark-green)" }}>
-                완독한 기사에서만 출제할게요!
-              </p>
-            </div>
-          </div>
-          <ArrowRightIcon color="var(--pt-text-dark-green)" />
         </div>
 
         {/* CTA: Shop button */}
@@ -2306,9 +2272,6 @@ export default function App() {
       case "category":
         return (
           <CategoryScreen
-            onBack={() =>
-              goTo(prevScreen === "category-landing" ? "category-landing" : "landing")
-            }
             onCategorySelect={(cat) => {
               setCategory(cat);
               goTo("category-landing");
