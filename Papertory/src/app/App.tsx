@@ -3846,9 +3846,11 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
 
 // ── Navigation Drawer ──
 function NavigationDrawer({
+  currentScreen,
   onClose,
   onNavigate,
 }: {
+  currentScreen: Screen;
   onClose: () => void;
   onNavigate: (screen: Screen) => void;
 }) {
@@ -3916,7 +3918,11 @@ function NavigationDrawer({
               entry.type === "flat" ? (
                 <button
                   key={entry.label}
-                  className="w-full text-left flex items-center px-5 py-3.5"
+                  className="w-full text-left flex items-center px-5 py-3.5 rounded-3xl"
+                  style={{
+                    backgroundColor:
+                      entry.screen === currentScreen ? "var(--pt-bg-surface)" : "transparent",
+                  }}
                   onClick={() => entry.screen && onNavigate(entry.screen)}
                 >
                   <span className="subtitle" style={{ color: "var(--pt-brand-primary)" }}>
@@ -3939,18 +3945,26 @@ function NavigationDrawer({
                       />
                     </svg>
                   </div>
-                  {entry.items.map((item) => (
-                    <button
-                      key={item.label}
-                      className="w-full text-left flex items-center h-[50px] border-b"
-                      style={{ paddingLeft: 32, paddingRight: 32, borderColor: "var(--pt-border-menu)" }}
-                      onClick={() => item.screen && onNavigate(item.screen)}
-                    >
-                      <span className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 15 }}>
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
+                  {entry.items.map((item) => {
+                    const isActive = item.screen === currentScreen;
+                    return (
+                      <button
+                        key={item.label}
+                        className={`w-full text-left flex items-center h-[50px] ${isActive ? "rounded-2xl" : "border-b"}`}
+                        style={{
+                          paddingLeft: 32,
+                          paddingRight: 32,
+                          borderColor: "var(--pt-border-menu)",
+                          backgroundColor: isActive ? "var(--pt-bg-surface)" : "transparent",
+                        }}
+                        onClick={() => item.screen && onNavigate(item.screen)}
+                      >
+                        <span className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 15 }}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )
             )}
@@ -4249,6 +4263,7 @@ export default function App() {
         <PwaInstallControl visible={screen !== "start"} />
         {drawerOpen && (
           <NavigationDrawer
+            currentScreen={screen}
             onClose={() => setDrawerOpen(false)}
             onNavigate={handleDrawerNavigate}
           />
