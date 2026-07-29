@@ -473,7 +473,7 @@ function DropdownTab({
 
 function ToriAvatar({ onClick }: { onClick?: () => void }) {
   return (
-    <GlassBtn onClick={onClick} ariaLabel="스크랩 라이브러리 열기">
+    <GlassBtn onClick={onClick} ariaLabel="새 스크랩북 꾸미기">
       <ScrapIcon color="var(--pt-text-primary)" />
     </GlassBtn>
   );
@@ -489,6 +489,7 @@ function AppHeader({
   onDropdownClick,
   onBackClick,
   onMenuOpen,
+  onAvatarClick,
 }: {
   dropdownLabel?: string;
   showBack?: boolean;
@@ -498,6 +499,7 @@ function AppHeader({
   onDropdownClick?: () => void;
   onBackClick?: () => void;
   onMenuOpen?: () => void;
+  onAvatarClick?: () => void;
 }) {
   return (
     <div
@@ -529,7 +531,7 @@ function AppHeader({
         )}
       </div>
 
-      {showAvatar ? <ToriAvatar /> : <div style={{ width: 40 }} />}
+      {showAvatar ? <ToriAvatar onClick={onAvatarClick} /> : <div style={{ width: 40 }} />}
     </div>
   );
 }
@@ -1650,6 +1652,7 @@ function ArticleScreen({
   onBack,
   onComplete,
   onToggleClip,
+  onOpenScrapbook,
 }: {
   article: NewsItem;
   activeTab: ArticleTab;
@@ -1657,6 +1660,7 @@ function ArticleScreen({
   onBack: () => void;
   onComplete?: () => void;
   onToggleClip?: (text: string, on: boolean) => void;
+  onOpenScrapbook?: () => void;
 }) {
   const [showToolbar, setShowToolbar] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -1723,7 +1727,12 @@ function ArticleScreen({
       className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showBack showDropdown={false} onBackClick={onBack} />
+      <AppHeader
+        showBack
+        showDropdown={false}
+        onBackClick={onBack}
+        onAvatarClick={onOpenScrapbook}
+      />
       <div
         ref={scrollRef}
         className="pt-content-column pt-scroll h-full overflow-y-auto"
@@ -4070,6 +4079,7 @@ export default function App() {
             onBack={() => goTo(prevScreen)}
             onComplete={markTodayRead}
             onToggleClip={toggleClip}
+            onOpenScrapbook={() => { setScrapNew(true); goTo("scrapbook"); }}
           />
         );
 
