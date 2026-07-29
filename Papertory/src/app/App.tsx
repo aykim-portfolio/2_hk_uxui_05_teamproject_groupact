@@ -701,12 +701,12 @@ function CategoryScreen({
     gsap.registerPlugin(ScrollTrigger);
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // 카드(208×298)에 맞춘 대각선 캐스케이드 상수
-    const STEP_X = -60;
+    // 세로 방향 고정 캐스케이드 상수(기존 디자인과 동일하게 좌우 이동 없음)
     const STEP_Y = 132;
     const PUSH = 46;
     const DISTANCE_PER_CARD = 220;
     const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
+    const DIM_PER_STEP = 0.35; // 뒤에 가려진 카드일수록 투명도·명도를 낮추는 정도
 
     const els = Array.from(content.querySelectorAll<HTMLElement>(".cascade-card"));
 
@@ -730,15 +730,20 @@ function CategoryScreen({
         const falloff = Math.max(0, 1 - dist / 1.8);
         // Math.sign(pos)는 pos가 0을 지날 때 카드가 튀는 원인이라 tanh로 매끄럽게 처리
         const push = Math.tanh(pos * 1.7) * PUSH * falloff;
+        // 화면 밖으로 멀어질수록 서서히 사라지는 전체 페이드
         const t = gsap.utils.clamp(0, 1, dist / FADE_RANGE);
-        const opacity = 1 - t * t;
+        const farFade = 1 - t * t;
+        // 바로 뒤에 가려진 카드부터 곧바로 살짝 어둡고 흐리게 — 카드 한 장 거리(dist=1)면 최대로 적용
+        const depthT = gsap.utils.clamp(0, 1, dist);
+        const dim = 1 - depthT * DIM_PER_STEP;
         gsap.set(el, {
           xPercent: -50,
           yPercent: -50,
-          x: pos * STEP_X + push * (STEP_X / STEP_Y),
+          x: 0,
           y: pos * STEP_Y + push,
           scale: 0.94 + near * 0.14,
-          opacity,
+          opacity: dim * farFade,
+          filter: `brightness(${dim})`,
           zIndex: Math.round((1 - dist) * 1000),
         });
       });
