@@ -554,95 +554,28 @@ const NEWS_IMG = {
     "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
 };
 
-const ALL_NEWS: NewsItem[] = [
-  {
-    id: "anthropic-ipo",
-    category: "산업",
-    headline: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입",
-    image: NEWS_IMG.ipo,
-    byline: "한경 산업부 기자 · 2026.07.20 09:12",
-    summary:
-      "앤트로픽이 '신뢰할 수 있는 AI' 기업 이미지를 앞세워 기업공개(IPO)를 추진한다. 주요 투자자와의 로드쇼 미팅을 10월로 잡은 것으로 전해지며, 상장 시 AI 기업 밸류에이션의 기준점이 될 전망이다.",
-  },
-  {
-    id: "lnf-lfp",
-    category: "산업",
-    headline: "엘앤에프, 美 코어셀 손잡고 모빌리티·방산까지 LFP 영토 확장",
-    image: NEWS_IMG.industry,
-    byline: "한경 산업부 기자 · 2026.07.21 08:40",
-    summary:
-      "엘앤에프가 미국 코어셀과 손잡고 LFP 배터리 소재 공급망을 넓힌다. 전기차 중심이던 적용처를 도심항공모빌리티와 방산 분야까지 확대해, 중국 업체가 주도해온 LFP 시장의 판도 변화를 노린다는 구상이다.",
-  },
-  {
-    id: "battery-localization",
-    category: "산업",
-    headline: "2차전지 소재 국산화 속도",
-    image: NEWS_IMG.industry,
-    byline: "한경 산업부 기자 · 2026.07.21 07:55",
-    summary:
-      "국내 배터리 3사가 양극재·분리막 등 핵심 소재의 국산화 비중을 끌어올리고 있다. 해외 의존도를 낮춰 공급망 리스크를 줄이고, 보조금 요건을 충족해 북미 시장 경쟁력을 확보하려는 포석이다.",
-  },
-  {
-    id: "assembly-budget",
-    category: "정치",
-    headline: "국회, 추경안 본회의 처리 임박",
-    image: NEWS_IMG.opinion,
-    byline: "한경 정치부 기자 · 2026.07.21 11:20",
-    summary:
-      "추가경정예산안이 본회의 처리를 앞두고 막판 조율에 들어갔다. 여야는 총액 규모에는 접근했지만 세부 항목을 두고 이견을 좁히지 못해, 처리 시점이 회기 막바지로 밀릴 가능성도 거론된다.",
-  },
-  {
-    id: "bok-rate-freeze",
-    category: "경제",
-    headline: "한국은행 기준금리 연 3.0% 동결 결정",
-    image: NEWS_IMG.economy,
-    byline: "한경 경제부 기자 · 2026.07.20 14:05",
-    summary:
-      "한국은행 금융통화위원회가 기준금리를 연 3.0%로 동결했다. 물가 둔화 흐름은 이어지고 있지만 가계부채와 환율 변동성을 감안해 인하 시점을 늦춘 것으로 풀이된다.",
-  },
-  {
-    id: "kospi-3200",
-    category: "코리안마켓",
-    headline: "코스피 3,200선 돌파, 외국인 순매수",
-    image: NEWS_IMG.koreaMarket,
-    byline: "한경 증권부 기자 · 2026.07.21 15:40",
-    summary:
-      "코스피가 외국인 순매수에 힘입어 3,200선을 넘어섰다. 반도체와 2차전지 대형주가 지수를 끌어올렸고, 증권가는 실적 개선세가 확인되면 추가 상승 여력이 있다고 본다.",
-  },
-  {
-    id: "seoul-apt-8weeks",
-    category: "부동산",
-    headline: "서울 아파트 매매가 8주 연속 상승",
-    image: NEWS_IMG.realEstate,
-    byline: "한경 건설부동산부 기자 · 2026.07.21 10:15",
-    summary:
-      "서울 아파트 매매가격이 8주 연속 올랐다. 강남권 재건축 단지가 상승을 주도했고, 전세 물량 부족이 매매 수요로 옮겨가면서 상승 폭이 확대되는 모습이다.",
-  },
-];
+const ALL_NEWS: NewsItem[] = articlesData.articles
+  .filter(a => a.category === 'Today')
+  .map(a => ({
+    id: a.id,
+    category: a.category,
+    headline: a.headline,
+    image: a.imageUrl || "",
+    byline: `${a.author} · ${a.date}`,
+    summary: a.ai.summary
+  }));
 
-const INDUSTRY_NEWS: NewsItem[] = [
-  ALL_NEWS[0],
-  ALL_NEWS[1],
-  ALL_NEWS[2],
-  {
-    id: "samsung-hbm4",
-    category: "산업",
-    headline: "삼성전자, HBM4 양산 속도 낸다",
-    image: NEWS_IMG.industry,
-    byline: "한경 산업부 기자 · 2026.07.20 16:30",
-    summary:
-      "삼성전자가 차세대 고대역폭메모리 HBM4 양산 일정을 앞당긴다. AI 서버 수요가 이어지는 가운데 주요 고객사 품질 검증을 마무리하고 하반기 공급 확대에 나선다는 계획이다.",
-  },
-  {
-    id: "hyundai-robot",
-    category: "산업",
-    headline: "현대차 울산공장, 로봇 공정 전환 완료",
-    image: NEWS_IMG.industry,
-    byline: "한경 산업부 기자 · 2026.07.19 09:00",
-    summary:
-      "현대차 울산공장이 주요 조립 라인의 로봇 공정 전환을 마쳤다. 생산 유연성을 높여 다품종 소량 생산에 대응하고, 전기차 전용 모델 증산에도 활용한다는 방침이다.",
-  },
-];
+const INDUSTRY_NEWS: NewsItem[] = articlesData.articles
+  .filter(a => a.category !== 'Today')
+  .slice(0, 20)
+  .map(a => ({
+    id: a.id,
+    category: a.category,
+    headline: a.headline,
+    image: a.imageUrl || "",
+    byline: `${a.author} · ${a.date}`,
+    summary: a.ai.summary
+  }));
 
 // ── Landing Screen ──
 function LandingScreen({
