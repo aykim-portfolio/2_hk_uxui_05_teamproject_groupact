@@ -994,13 +994,13 @@ function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggl
   ];
   const [hl, setHl] = useState<Set<number>>(new Set());
   const toggle = (i: number) => {
+    const on = !hl.has(i);
     setHl((prev) => {
       const next = new Set(prev);
-      const on = !next.has(i);
       on ? next.add(i) : next.delete(i);
-      onToggleClip?.(paras[i], on);
       return next;
     });
+    onToggleClip?.(paras[i], on); // 업데이터 밖에서 부모 상태 갱신 (setState-in-render 방지)
   };
 
   return (
