@@ -2,11 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "prototypes-static",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "serve", "."],
-      "port": 8730,
-      "autoPort": true
+      "name": "papertory",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": [
+        "C:\\Users\\HKEDU\\Desktop\\2_hk_uxui_05_teamproject_groupact-main\\Papertory\\node_modules\\vite\\bin\\vite.js",
+        "C:\\Users\\HKEDU\\Desktop\\2_hk_uxui_05_teamproject_groupact-main\\Papertory",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
     }
   ]
 }
