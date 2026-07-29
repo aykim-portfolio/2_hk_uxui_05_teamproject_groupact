@@ -1129,7 +1129,15 @@ function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggl
 }
 
 // ── AI Tab Content ──
-function AiContent() {
+// 내지갑 번역기 목업 — 기사 수치·용어를 "내 자산 관점"으로 풀어주는 카드(PRD P1).
+// 보유 종목/해설은 추후 기사별 데이터로 교체 예정이라 상수로 분리해 둠.
+const WALLET_TRANSLATION = {
+  holding: "아마존·구글 주식 보유중 - 12주",
+  body:
+    "아마존과 구글은 앤트로픽의 핵심 주주에요.\n앤트로픽이 거대한 기업가치로 상장에 성공하면, 빅테크 기업의 지분 가치 재평가로 인해 주가가 동반 상승하는 수혜를 누릴 가능성이 높아요.",
+};
+
+function AiContent({ article }: { article: NewsItem }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState<{ from: "tori" | "user"; text: string }[]>([
     { from: "tori", text: "안녕! 나는 토리야. 궁금한 내용 쉽게 알려줄게!" },
@@ -1152,6 +1160,44 @@ function AiContent() {
 
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
+      {/* 내지갑 번역기 */}
+      <div
+        className="rounded-3xl px-4 py-4 flex flex-col gap-3"
+        style={{
+          backgroundColor: "var(--pt-bg-accent-light)",
+          filter: "drop-shadow(2px 2px 4px var(--pt-shadow-card))",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="shrink-0" style={{ width: 28, height: 28, position: "relative" }}>
+            <img
+              src={imgToriChat}
+              alt="토리"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            />
+          </div>
+          <span className="label" style={{ color: "var(--pt-text-primary)" }}>
+            내지갑 번역기
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="title" style={{ color: "var(--pt-text-primary)" }}>
+            {WALLET_TRANSLATION.holding}
+          </p>
+          <p className="label" style={{ color: "var(--pt-brand-primary)" }}>
+            {article.headline}
+          </p>
+        </div>
+
+        <p
+          className="caption leading-5 whitespace-pre-line"
+          style={{ color: "var(--pt-text-primary)" }}
+        >
+          {WALLET_TRANSLATION.body}
+        </p>
+      </div>
+
       {/* Perspectives card */}
       <div
         className="rounded-3xl px-4 py-3 flex flex-col gap-8"
@@ -1375,7 +1421,7 @@ function ArticleScreen({
       <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }} onScroll={handleScroll}>
         <TabSlider active={activeTab} onChange={onTabChange} />
         {activeTab === "original" && <OriginalContent article={article} onToggleClip={onToggleClip} />}
-        {activeTab === "ai" && <AiContent />}
+        {activeTab === "ai" && <AiContent article={article} />}
         {activeTab === "easy" && <EasyContent />}
       </div>
       <FAB
