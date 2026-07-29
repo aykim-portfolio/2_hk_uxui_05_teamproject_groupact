@@ -468,27 +468,29 @@ function FAB({
 }
 
 // ── Hero Card ──
-function HeroCard({ category, onClick }: { category: Category; onClick?: () => void }) {
+function HeroCard({ article, onClick }: { article: NewsItem; onClick?: () => void }) {
   return (
     <div className="flex flex-col gap-5 px-5 w-full" style={{ paddingTop: 120, paddingBottom: 16 }}>
-      {/* 헤드라인·썸네일·본문 클릭 시 기사 원문으로 이동 */}
+      {/* 헤드라인·썸네일·요약 클릭 시 기사 원문으로 이동 */}
       <button onClick={onClick} className="flex flex-col gap-5 w-full text-left">
         <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
-          <CategoryChip label={category === "Today" ? "산업" : category} />
+          <CategoryChip label={article.category} />
           <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-            앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+            {article.headline}
           </p>
         </div>
         <div
           className="relative rounded-xl overflow-hidden shrink-0 w-full"
           style={{ height: 181, marginBottom: 10 }}
         >
-          <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <img
+            src={article.image}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
         </div>
         <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
-          종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
-          제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
-          안내한다. AI 요약과 형광펜 스크랩을 활용한다.
+          {article.summary}
         </p>
       </button>
       <p
@@ -501,18 +503,119 @@ function HeroCard({ category, onClick }: { category: Category; onClick?: () => v
   );
 }
 
-// ── News data ──
-const ALL_NEWS = [
-  { category: "산업", headline: "2차전지 소재 국산화 속도" },
-  { category: "정치", headline: "국회, 추경안 본회의 처리 임박" },
-  { category: "경제", headline: "한국은행 기준금리 연 3.0% 동결 결정" },
-  { category: "코리안마켓", headline: "코스피 3,200선 돌파, 외국인 순매수" },
-  { category: "부동산", headline: "서울 아파트 매매가 8주 연속 상승" },
+// ── News data (목업) ──
+// 한경 CMS 연동 전까지 흐름 확인용 더미 데이터. 스키마(id/category/headline/image/byline/summary)를
+// 먼저 고정해 두고, 실제 연동 시 이 배열만 API 응답으로 교체하면 되도록 구성.
+type NewsItem = {
+  id: string;
+  category: string;
+  headline: string;
+  image: string;
+  byline: string;
+  summary: string;
+};
+
+// 기사 썸네일은 카테고리 지면과 동일한 ImageKit 소스를 재사용
+const NEWS_IMG = {
+  ipo: imgArticle,
+  industry: "https://ik.imagekit.io/cuquvvrdw/%E1%84%89%E1%85%A1%E1%86%AB%E1%84%8B%E1%85%A5%E1%86%B8.png",
+  economy: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png",
+  koreaMarket:
+    "https://ik.imagekit.io/cuquvvrdw/%E1%84%8F%E1%85%A9%E1%84%85%E1%85%B5%E1%84%8B%E1%85%A1%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+  realEstate:
+    "https://ik.imagekit.io/cuquvvrdw/%E1%84%8C%E1%85%B5%E1%86%B8%E1%84%8F%E1%85%A9%E1%84%82%E1%85%A9%E1%84%86%E1%85%B5.png",
+  opinion:
+    "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
+};
+
+const ALL_NEWS: NewsItem[] = [
+  {
+    id: "anthropic-ipo",
+    category: "산업",
+    headline: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입",
+    image: NEWS_IMG.ipo,
+    byline: "한경 산업부 기자 · 2026.07.20 09:12",
+    summary:
+      "앤트로픽이 '신뢰할 수 있는 AI' 기업 이미지를 앞세워 기업공개(IPO)를 추진한다. 주요 투자자와의 로드쇼 미팅을 10월로 잡은 것으로 전해지며, 상장 시 AI 기업 밸류에이션의 기준점이 될 전망이다.",
+  },
+  {
+    id: "lnf-lfp",
+    category: "산업",
+    headline: "엘앤에프, 美 코어셀 손잡고 모빌리티·방산까지 LFP 영토 확장",
+    image: NEWS_IMG.industry,
+    byline: "한경 산업부 기자 · 2026.07.21 08:40",
+    summary:
+      "엘앤에프가 미국 코어셀과 손잡고 LFP 배터리 소재 공급망을 넓힌다. 전기차 중심이던 적용처를 도심항공모빌리티와 방산 분야까지 확대해, 중국 업체가 주도해온 LFP 시장의 판도 변화를 노린다는 구상이다.",
+  },
+  {
+    id: "battery-localization",
+    category: "산업",
+    headline: "2차전지 소재 국산화 속도",
+    image: NEWS_IMG.industry,
+    byline: "한경 산업부 기자 · 2026.07.21 07:55",
+    summary:
+      "국내 배터리 3사가 양극재·분리막 등 핵심 소재의 국산화 비중을 끌어올리고 있다. 해외 의존도를 낮춰 공급망 리스크를 줄이고, 보조금 요건을 충족해 북미 시장 경쟁력을 확보하려는 포석이다.",
+  },
+  {
+    id: "assembly-budget",
+    category: "정치",
+    headline: "국회, 추경안 본회의 처리 임박",
+    image: NEWS_IMG.opinion,
+    byline: "한경 정치부 기자 · 2026.07.21 11:20",
+    summary:
+      "추가경정예산안이 본회의 처리를 앞두고 막판 조율에 들어갔다. 여야는 총액 규모에는 접근했지만 세부 항목을 두고 이견을 좁히지 못해, 처리 시점이 회기 막바지로 밀릴 가능성도 거론된다.",
+  },
+  {
+    id: "bok-rate-freeze",
+    category: "경제",
+    headline: "한국은행 기준금리 연 3.0% 동결 결정",
+    image: NEWS_IMG.economy,
+    byline: "한경 경제부 기자 · 2026.07.20 14:05",
+    summary:
+      "한국은행 금융통화위원회가 기준금리를 연 3.0%로 동결했다. 물가 둔화 흐름은 이어지고 있지만 가계부채와 환율 변동성을 감안해 인하 시점을 늦춘 것으로 풀이된다.",
+  },
+  {
+    id: "kospi-3200",
+    category: "코리안마켓",
+    headline: "코스피 3,200선 돌파, 외국인 순매수",
+    image: NEWS_IMG.koreaMarket,
+    byline: "한경 증권부 기자 · 2026.07.21 15:40",
+    summary:
+      "코스피가 외국인 순매수에 힘입어 3,200선을 넘어섰다. 반도체와 2차전지 대형주가 지수를 끌어올렸고, 증권가는 실적 개선세가 확인되면 추가 상승 여력이 있다고 본다.",
+  },
+  {
+    id: "seoul-apt-8weeks",
+    category: "부동산",
+    headline: "서울 아파트 매매가 8주 연속 상승",
+    image: NEWS_IMG.realEstate,
+    byline: "한경 건설부동산부 기자 · 2026.07.21 10:15",
+    summary:
+      "서울 아파트 매매가격이 8주 연속 올랐다. 강남권 재건축 단지가 상승을 주도했고, 전세 물량 부족이 매매 수요로 옮겨가면서 상승 폭이 확대되는 모습이다.",
+  },
 ];
-const INDUSTRY_NEWS = [
-  { category: "산업", headline: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입" },
-  { category: "산업", headline: "삼성전자, HBM4 양산 속도 낸다" },
-  { category: "산업", headline: "현대차 울산공장, 로봇 공정 전환 완료" },
+
+const INDUSTRY_NEWS: NewsItem[] = [
+  ALL_NEWS[0],
+  ALL_NEWS[1],
+  ALL_NEWS[2],
+  {
+    id: "samsung-hbm4",
+    category: "산업",
+    headline: "삼성전자, HBM4 양산 속도 낸다",
+    image: NEWS_IMG.industry,
+    byline: "한경 산업부 기자 · 2026.07.20 16:30",
+    summary:
+      "삼성전자가 차세대 고대역폭메모리 HBM4 양산 일정을 앞당긴다. AI 서버 수요가 이어지는 가운데 주요 고객사 품질 검증을 마무리하고 하반기 공급 확대에 나선다는 계획이다.",
+  },
+  {
+    id: "hyundai-robot",
+    category: "산업",
+    headline: "현대차 울산공장, 로봇 공정 전환 완료",
+    image: NEWS_IMG.industry,
+    byline: "한경 산업부 기자 · 2026.07.19 09:00",
+    summary:
+      "현대차 울산공장이 주요 조립 라인의 로봇 공정 전환을 마쳤다. 생산 유연성을 높여 다품종 소량 생산에 대응하고, 전기차 전용 모델 증산에도 활용한다는 방침이다.",
+  },
 ];
 
 // ── Landing Screen ──
@@ -524,12 +627,62 @@ function LandingScreen({
 }: {
   category: Category;
   onDropdownClick: () => void;
-  onNewsClick: () => void;
+  onNewsClick: (article: NewsItem) => void;
   onMenuOpen: () => void;
 }) {
-  const news = category === "Today" ? ALL_NEWS : INDUSTRY_NEWS;
   const sectionTitle =
     category === "Today" ? "오늘의 주요뉴스" : `오늘의 ${category} 주요뉴스`;
+
+  // items[0] = 히어로(요약본), 나머지 = 하단 카드 목록
+  const [items, setItems] = useState<NewsItem[]>(() =>
+    category === "Today" ? ALL_NEWS : INDUSTRY_NEWS
+  );
+  const hero = items[0];
+  const cards = items.slice(1);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // 직전 히어로가 내려간 카드 위치. 최초 렌더·카테고리 전환 때는 null이라 애니메이션을 건너뜀
+  const demotedIdxRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    demotedIdxRef.current = null;
+    setItems(category === "Today" ? ALL_NEWS : INDUSTRY_NEWS);
+  }, [category]);
+
+  // 카드를 누르면 그 기사를 히어로로 끌어올리고, 기존 히어로는 그 카드 자리로 내려보냄
+  const promoteToHero = (cardIdx: number) => {
+    demotedIdxRef.current = cardIdx;
+    setItems((prev) => {
+      const next = [...prev];
+      [next[0], next[cardIdx + 1]] = [next[cardIdx + 1], next[0]];
+      return next;
+    });
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const demoted = demotedIdxRef.current;
+    demotedIdxRef.current = null;
+    if (demoted === null) return;
+
+    if (heroRef.current) {
+      gsap.fromTo(
+        heroRef.current,
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }
+      );
+    }
+    const demotedRow = listRef.current?.children[demoted];
+    if (demotedRow) {
+      gsap.fromTo(
+        demotedRow,
+        { opacity: 0, y: -12 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", delay: 0.05 }
+      );
+    }
+  }, [items]);
 
   return (
     <div
@@ -542,17 +695,24 @@ function LandingScreen({
         onMenuOpen={onMenuOpen}
         showAvatar={false}
       />
-      <div className="h-full overflow-y-auto pb-24">
-        <HeroCard category={category} onClick={onNewsClick} />
+      <div ref={scrollRef} className="h-full overflow-y-auto pb-24">
+        <div ref={heroRef}>
+          <HeroCard article={hero} onClick={() => onNewsClick(hero)} />
+        </div>
         <div className="flex flex-col gap-2 pt-8">
           <div className="px-5">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)", fontSize: 18 }}>
               {sectionTitle}
             </p>
           </div>
-          <div className="flex flex-col gap-2.5 py-2">
-            {news.map((n, i) => (
-              <NewsRow key={i} category={n.category} headline={n.headline} onClick={onNewsClick} />
+          <div ref={listRef} className="flex flex-col gap-2.5 py-2">
+            {cards.map((n, i) => (
+              <NewsRow
+                key={n.id}
+                category={n.category}
+                headline={n.headline}
+                onClick={() => promoteToHero(i)}
+              />
             ))}
           </div>
         </div>
@@ -825,26 +985,27 @@ function CategoryScreen({
 }
 
 // ── Original Tab Content ──
-function OriginalContent() {
+function OriginalContent({ article }: { article: NewsItem }) {
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
       <div className="flex flex-col gap-2" style={{ minHeight: 144 }}>
-        <CategoryChip label="산업" />
+        <CategoryChip label={article.category} />
         <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+          {article.headline}
         </p>
         <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
-          한경 산업부 기자 · 2026.07.20 09:12
+          {article.byline}
         </p>
       </div>
       <div className="relative rounded-xl overflow-hidden w-full" style={{ height: 181 }}>
-        <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
       <div className="flex flex-col gap-4">
         {[
+          // 첫 문단은 선택한 기사의 요약, 이후 문단은 원문 연동 전까지 공통 목업 텍스트
+          article.summary,
           "한국경제 뉴스 랜딩페이지는 종이신문이 갖고 있던 정보 위계를 디지털 환경에서 재현하지 못했다. 무한 스크롤과 배너 광고는 정돈된 지면 몰입감을 지웠다.",
           "한경 페이퍼는 하루치 뉴스를 메인기사 1개와 스택형 카드로 편집해, 정보 위계가 살아있는 지면형 레이아웃을 되살린다. 광고는 지면처럼 약속된 위치에만 배치해 피로도를 낮춘다.",
-          "앤트로픽은 이른바 '신뢰할 수 있는 AI' 기업 이미지를 전면에 내세워 기업공개(IPO)를 추진하고 있으며, 주요 투자자들과의 로드쇼 미팅을 10월 예정으로 잡은 것으로 전해진다.",
         ].map((text, i) => (
           <p
             key={i}
@@ -1071,11 +1232,13 @@ function EasyContent() {
 
 // ── Article Screen ──
 function ArticleScreen({
+  article,
   activeTab,
   onTabChange,
   onBack,
   onComplete,
 }: {
+  article: NewsItem;
   activeTab: ArticleTab;
   onTabChange: (t: ArticleTab) => void;
   onBack: () => void;
@@ -1101,7 +1264,7 @@ function ArticleScreen({
       <AppHeader showBack showDropdown={false} onBackClick={onBack} />
       <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }} onScroll={handleScroll}>
         <TabSlider active={activeTab} onChange={onTabChange} />
-        {activeTab === "original" && <OriginalContent />}
+        {activeTab === "original" && <OriginalContent article={article} />}
         {activeTab === "ai" && <AiContent />}
         {activeTab === "easy" && <EasyContent />}
       </div>
@@ -2096,6 +2259,8 @@ export default function App() {
   const [articleTab, setArticleTab] = useState<ArticleTab>("original");
   const [category, setCategory] = useState<Category>("Today");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // 원문 뷰어에 넘길 기사 — 지면(히어로)에서 선택한 기사가 그대로 이어짐
+  const [selectedArticle, setSelectedArticle] = useState<NewsItem>(ALL_NEWS[0]);
 
   // 읽기 기록(완독) 상태 — 메인 피드 완독 시 오늘 카운트 +1 되어 달력에 반영
   const [readsByDate, setReadsByDate] = useState<Record<number, number>>({ ...JULY_READS });
@@ -2129,7 +2294,8 @@ export default function App() {
           <LandingScreen
             category={category}
             onDropdownClick={() => goTo("category")}
-            onNewsClick={() => {
+            onNewsClick={(a) => {
+              setSelectedArticle(a);
               setArticleTab("original");
               goTo("article");
             }}
@@ -2155,7 +2321,8 @@ export default function App() {
           <LandingScreen
             category={category}
             onDropdownClick={() => goTo("category")}
-            onNewsClick={() => {
+            onNewsClick={(a) => {
+              setSelectedArticle(a);
               setArticleTab("original");
               goTo("article");
             }}
@@ -2166,6 +2333,7 @@ export default function App() {
       case "article":
         return (
           <ArticleScreen
+            article={selectedArticle}
             activeTab={articleTab}
             onTabChange={setArticleTab}
             onBack={() => goTo(prevScreen)}
