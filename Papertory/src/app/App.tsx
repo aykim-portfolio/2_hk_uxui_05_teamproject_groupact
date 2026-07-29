@@ -14,6 +14,12 @@ import imgToriAcorn from "@/imports/미션리워드/83c7dbb8da7027e4e62dfad831ea
 import imgTape from "@/imports/상점적용예시/ea6aea2b073382a238ef9b308be47610b8745314.png";
 import imgToriMypage from "@/imports/마이페이지/tori-confetti.png";
 import imgToriEmpty from "@/imports/읽기기록달력/tori-empty.png";
+import imgSticker1 from "@/imports/스크랩북/sticker-1.png";
+import imgSticker2 from "@/imports/스크랩북/sticker-2.png";
+import imgSticker3 from "@/imports/스크랩북/sticker-3.png";
+import imgSticker4 from "@/imports/스크랩북/sticker-4.png";
+import imgToriDeco from "@/imports/스크랩북/tori-deco.png";
+import imgBgPaper from "@/imports/스크랩북/bg-paper.png";
 
 type Screen =
   | "start"
@@ -25,7 +31,10 @@ type Screen =
   | "shop"
   | "mypage"
   | "calendar"
-  | "reading-detail";
+  | "reading-detail"
+  | "scrap-library"
+  | "scrapbook"
+  | "scrap-share";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
 type Category = string;
@@ -976,7 +985,24 @@ function CategoryScreen({
 }
 
 // ── Original Tab Content ──
-function OriginalContent({ article }: { article: NewsItem }) {
+function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggleClip?: (text: string, on: boolean) => void }) {
+  const paras = [
+    // 첫 문단은 선택한 기사의 요약, 이후 문단은 원문 연동 전까지 공통 목업 텍스트
+    article.summary,
+    "한국경제 뉴스 랜딩페이지는 종이신문이 갖고 있던 정보 위계를 디지털 환경에서 재현하지 못했다. 무한 스크롤과 배너 광고는 정돈된 지면 몰입감을 지웠다.",
+    "한경 페이퍼는 하루치 뉴스를 메인기사 1개와 스택형 카드로 편집해, 정보 위계가 살아있는 지면형 레이아웃을 되살린다. 광고는 지면처럼 약속된 위치에만 배치해 피로도를 낮춘다.",
+  ];
+  const [hl, setHl] = useState<Set<number>>(new Set());
+  const toggle = (i: number) => {
+    setHl((prev) => {
+      const next = new Set(prev);
+      const on = !next.has(i);
+      on ? next.add(i) : next.delete(i);
+      onToggleClip?.(paras[i], on);
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
       <div className="flex flex-col gap-2" style={{ minHeight: 144 }}>
@@ -991,17 +1017,29 @@ function OriginalContent({ article }: { article: NewsItem }) {
       <div className="relative rounded-xl overflow-hidden w-full" style={{ height: 181 }}>
         <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
       </div>
+      <div
+        className="rounded-lg px-3 py-2 flex items-center gap-2"
+        style={{ backgroundColor: "var(--pt-bg-accent-light)" }}
+      >
+        <span className="rounded-full" style={{ width: 14, height: 14, backgroundColor: "var(--pt-brand-secondary)" }} />
+        <span className="caption" style={{ color: "var(--pt-text-dark-green)" }}>
+          문장을 탭하면 형광펜으로 스크랩돼요 (클립보드에 저장)
+        </span>
+      </div>
       <div className="flex flex-col gap-4">
-        {[
-          // 첫 문단은 선택한 기사의 요약, 이후 문단은 원문 연동 전까지 공통 목업 텍스트
-          article.summary,
-          "한국경제 뉴스 랜딩페이지는 종이신문이 갖고 있던 정보 위계를 디지털 환경에서 재현하지 못했다. 무한 스크롤과 배너 광고는 정돈된 지면 몰입감을 지웠다.",
-          "한경 페이퍼는 하루치 뉴스를 메인기사 1개와 스택형 카드로 편집해, 정보 위계가 살아있는 지면형 레이아웃을 되살린다. 광고는 지면처럼 약속된 위치에만 배치해 피로도를 낮춘다.",
-        ].map((text, i) => (
+        {paras.map((text, i) => (
           <p
             key={i}
-            className="body-2"
-            style={{ color: "var(--pt-text-primary)", textIndent: 8, letterSpacing: "-0.32px" }}
+            onClick={() => toggle(i)}
+            className="body-2 cursor-pointer transition-colors"
+            style={{
+              color: "var(--pt-text-primary)",
+              textIndent: 8,
+              letterSpacing: "-0.32px",
+              backgroundColor: hl.has(i) ? "rgba(230,249,151,0.85)" : "transparent",
+              borderRadius: 4,
+              boxDecorationBreak: "clone",
+            }}
           >
             {text}
           </p>
@@ -1228,12 +1266,14 @@ function ArticleScreen({
   onTabChange,
   onBack,
   onComplete,
+  onToggleClip,
 }: {
   article: NewsItem;
   activeTab: ArticleTab;
   onTabChange: (t: ArticleTab) => void;
   onBack: () => void;
   onComplete?: () => void;
+  onToggleClip?: (text: string, on: boolean) => void;
 }) {
   const [showToolbar, setShowToolbar] = useState(false);
   const completedRef = useRef(false);
@@ -1255,7 +1295,7 @@ function ArticleScreen({
       <AppHeader showBack showDropdown={false} onBackClick={onBack} />
       <div className="h-full overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 100 }} onScroll={handleScroll}>
         <TabSlider active={activeTab} onChange={onTabChange} />
-        {activeTab === "original" && <OriginalContent article={article} />}
+        {activeTab === "original" && <OriginalContent article={article} onToggleClip={onToggleClip} />}
         {activeTab === "ai" && <AiContent />}
         {activeTab === "easy" && <EasyContent />}
       </div>
@@ -2079,6 +2119,700 @@ function DatePickerSheet({
   );
 }
 
+// ── Scrap: icons ──
+function HeartIcon({ filled, color = "var(--pt-text-primary)" }: { filled?: boolean; color?: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? "var(--pt-brand-primary)" : "none"}>
+      <path
+        d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"
+        stroke={filled ? "var(--pt-brand-primary)" : color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShareIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+type PenTool = "keyboard" | "highlighter" | "pencil" | "eraser" | "clipboard" | "scissors" | "undo";
+function PenToolIcon({ name, color = "var(--pt-text-primary)" }: { name: PenTool; color?: string }) {
+  const paths: Record<PenTool, React.ReactNode> = {
+    keyboard: (
+      <>
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8" />
+      </>
+    ),
+    highlighter: (
+      <>
+        <path d="m9 11-6 6v3h3l6-6" />
+        <path d="m22 8-5.5 5.5-4-4L18 4a1.4 1.4 0 0 1 2 0l2 2a1.4 1.4 0 0 1 0 2Z" />
+      </>
+    ),
+    pencil: (
+      <>
+        <path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
+        <path d="m15 5 4 4" />
+      </>
+    ),
+    eraser: (
+      <>
+        <path d="m7 21-4.3-4.3a1.7 1.7 0 0 1 0-2.4l9.6-9.6a1.7 1.7 0 0 1 2.4 0l5.6 5.6a1.7 1.7 0 0 1 0 2.4L13 21" />
+        <path d="M22 21H7M5 11l9 9" />
+      </>
+    ),
+    clipboard: (
+      <>
+        <rect x="8" y="2" width="8" height="4" rx="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      </>
+    ),
+    scissors: (
+      <>
+        <circle cx="6" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
+        <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" />
+      </>
+    ),
+    undo: <path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" />,
+  };
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
+}
+
+// ── Scrap Library Screen (스크랩 라이브러리) ──
+const SCRAP_ITEMS = [
+  { id: 1, title: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입", date: "2026.07.20" },
+  { id: 2, title: "삼성전자, HBM4 양산 속도 낸다", date: "2026.07.18" },
+  { id: 3, title: "코스피 3,200선 돌파, 외국인 순매수", date: "2026.07.15" },
+  { id: 4, title: "서울 아파트 매매가 8주 연속 상승", date: "2026.07.12" },
+  { id: 5, title: "한국은행 기준금리 연 3.0% 동결", date: "2026.07.10" },
+];
+
+function ScrapLibraryScreen({
+  onMenuOpen,
+  onOpen,
+  onNew,
+  onShare,
+}: {
+  onMenuOpen: () => void;
+  onOpen: (id: number) => void;
+  onNew: () => void;
+  onShare: (id: number) => void;
+}) {
+  const [liked, setLiked] = useState<Set<number>>(new Set([1]));
+  const toggleLike = (id: number) =>
+    setLiked((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  return (
+    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+      <AppHeader dropdownLabel="스크랩 라이브러리" showDropdown onDropdownClick={() => {}} showAvatar onMenuOpen={onMenuOpen} />
+
+      <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
+        <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
+          <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>7월 20일</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 px-4">
+          {SCRAP_ITEMS.map((it) => (
+            <button
+              key={it.id}
+              onClick={() => onOpen(it.id)}
+              className="bg-white rounded-xl border flex flex-col items-end text-left"
+              style={{ width: 114, padding: "20px 12px", borderColor: "var(--pt-border-default)", filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.06))", gap: 10 }}
+            >
+              <div className="flex flex-col items-center gap-8 w-full">
+                <p className="subtitle overflow-hidden w-full" style={{ color: "var(--pt-text-primary)", height: 75, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}>
+                  {it.title}
+                </p>
+                <p className="caption w-full text-right" style={{ color: "var(--pt-text-secondary)" }}>{it.date}</p>
+              </div>
+              <div className="flex gap-1.5 items-center">
+                <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); toggleLike(it.id); }} className="flex items-center cursor-pointer">
+                  <HeartIcon filled={liked.has(it.id)} />
+                </span>
+                <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onShare(it.id); }} className="flex items-center cursor-pointer">
+                  <ShareIcon />
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* FAB → 새 스크랩북 */}
+      <button
+        onClick={onNew}
+        className="absolute z-30 flex items-center justify-center rounded-full"
+        style={{ bottom: 68, right: 27, width: 60, height: 60, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
+      >
+        <ScrapIcon color="var(--pt-brand-primary)" />
+      </button>
+
+      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+    </div>
+  );
+}
+
+// ── Scrapbook Editor (스크랩북) ──
+type ScrapEl = { id: string; kind: "note" | "text" | "sticker"; x: number; y: number; text?: string; bg?: string; color?: string; src?: string; size?: number; rot?: number };
+type ScrapStroke = { id: string; tool: "pencil" | "highlighter"; color: string; width: number; pts: { x: number; y: number }[] };
+type ScrapDoc = { elements: ScrapEl[]; strokes: ScrapStroke[]; bg: ScrapBg };
+type ScrapBg = "none" | "paper" | "grid" | "lime" | "blue";
+type EraserMode = "stroke" | "area" | "all";
+type ScrapAction = { t: "stroke" | "el"; id: string } | { t: "clear"; strokes: ScrapStroke[]; els: ScrapEl[] };
+const scrapUid = () => Math.random().toString(36).slice(2, 9);
+const PEN_COLORS = ["#1a2535", "#6083f5", "#496de0", "#e6f997", "#ff6b6b", "#ffa94d", "#51cf66", "#845ef7"];
+const STICKERS = [imgSticker1, imgSticker2, imgSticker3, imgSticker4, imgToriDeco];
+const ERASE_R = 18;
+const BG_OPTIONS: { id: ScrapBg; label: string }[] = [
+  { id: "none", label: "기본" },
+  { id: "paper", label: "원본" },
+  { id: "grid", label: "모눈" },
+  { id: "lime", label: "라임" },
+  { id: "blue", label: "블루" },
+];
+function scrapBgStyle(bg: ScrapBg): React.CSSProperties {
+  if (bg === "grid")
+    return {
+      backgroundColor: "var(--pt-bg-primary)",
+      backgroundImage: "linear-gradient(#e2e5eb 1px,transparent 1px),linear-gradient(90deg,#e2e5eb 1px,transparent 1px)",
+      backgroundSize: "22px 22px",
+    };
+  if (bg === "lime") return { backgroundColor: "var(--pt-bg-accent-light)" };
+  if (bg === "blue") return { backgroundColor: "var(--pt-bg-brand)" };
+  return { backgroundColor: "var(--pt-bg-primary)" };
+}
+
+function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean; clippings: string[]; onBack: () => void; onShare: (doc: ScrapDoc) => void }) {
+  const [tool, setTool] = useState<PenTool | "none">("none");
+  const [penColor, setPenColor] = useState("#6083f5");
+  const [hlColor, setHlColor] = useState("#e6f997");
+  const [penWidth, setPenWidth] = useState(4);
+  const [textColor, setTextColor] = useState("#1a2535");
+  const [text, setText] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [eraserMode, setEraserMode] = useState<EraserMode>("stroke");
+  const [bg, setBg] = useState<ScrapBg>(isNew ? "none" : "paper");
+  const [bgOpen, setBgOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [strokes, setStrokes] = useState<ScrapStroke[]>([]);
+  const [elements, setElements] = useState<ScrapEl[]>(
+    isNew
+      ? []
+      : [
+          { id: scrapUid(), kind: "note", x: 24, y: 16, text: "부동산 공급 대책", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
+          { id: scrapUid(), kind: "note", x: 60, y: 240, text: "일정한 선의 사회적 합의 필요", bg: "var(--pt-brand-secondary)", color: "#1a1a1a" },
+          { id: scrapUid(), kind: "note", x: 40, y: 360, text: "전세가율 반등, 실수요 유입 신호", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
+          { id: scrapUid(), kind: "sticker", x: 250, y: 300, src: imgToriDeco, size: 96 },
+        ]
+  );
+  const [history, setHistory] = useState<ScrapAction[]>([]);
+  const [, force] = useState(0);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const drawingRef = useRef<ScrapStroke | null>(null);
+  const dragRef = useRef<{ id: string; ox: number; oy: number } | null>(null);
+  const erasingRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const isDraw = tool === "pencil" || tool === "highlighter";
+  const activeColor = tool === "highlighter" ? hlColor : penColor;
+  const selectedEl = elements.find((el) => el.id === selectedId) || null;
+
+  // 키보드 도구 선택 시 입력창 포커스 → 모바일 키보드 올라옴
+  useEffect(() => {
+    if (tool === "keyboard") {
+      const t = setTimeout(() => inputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [tool]);
+
+  const pt = (e: React.PointerEvent) => {
+    const r = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const pushHist = (a: ScrapAction) => setHistory((h) => [...h, a]);
+
+  const eraseStroke = (p: { x: number; y: number }) =>
+    setStrokes((v) => v.filter((s) => !s.pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < ERASE_R)));
+  const erasePartial = (p: { x: number; y: number }) =>
+    setStrokes((prev) =>
+      prev.flatMap((s) => {
+        if (!s.pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < ERASE_R)) return [s];
+        const segs: ScrapStroke[] = [];
+        let cur: { x: number; y: number }[] = [];
+        for (const q of s.pts) {
+          if (Math.hypot(q.x - p.x, q.y - p.y) < ERASE_R) {
+            if (cur.length > 1) segs.push({ ...s, id: scrapUid(), pts: cur });
+            cur = [];
+          } else cur.push(q);
+        }
+        if (cur.length > 1) segs.push({ ...s, id: scrapUid(), pts: cur });
+        return segs;
+      })
+    );
+  const eraseAll = () => {
+    pushHist({ t: "clear", strokes, els: elements });
+    setStrokes([]);
+    setElements([]);
+    setSelectedId(null);
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (isDraw) {
+      const p = pt(e);
+      drawingRef.current = { id: scrapUid(), tool: tool as "pencil" | "highlighter", color: activeColor, width: tool === "highlighter" ? 16 : penWidth, pts: [p] };
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      force((n) => n + 1);
+    } else if (tool === "eraser") {
+      const p = pt(e);
+      if (eraserMode === "all") eraseAll();
+      else if (eraserMode === "stroke") eraseStroke(p);
+      else erasePartial(p);
+      erasingRef.current = eraserMode !== "all";
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } else {
+      setSelectedId(null); // 빈 캔버스 탭 → 선택 해제
+    }
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (drawingRef.current) {
+      drawingRef.current.pts.push(pt(e));
+      force((n) => n + 1);
+    } else if (erasingRef.current) {
+      const p = pt(e);
+      eraserMode === "stroke" ? eraseStroke(p) : erasePartial(p);
+    } else if (dragRef.current) {
+      const p = pt(e);
+      const { id, ox, oy } = dragRef.current;
+      setElements((els) => els.map((el) => (el.id === id ? { ...el, x: p.x - ox, y: p.y - oy } : el)));
+    }
+  };
+  const onUp = () => {
+    if (drawingRef.current) {
+      const s = drawingRef.current;
+      if (s.pts.length > 1) {
+        setStrokes((v) => [...v, s]);
+        pushHist({ t: "stroke", id: s.id });
+      }
+      drawingRef.current = null;
+      force((n) => n + 1);
+    }
+    erasingRef.current = false;
+    dragRef.current = null;
+  };
+
+  const elDown = (e: React.PointerEvent, el: ScrapEl) => {
+    if (tool === "eraser") {
+      e.stopPropagation();
+      if (eraserMode === "all") { eraseAll(); return; }
+      setElements((v) => v.filter((x) => x.id !== el.id));
+      return;
+    }
+    if (tool !== "none") return; // drawing tools: let canvas handle
+    e.stopPropagation();
+    setSelectedId(el.id);
+    const p = pt(e);
+    dragRef.current = { id: el.id, ox: p.x - el.x, oy: p.y - el.y };
+  };
+
+  const undo = () =>
+    setHistory((h) => {
+      if (!h.length) return h;
+      const last = h[h.length - 1];
+      if (last.t === "stroke") setStrokes((v) => v.filter((s) => s.id !== last.id));
+      else if (last.t === "el") setElements((v) => v.filter((el) => el.id !== last.id));
+      else { setStrokes(last.strokes); setElements(last.els); }
+      return h.slice(0, -1);
+    });
+
+  const addEl = (el: ScrapEl) => {
+    setElements((v) => [...v, el]);
+    pushHist({ t: "el", id: el.id });
+  };
+  const addText = () => {
+    if (!text.trim()) return;
+    addEl({ id: scrapUid(), kind: "text", x: 40, y: 130, text: text.trim(), color: textColor });
+    setText("");
+  };
+  const addSticker = (src: string) => addEl({ id: scrapUid(), kind: "sticker", x: 140, y: 300, src, size: 72 });
+  const addClip = (t: string) => addEl({ id: scrapUid(), kind: "note", x: 40, y: 150, text: t.length > 42 ? t.slice(0, 42) + "…" : t, bg: "var(--pt-brand-secondary)", color: "#1a1a1a" });
+  const resizeSel = (d: number) => setElements((v) => v.map((el) => (el.id === selectedId && el.kind === "sticker" ? { ...el, size: Math.max(32, Math.min(220, (el.size || 72) + d)) } : el)));
+  const deleteSel = () => { setElements((v) => v.filter((el) => el.id !== selectedId)); setSelectedId(null); };
+
+  const selectTool = (t: PenTool) => {
+    if (t === "undo") { undo(); return; }
+    setPickerOpen(false);
+    setBgOpen(false);
+    setSelectedId(null);
+    setTool((cur) => (cur === t ? "none" : t));
+  };
+
+  const drawLive = drawingRef.current;
+
+  return (
+    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+      {/* Header */}
+      <div className="absolute left-0 right-0 flex items-center justify-between px-4 z-30" style={{ top: 58, height: 52 }}>
+        <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
+        <div className="flex gap-2">
+          <button onClick={() => setBgOpen((v) => !v)} className="flex items-center justify-center rounded-full px-3" style={{ height: 40, backgroundColor: bgOpen ? "var(--pt-brand-secondary)" : "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+            <span className="label" style={{ color: "var(--pt-brand-primary)", fontSize: 12 }}>배경</span>
+          </button>
+          <button onClick={() => onShare({ elements, strokes, bg })} className="flex items-center justify-center rounded-full px-4" style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+            <ShareIcon color="var(--pt-brand-primary)" />
+          </button>
+          <button onClick={onBack} className="flex items-center justify-center rounded-full px-4" style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+            <span className="label" style={{ color: "var(--pt-brand-primary)" }}>저장</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Background picker */}
+      {bgOpen && (
+        <div className="absolute right-4 z-40 rounded-2xl p-2 flex gap-2" style={{ top: 116, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+          {BG_OPTIONS.map((o) => (
+            <button key={o.id} onClick={() => { setBg(o.id); setBgOpen(false); }} className="rounded-lg flex items-center justify-center overflow-hidden" style={{ width: 44, height: 44, border: bg === o.id ? "2px solid var(--pt-brand-primary)" : "1px solid var(--pt-border-default)", ...(o.id === "paper" ? {} : scrapBgStyle(o.id)) }}>
+              {o.id === "paper" ? <img src={imgBgPaper} alt="원본" className="w-full h-full object-cover" /> : <span className="caption" style={{ fontSize: 9, color: "var(--pt-text-secondary)" }}>{o.label}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Canvas */}
+      <div
+        ref={canvasRef}
+        className="absolute inset-0 overflow-hidden"
+        style={{ top: 110, touchAction: isDraw || tool === "eraser" ? "none" : "auto" }}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerLeave={onUp}
+      >
+        {/* background layer */}
+        <div className="absolute inset-0 pointer-events-none" style={scrapBgStyle(bg)} />
+        {bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ opacity: 0.4 }} />}
+
+        {/* strokes */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: "visible" }}>
+          {strokes.map((s) => (
+            <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
+          ))}
+          {drawLive && (
+            <polyline points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={drawLive.color} strokeWidth={drawLive.width} strokeLinecap="round" strokeLinejoin="round" opacity={drawLive.tool === "highlighter" ? 0.4 : 1} />
+          )}
+        </svg>
+
+        {/* elements */}
+        {elements.map((el) => (
+          <div
+            key={el.id}
+            onPointerDown={(e) => elDown(e, el)}
+            className="absolute"
+            style={{ left: el.x, top: el.y, touchAction: "none", cursor: tool === "none" ? "grab" : tool === "eraser" ? "pointer" : "default", outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none", outlineOffset: 2, borderRadius: 6 }}
+          >
+            {el.kind === "sticker" ? (
+              <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
+            ) : (
+              <div className="rounded-3xl" style={{ maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
+                <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap" }}>{el.text}</p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* empty hint */}
+        {isNew && elements.length === 0 && strokes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="body-2" style={{ color: "var(--pt-text-secondary)" }}>아래 도구로 나만의 스크랩북을 꾸며보세요</p>
+          </div>
+        )}
+      </div>
+
+      {/* Selected sticker control (크기 조절) */}
+      {selectedEl && selectedEl.kind === "sticker" && tool === "none" && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full px-3 py-2" style={{ bottom: 108, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.18)" }}>
+          <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>크기</span>
+          <button onClick={() => resizeSel(-16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
+          <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>{selectedEl.size}px</span>
+          <button onClick={() => resizeSel(16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>+</span></button>
+          <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
+          <button onClick={deleteSel} className="rounded-full px-3 flex items-center" style={{ height: 28, backgroundColor: "var(--pt-bg-card)" }}><span className="caption" style={{ color: "#ff6b6b" }}>삭제</span></button>
+        </div>
+      )}
+
+      {/* Picker (내 색상 팔레트) */}
+      {isDraw && pickerOpen && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-3xl p-3 flex flex-wrap gap-2 justify-center" style={{ bottom: 168, width: 260, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+          {PEN_COLORS.map((c) => (
+            <button key={c} onClick={() => { tool === "highlighter" ? setHlColor(c) : setPenColor(c); setPickerOpen(false); }} className="rounded-full" style={{ width: 32, height: 32, backgroundColor: c, border: activeColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+          ))}
+        </div>
+      )}
+      {/* Pen detail (형광펜/펜 선택 시) */}
+      {isDraw && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-full px-4 py-2 flex items-center gap-3" style={{ bottom: 110, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+          {[3, 6, 10].map((w) => (
+            <button key={w} onClick={() => setPenWidth(w)} className="flex items-center justify-center" style={{ width: 28, height: 28 }}>
+              <span className="rounded-full" style={{ width: w + 4, height: w + 4, backgroundColor: penWidth === w && tool === "pencil" ? "var(--pt-text-primary)" : "var(--pt-text-secondary)" }} />
+            </button>
+          ))}
+          <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
+          <button onClick={() => setPickerOpen((v) => !v)} className="rounded-full" style={{ width: 26, height: 26, backgroundColor: activeColor, border: "2px solid #fff", boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }} />
+        </div>
+      )}
+      {/* Eraser mode submenu */}
+      {tool === "eraser" && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-full px-2 py-2 flex items-center gap-1.5" style={{ bottom: 110, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+          {([["stroke", "펜 지우기"], ["area", "닿는 곳"], ["all", "전체 지우기"]] as [EraserMode, string][]).map(([m, label]) => (
+            <button key={m} onClick={() => (m === "all" ? eraseAll() : setEraserMode(m))} className="rounded-full px-3 py-1.5 caption" style={{ backgroundColor: m !== "all" && eraserMode === m ? "var(--pt-brand-primary)" : "var(--pt-bg-card)", color: m === "all" ? "#ff6b6b" : eraserMode === m ? "#fff" : "var(--pt-text-secondary)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Text compose (키보드 선택 시) — 실제 모바일 키보드가 올라옴 */}
+      {tool === "keyboard" && (
+        <div className="absolute left-0 right-0 bottom-0 z-40" style={{ backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px -4px 16px rgba(0,0,0,0.12)" }}>
+          <div className="flex items-center gap-2 px-4 pt-2">
+            {["#1a2535", "#6083f5", "#ff6b6b", "#51cf66"].map((c) => (
+              <button key={c} onClick={() => setTextColor(c)} className="rounded-full" style={{ width: 22, height: 22, backgroundColor: c, border: textColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff" }} />
+            ))}
+            <span className="caption ml-auto" style={{ color: "var(--pt-text-secondary)" }}>텍스트 서식</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-3">
+            <input
+              ref={inputRef}
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addText()}
+              placeholder="메모를 입력하세요"
+              className="flex-1 rounded-full px-4 bg-white outline-none caption"
+              style={{ height: 40, border: "1.4px solid var(--pt-border-default)", color: "var(--pt-text-primary)" }}
+            />
+            <button onClick={addText} className="rounded-full px-4 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
+              <span className="label" style={{ color: "#fff" }}>추가</span>
+            </button>
+            <button onClick={() => { setText(""); setTool("none"); }} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-bg-card)" }}>
+              <span className="label" style={{ color: "var(--pt-text-secondary)" }}>완료</span>
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Clipboard sheet (클립보드 선택 시) — 클리핑/스티커/테이프 */}
+      {tool === "clipboard" && <ClipboardSheet clippings={clippings} onPick={addSticker} onPickText={addClip} onClose={() => setTool("none")} />}
+
+      {/* Pen bar (툴바) */}
+      {tool !== "keyboard" && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 rounded-full px-4 py-3 border border-white" style={{ bottom: 40, backgroundColor: "rgba(255,255,255,0.85)", backdropFilter: "blur(12px)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}>
+          {(["keyboard", "highlighter", "pencil", "eraser", "clipboard", "scissors", "undo"] as PenTool[]).map((t) => (
+            <button key={t} onClick={() => selectTool(t)} className="flex items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: tool === t ? "var(--pt-brand-secondary)" : "transparent" }}>
+              <PenToolIcon name={t} color={tool === t ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+    </div>
+  );
+}
+
+function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings: string[]; onPick: (src: string) => void; onPickText: (t: string) => void; onClose: () => void }) {
+  const [tab, setTab] = useState<"clip" | "sticker" | "tape">("clip");
+  const tabs: [typeof tab, string][] = [["clip", "클리핑"], ["sticker", "스티커"], ["tape", "테이프"]];
+  return (
+    <div className="absolute left-1/2 -translate-x-1/2 z-40 rounded-xl border border-white overflow-hidden" style={{ bottom: 110, width: 335, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 4px 16px rgba(0,0,0,0.15)" }}>
+      <div className="flex">
+        {tabs.map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)} className="flex-1 py-3.5 caption" style={{ backgroundColor: tab === t ? "var(--pt-bg-accent-light)" : "transparent", borderBottom: tab === t ? "1px solid var(--pt-brand-primary)" : "1px solid var(--pt-border-strong)", color: tab === t ? "var(--pt-text-primary)" : "var(--pt-text-secondary)" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "clip" ? (
+        <div className="flex flex-col gap-2 p-4 max-h-[220px] overflow-y-auto no-scrollbar">
+          {clippings.length === 0 ? (
+            <p className="caption text-center py-6" style={{ color: "var(--pt-text-secondary)" }}>원문에서 형광펜으로 문장을 스크랩하면 여기에 담겨요</p>
+          ) : (
+            clippings.map((c, i) => (
+              <button key={i} onClick={() => onPickText(c)} className="text-left rounded-lg px-3 py-2.5" style={{ backgroundColor: "var(--pt-bg-accent-light)", border: "1px solid var(--pt-border-accent)" }}>
+                <span className="caption" style={{ color: "var(--pt-text-primary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c}</span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2.5 p-4">
+          {(tab === "sticker" ? STICKERS : [imgTape, imgTape, imgTape]).map((src, i) => (
+            <button key={i} onClick={() => onPick(src)} className="rounded-lg overflow-hidden" style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)" }}>
+              <img src={src} alt="스티커" className="w-full h-full object-contain pointer-events-none" />
+            </button>
+          ))}
+        </div>
+      )}
+      <button onClick={onClose} className="w-full py-2 caption" style={{ color: "var(--pt-text-secondary)" }}>닫기</button>
+    </div>
+  );
+}
+
+// ── Scrap Share Screen (공유하기 — 전체 화면 + 실제 스크랩 템플릿) ──
+const SAMPLE_DOC: ScrapDoc = {
+  bg: "paper",
+  strokes: [],
+  elements: [
+    { id: "s1", kind: "note", x: 24, y: 20, text: "부동산 공급 대책", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
+    { id: "s2", kind: "note", x: 44, y: 210, text: "일정한 선의 사회적 합의 필요", bg: "var(--pt-brand-secondary)", color: "#1a1a1a" },
+    { id: "s3", kind: "sticker", x: 240, y: 300, src: imgToriDeco, size: 96 },
+  ],
+};
+const bgHex = (bg: string | undefined) => (bg?.includes("brand-primary") ? "#6083f5" : bg?.includes("brand-secondary") ? "#e6f997" : "#e6f997");
+
+function ScrapPreview({ doc, scale }: { doc: ScrapDoc; scale: number }) {
+  const W = 393, H = 742;
+  return (
+    <div style={{ width: W * scale, height: H * scale, overflow: "hidden", position: "relative" }}>
+      <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "relative", ...scrapBgStyle(doc.bg) }}>
+        {doc.bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.4 }} />}
+        <svg className="absolute inset-0 w-full h-full" style={{ overflow: "visible" }}>
+          {doc.strokes.map((s) => (
+            <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
+          ))}
+        </svg>
+        {doc.elements.map((el) =>
+          el.kind === "sticker" ? (
+            <img key={el.id} src={el.src} alt="" className="absolute" style={{ left: el.x, top: el.y, width: el.size, height: el.size, objectFit: "contain" }} />
+          ) : (
+            <div key={el.id} className="absolute rounded-3xl" style={{ left: el.x, top: el.y, maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
+              <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", whiteSpace: "pre-wrap" }}>{el.text}</p>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () => void }) {
+  const d = doc && (doc.elements.length || doc.strokes.length) ? doc : SAMPLE_DOC;
+  const [toast, setToast] = useState("");
+  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1800); };
+
+  const copyLink = async () => {
+    const url = "https://papertory.app/s/" + Math.random().toString(36).slice(2, 8);
+    try { await navigator.clipboard.writeText(url); showToast("링크를 복사했어요 " + url); }
+    catch { showToast("링크: " + url); }
+  };
+
+  const loadImg = (src: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const wrapText = (ctx: CanvasRenderingContext2D, t: string, maxW: number) => {
+    const words = t.split(""); const lines: string[] = []; let cur = "";
+    for (const ch of words) { if (ctx.measureText(cur + ch).width > maxW && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+    if (cur) lines.push(cur); return lines;
+  };
+  const saveImage = async () => {
+    const W = 393, H = 742, S = 2;
+    const cv = document.createElement("canvas"); cv.width = W * S; cv.height = H * S;
+    const ctx = cv.getContext("2d"); if (!ctx) return; ctx.scale(S, S);
+    ctx.fillStyle = d.bg === "lime" ? "#F5FCE0" : d.bg === "blue" ? "#edf0fd" : "#f8f9fb"; ctx.fillRect(0, 0, W, H);
+    if (d.bg === "grid") { ctx.strokeStyle = "#e2e5eb"; ctx.lineWidth = 1; for (let x = 0; x < W; x += 22) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 22) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } }
+    if (d.bg === "paper") { const bp = await loadImg(imgBgPaper); if (bp) { ctx.globalAlpha = 0.4; ctx.drawImage(bp, 0, 0, W, H); ctx.globalAlpha = 1; } }
+    for (const s of d.strokes) { ctx.strokeStyle = s.color; ctx.lineWidth = s.width; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.globalAlpha = s.tool === "highlighter" ? 0.4 : 1; ctx.beginPath(); s.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke(); ctx.globalAlpha = 1; }
+    for (const el of d.elements) {
+      if (el.kind === "sticker") { const im = await loadImg(el.src!); if (im) ctx.drawImage(im, el.x, el.y, el.size!, el.size!); }
+      else {
+        ctx.font = "600 12px sans-serif"; const pad = 12, maxW = 200;
+        const lines = wrapText(ctx, el.text || "", maxW - pad * 2);
+        const wBox = Math.min(maxW, Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2);
+        const hBox = lines.length * 18 + pad * 2 - 4;
+        ctx.fillStyle = el.kind === "note" ? bgHex(el.bg) : "#ffffff";
+        const r = 14, x = el.x, y = el.y; ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + wBox, y, x + wBox, y + hBox, r); ctx.arcTo(x + wBox, y + hBox, x, y + hBox, r); ctx.arcTo(x, y + hBox, x, y, r); ctx.arcTo(x, y, x + wBox, y, r); ctx.fill();
+        ctx.fillStyle = el.color || "#1a1a1a"; lines.forEach((l, i) => ctx.fillText(l, x + pad, y + pad + 12 + i * 18));
+      }
+    }
+    cv.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "papertory-scrap.png"; a.click(); URL.revokeObjectURL(a.href); showToast("이미지를 저장했어요"); });
+  };
+
+  const targets = [
+    { label: "카카오", bg: "#FEE500", fg: "#3C1E1E", onClick: () => showToast("카카오 공유는 준비 중이에요") },
+    { label: "인스타", bg: "#E1306C", fg: "#ffffff", onClick: () => showToast("인스타 공유는 준비 중이에요") },
+    { label: "링크복사", bg: "var(--pt-bg-card)", fg: "var(--pt-text-primary)", onClick: copyLink },
+    { label: "이미지저장", bg: "var(--pt-bg-card)", fg: "var(--pt-text-primary)", onClick: saveImage },
+  ];
+
+  return (
+    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+      <div className="absolute left-0 right-0 flex items-center px-4 z-10" style={{ top: 58, height: 52 }}>
+        <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
+        <p className="title flex-1 text-center pr-10" style={{ color: "var(--pt-text-primary)" }}>공유하기</p>
+      </div>
+
+      <div className="h-full overflow-y-auto no-scrollbar flex flex-col items-center" style={{ paddingTop: 124, paddingBottom: 32 }}>
+        {/* Share template card — 실제 스크랩 내용 */}
+        <div className="rounded-[24px] overflow-hidden" style={{ width: 300, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
+          <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
+            <div style={{ width: 22, height: 26 }}><img src={imgTori} alt="Tori" className="w-full h-full object-contain" /></div>
+            <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
+            <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>나의 스크랩</span>
+          </div>
+          <div style={{ height: 300, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
+            <ScrapPreview doc={d} scale={300 / 393} />
+          </div>
+          <div className="px-4 py-3 flex flex-col gap-1">
+            <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
+            <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>2026.07.20 · 나의 경제공부 기록</p>
+            <p className="caption" style={{ color: "var(--pt-brand-primary)" }}>#직장인공부 #공스타그램 #페이퍼토리</p>
+          </div>
+        </div>
+
+        {/* Share targets */}
+        <div className="flex gap-3 mt-8">
+          {targets.map((t) => (
+            <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1.5">
+              <span className="rounded-full flex items-center justify-center" style={{ width: 56, height: 56, backgroundColor: t.bg }}>
+                <span className="caption" style={{ color: t.fg, fontSize: 10 }}>{t.label}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="caption mt-4 px-8 text-center" style={{ color: "var(--pt-text-secondary)" }}>
+          내 스크랩이 그대로 공유 카드로 만들어져요
+        </p>
+      </div>
+
+      {toast && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2" style={{ bottom: 40, backgroundColor: "rgba(26,37,53,0.9)", maxWidth: 320 }}>
+          <span className="caption" style={{ color: "#fff" }}>{toast}</span>
+        </div>
+      )}
+
+      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+    </div>
+  );
+}
+
 // ── Navigation Drawer ──
 function NavigationDrawer({
   onClose,
@@ -2098,7 +2832,7 @@ function NavigationDrawer({
       type: "section",
       title: "나의 기록",
       items: [
-        { label: "스크랩 라이브러리", screen: null },
+        { label: "스크랩 라이브러리", screen: "scrap-library" },
         { label: "읽기 기록 달력", screen: "calendar" },
       ],
     },
@@ -2234,6 +2968,11 @@ export default function App() {
   const [calYear, setCalYear] = useState(2026);
   const [calMonth, setCalMonth] = useState(7);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [scrapNew, setScrapNew] = useState(false);
+  const [clippings, setClippings] = useState<string[]>([]);
+  const [scrapSnapshot, setScrapSnapshot] = useState<ScrapDoc | null>(null);
+  const toggleClip = (t: string, on: boolean) =>
+    setClippings((prev) => (on ? (prev.includes(t) ? prev : [...prev, t]) : prev.filter((x) => x !== t)));
 
   const isJuly = calYear === 2026 && calMonth === 7;
   const monthReads: Record<number, number> = isJuly ? readsByDate : {};
@@ -2301,6 +3040,7 @@ export default function App() {
             onTabChange={setArticleTab}
             onBack={() => goTo(prevScreen)}
             onComplete={markTodayRead}
+            onToggleClip={toggleClip}
           />
         );
 
@@ -2354,6 +3094,29 @@ export default function App() {
             onGoFeed={() => goTo("landing")}
           />
         );
+
+      case "scrap-library":
+        return (
+          <ScrapLibraryScreen
+            onMenuOpen={() => setDrawerOpen(true)}
+            onOpen={() => { setScrapNew(false); goTo("scrapbook"); }}
+            onNew={() => { setScrapNew(true); goTo("scrapbook"); }}
+            onShare={() => { setScrapSnapshot(null); goTo("scrap-share"); }}
+          />
+        );
+
+      case "scrapbook":
+        return (
+          <ScrapbookScreen
+            isNew={scrapNew}
+            clippings={clippings}
+            onBack={() => goTo("scrap-library")}
+            onShare={(doc) => { setScrapSnapshot(doc); goTo("scrap-share"); }}
+          />
+        );
+
+      case "scrap-share":
+        return <ScrapShareScreen doc={scrapSnapshot} onBack={() => goTo(prevScreen)} />;
     }
   };
 
