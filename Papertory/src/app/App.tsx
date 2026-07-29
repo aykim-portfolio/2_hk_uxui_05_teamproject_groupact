@@ -1586,16 +1586,26 @@ function MissionScreen({
 
 // ── Shop Screen (상점적용예시) ──
 // ── Shop items ──
-// 테이프는 마스킹테이프 시트(2열 x 5행) 스프라이트에서 칸을 골라 쓰고, 스티커는 토리 표정 에셋을 사용
-type ShopItem = { name: string; price: number; col?: number; row?: number; img?: string };
+// 테이프는 마스킹테이프 시트 한 장에서 각 테이프 영역만 잘라 쓰고, 스티커는 토리 표정 에셋을 사용.
+// crop은 시트(1024x1008) 안에서 실제 테이프가 차지하는 픽셀 영역 — 시트의 테이프들이 균등 격자로
+// 배치돼 있지 않아, 칸 단위로 자르면 이미지가 한쪽으로 쏠리고 옆 테이프가 비쳐 들어옴.
+const TAPE_SHEET = { w: 1024, h: 1008 };
+const TAPE_WIDTH = 80; // 카드 안에서 테이프가 그려지는 가로 길이(px)
+
+type ShopItem = {
+  name: string;
+  price: number;
+  crop?: { x: number; y: number; w: number; h: number };
+  img?: string;
+};
 
 const TAPE_ITEMS: ShopItem[] = [
-  { name: "올리브 패턴 테이프", price: 100, col: 0, row: 0 },
-  { name: "베리 도트 테이프", price: 120, col: 1, row: 0 },
-  { name: "블루 체크 테이프", price: 100, col: 0, row: 1 },
-  { name: "코랄 퍼즐 테이프", price: 140, col: 1, row: 1 },
-  { name: "민트 버블 테이프", price: 110, col: 0, row: 2 },
-  { name: "머스터드 스트라이프 테이프", price: 130, col: 1, row: 2 },
+  { name: "올리브 패턴 테이프", price: 100, crop: { x: 72, y: 81, w: 419, h: 127 } },
+  { name: "베리 도트 테이프", price: 120, crop: { x: 521, y: 84, w: 419, h: 122 } },
+  { name: "블루 체크 테이프", price: 100, crop: { x: 69, y: 262, w: 414, h: 123 } },
+  { name: "코랄 퍼즐 테이프", price: 140, crop: { x: 521, y: 261, w: 424, h: 123 } },
+  { name: "민트 버블 테이프", price: 110, crop: { x: 85, y: 419, w: 389, h: 144 } },
+  { name: "머스터드 스트라이프 테이프", price: 130, crop: { x: 545, y: 438, w: 377, h: 126 } },
 ];
 
 const STICKER_ITEMS: ShopItem[] = [
@@ -1671,6 +1681,8 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
         <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-8 px-2 pt-2 pb-4">
           {items.map((item, i) => {
             const isTape = activeTab === "tape";
+            // 잘라낸 영역을 그대로 카드 안에 채우도록 스케일 — 비율 유지라 늘어남/쏠림이 없음
+            const scale = item.crop ? TAPE_WIDTH / item.crop.w : 1;
             return (
               <div
                 key={`${activeTab}-${i}`}
@@ -1720,16 +1732,16 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
                       className="rounded-xl overflow-hidden w-full relative shrink-0 flex items-center justify-center"
                       style={{ height: 79, backgroundColor: "var(--pt-bg-primary)" }}
                     >
-                      {isTape ? (
-                        // 시트에서 해당 칸만 잘라 비스듬히 배치
+                      {isTape && item.crop ? (
+                        // 시트에서 해당 테이프 영역만 잘라 비스듬히 배치
                         <div
                           style={{
-                            width: "112%",
-                            height: 40,
+                            width: TAPE_WIDTH,
+                            height: item.crop.h * scale,
                             transform: "rotate(-18deg)",
                             backgroundImage: `url(${imgTape})`,
-                            backgroundSize: "200% 500%",
-                            backgroundPosition: `${(item.col ?? 0) * 100}% ${(item.row ?? 0) * 25}%`,
+                            backgroundSize: `${TAPE_SHEET.w * scale}px ${TAPE_SHEET.h * scale}px`,
+                            backgroundPosition: `-${item.crop.x * scale}px -${item.crop.y * scale}px`,
                             backgroundRepeat: "no-repeat",
                           }}
                         />
