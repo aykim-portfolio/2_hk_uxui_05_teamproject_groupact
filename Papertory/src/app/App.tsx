@@ -645,7 +645,7 @@ function LandingScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader
@@ -678,7 +678,7 @@ function LandingScreen({
       </div>
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -966,7 +966,7 @@ function CategoryScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{
         background:
           "linear-gradient(162.946deg, #ffffff 2.5%, var(--pt-bg-primary) 50%, #EFF1F5 103%)",
@@ -991,7 +991,7 @@ function CategoryScreen({
       </div>
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -1349,7 +1349,7 @@ function ArticleScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader showBack showDropdown={false} onBackClick={onBack} />
@@ -1366,7 +1366,7 @@ function ArticleScreen({
       />
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -1390,7 +1390,7 @@ function MissionScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader
@@ -1511,7 +1511,7 @@ function MissionScreen({
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -1556,7 +1556,7 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader
@@ -1720,7 +1720,7 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -1733,7 +1733,7 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader
@@ -1822,7 +1822,7 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -1922,7 +1922,7 @@ function CalendarScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader
@@ -2036,7 +2036,7 @@ function CalendarScreen({
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -2065,7 +2065,7 @@ function ReadingDetailScreen({
 
   return (
     <div
-      className="relative size-full rounded-[40px] overflow-hidden"
+      className="relative size-full overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
       <AppHeader showBack showDropdown={false} showAvatar={false} onBackClick={onBack} />
@@ -2120,7 +2120,7 @@ function ReadingDetailScreen({
 
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[40px] border-4"
+        className="absolute inset-0 pointer-events-none border-4"
         style={{ borderColor: "rgba(0,0,0,0.06)" }}
       />
     </div>
@@ -2332,7 +2332,7 @@ function ScrapLibraryScreen({
     });
 
   return (
-    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+    <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       <AppHeader
         dropdownLabel="스크랩 라이브러리"
         showDropdown
@@ -2383,7 +2383,7 @@ function ScrapLibraryScreen({
         <ScrapIcon color="var(--pt-brand-primary)" />
       </button>
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -2585,7 +2585,7 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
   const drawLive = drawingRef.current;
 
   return (
-    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+    <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       {/* Header */}
       <div className="absolute left-0 right-0 flex items-center justify-between px-4 z-30" style={{ top: 58, height: 52 }}>
         <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
@@ -2748,7 +2748,7 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
         </div>
       )}
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -2889,7 +2889,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
   ];
 
   return (
-    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+    <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       <div className="absolute left-0 right-0 flex items-center px-4 z-10" style={{ top: 58, height: 52 }}>
         <GlassBtn onClick={onBack}><BackArrowIcon /></GlassBtn>
         <p className="title flex-1 text-center pr-10" style={{ color: "var(--pt-text-primary)" }}>공유하기</p>
@@ -2935,7 +2935,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
         </div>
       )}
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -2944,7 +2944,7 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
 function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onArticle: () => void; onFeed: () => void }) {
   const d = doc && (doc.elements.length || doc.strokes.length) ? doc : SAMPLE_DOC;
   return (
-    <div className="relative size-full rounded-[40px] overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
+    <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       {/* Inbound banner */}
       <div className="absolute left-0 right-0 z-10 flex items-center gap-2 px-5" style={{ top: 58, height: 52 }}>
         <div style={{ width: 28, height: 28 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
@@ -2983,7 +2983,7 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
         </p>
       </div>
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none rounded-[40px] border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -3315,7 +3315,7 @@ export default function App() {
       style={{ backgroundColor: "#D8DCE8" }}
     >
       <div
-        className="relative overflow-hidden rounded-[44px]"
+        className="relative overflow-hidden"
         style={{
           // 393×852은 iPhone 14 Pro 목업 기준 크기. 뷰포트가 더 작은 기기(안드로이드 등)에서
           // 하단이 잘리지 않도록 뷰포트를 넘지 않는 선에서만 그 크기를 씀.
