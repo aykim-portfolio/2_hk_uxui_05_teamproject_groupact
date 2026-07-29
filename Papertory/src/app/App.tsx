@@ -1394,10 +1394,10 @@ function ArticleScreen({
 
 // ── Mission Screen (미션리워드) ──
 function MissionScreen({
-  onBack,
+  onMenuOpen,
   onShopPress,
 }: {
-  onBack: () => void;
+  onMenuOpen: () => void;
   onShopPress: () => void;
 }) {
   const missions = [
@@ -1414,12 +1414,11 @@ function MissionScreen({
     >
       <AppHeader
         dropdownLabel="도토리 줍기"
-        showBack
         showDropdown
         showDropdownChevron={false}
         onDropdownClick={() => {}}
-        onBackClick={onBack}
         showAvatar={false}
+        onMenuOpen={onMenuOpen}
       />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
@@ -3152,7 +3151,7 @@ export default function App() {
       case "mission":
         return (
           <MissionScreen
-            onBack={() => goTo(prevScreen)}
+            onMenuOpen={() => setDrawerOpen(true)}
             onShopPress={() => goTo("shop")}
           />
         );
