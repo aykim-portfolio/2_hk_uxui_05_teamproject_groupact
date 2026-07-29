@@ -992,9 +992,9 @@ function CategoryScreen({
         introTween = gsap.to(els, {
           y: (i: number) => targets[i].y,
           opacity: (i: number) => targets[i].opacity,
-          duration: 0.55,
+          duration: 0.85,
           ease: "power3.out",
-          stagger: 0.07,
+          stagger: 0.11,
           onComplete() {
             introActive = false;
           },
