@@ -162,7 +162,6 @@ flowchart TD
 
 ```text
 docs/
-  design/         # design.md — SSOT 리다이렉트 스텁 (실제 디자인 시스템은 Papertory/guidelines/design.md)
   meeting-notes/  # 회의록
   planning/       # 프로젝트 계획과 마일스톤
   deliverables/   # 스프린트별 산출물
@@ -173,6 +172,8 @@ docs/
     ui/           # 와이어프레임·하이파이 목업 (Figma 링크)
     mvp/          # 최종 작동 MVP
     report/       # 결과보고서
+Papertory/
+  guidelines/design.md  # 디자인 시스템 SSOT — 저장소 내 유일한 design.md
 CLAUDE.md         # AI 개발 지원용 프로젝트 컨텍스트
 README.md         # 프로젝트 소개
 ```

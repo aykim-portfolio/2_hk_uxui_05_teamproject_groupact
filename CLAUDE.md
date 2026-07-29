@@ -58,7 +58,7 @@
 
 ## 디자인 시스템
 
-> **Single Source of Truth: [Papertory/guidelines/design.md](Papertory/guidelines/design.md)** (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영). Papertory(Figma Make 앱)의 코드 생성 도구가 이 경로를 빌드 시 필수로 참조하므로, 디자인 시스템 변경은 반드시 이 파일에서만 함. `docs/design/design.md`는 과거 경로 호환용 리다이렉트 스텁일 뿐 더 이상 갱신하지 않음
+> **Single Source of Truth: [Papertory/guidelines/design.md](Papertory/guidelines/design.md)** (Figma "디자인 시스템 + UI 통합본" 페이지 기준, 작성자: 김아영). Papertory(Figma Make 앱)의 코드 생성 도구가 이 경로를 빌드 시 필수로 참조하므로, 디자인 시스템 변경은 반드시 이 파일에서만 함. 저장소 전체에서 design.md는 이 파일 하나만 존재함 (과거 `docs/design/design.md` 리다이렉트 스텁은 삭제됨)
 >
 > **값이 Figma와 다르면 design.md를 따름.** Figma에서 화면을 구현할 때 `get_design_context`가 돌려주는 컬러·토큰 값이 design.md와 어긋나는 경우가 있는데(예: `text/primary`를 Figma는 `#1A2535`, design.md는 gray/900 `#1C222A`로 정의), 코드에는 design.md 값을 적용하고 Figma 쪽 차이는 디자이너에게 알려 문서·파일을 맞추도록 함
 
@@ -73,13 +73,12 @@
 - **Radius:** sm 12px(카드) / lg 24px(칩·pill) / xl 36px(바텀시트) / full 999px(원형)
 - **아이콘:** Lucide Icon Library 사용, 디자인 시스템과 동일한 이름의 Lucide 아이콘 그대로 매칭 (커스텀은 토리 마스코트 등 예외적인 경우만)
 - **상태바:** 디자인 토큰 미적용 — iOS 기본 스타일 그대로 사용
-- 새 컴포넌트/스타일 결정이 생기면 `Papertory/guidelines/design.md`에서 갱신 (변경 이력 섹션에 기록) — `docs/design/design.md`는 건드리지 않음
+- 새 컴포넌트/스타일 결정이 생기면 `Papertory/guidelines/design.md`에서 갱신 (변경 이력 섹션에 기록)
 
 ## 폴더 구조
 
 ```
 docs/
-  design/         # design.md — SSOT 리다이렉트 스텁 (실제 내용은 Papertory/guidelines/design.md)
   meeting-notes/  # 회의록 (AI 회의록 툴 요약본, 날짜순)
   planning/       # 프로젝트 계획서, 마일스톤
   deliverables/   # 스프린트별 최종 산출물 요약 및 링크
@@ -101,4 +100,4 @@ Papertory/        # Figma Make로 생성한 페이퍼토리 앱 (React)
 
 - 모든 진행 기록은 마크다운(.md)으로 작성
 - 회의록 파일명: `YYYY.MM.DD_그룹명.md`
-- 디자인 시스템 변경은 `Papertory/guidelines/design.md`(SSOT)에서만 갱신 — `docs/design/design.md`는 리다이렉트 스텁이므로 수정 대상 아님
+- 디자인 시스템 변경은 `Papertory/guidelines/design.md`(SSOT, 저장소 내 유일한 design.md)에서만 갱신

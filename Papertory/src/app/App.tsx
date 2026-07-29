@@ -2,6 +2,9 @@
 // MARKER-MAKE-KIT-DISCOVERY-READ
 // MARKER-MAKE-KIT-TOKENS-READ
 import { useState, useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lenis from "lenis";
 import StartScreenImport from "@/imports/Start/index";
 import imgArticle from "@/imports/Landing/8db2a969b7cc2690d1ad5bbc3961b54f39a56d49.png";
 import imgTori from "@/imports/Landing/209e16e9a7b0e6466a84c310cffb3fdc38787db8.png";
@@ -468,26 +471,29 @@ function FAB({
 }
 
 // ── Hero Card ──
-function HeroCard({ category }: { category: Category }) {
+function HeroCard({ category, onClick }: { category: Category; onClick?: () => void }) {
   return (
     <div className="flex flex-col gap-5 px-5 w-full" style={{ paddingTop: 120, paddingBottom: 16 }}>
-      <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
-        <CategoryChip label={category === "Today" ? "산업" : category} />
-        <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+      {/* 헤드라인·썸네일·본문 클릭 시 기사 원문으로 이동 */}
+      <button onClick={onClick} className="flex flex-col gap-5 w-full text-left">
+        <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
+          <CategoryChip label={category === "Today" ? "산업" : category} />
+          <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
+            앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+          </p>
+        </div>
+        <div
+          className="relative rounded-xl overflow-hidden shrink-0 w-full"
+          style={{ height: 181, marginBottom: 10 }}
+        >
+          <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        </div>
+        <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
+          종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
+          제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
+          안내한다. AI 요약과 형광펜 스크랩을 활용한다.
         </p>
-      </div>
-      <div
-        className="relative rounded-xl overflow-hidden shrink-0 w-full"
-        style={{ height: 181, marginBottom: 10 }}
-      >
-        <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      </div>
-      <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
-        종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
-        제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
-        안내한다. AI 요약과 형광펜 스크랩을 활용한다.
-      </p>
+      </button>
       <p
         className="caption text-center"
         style={{ color: "var(--pt-text-secondary)", paddingTop: 10 }}
@@ -540,7 +546,7 @@ function LandingScreen({
         showAvatar
       />
       <div className="h-full overflow-y-auto pb-24">
-        <HeroCard category={category} />
+        <HeroCard category={category} onClick={onNewsClick} />
         <div className="flex flex-col gap-2 pt-8">
           <div className="px-5">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)", fontSize: 18 }}>
@@ -569,18 +575,20 @@ function CategoryCard({
   subtitle,
   image,
   style,
+  className,
   onClick,
 }: {
   label: string;
   subtitle: string;
   image: string;
   style?: React.CSSProperties;
+  className?: string;
   onClick?: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="absolute rounded-xl overflow-hidden text-left"
+      className={`absolute rounded-xl overflow-hidden text-left${className ? ` ${className}` : ""}`}
       style={{
         width: 208,
         height: 298,
@@ -642,7 +650,7 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
   {
     title: "글로벌마켓",
     subtitle: "미국시세 · 투자의견 · 실적",
-    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png?updatedAt=1784606570958",
   },
   {
     title: "집코노미",
@@ -667,6 +675,9 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
 ];
 
 // ── Category Screen ──
+// 프레임 고정 크기(App()의 393×852 폰 목업)에 맞춰 스크롤 캐스케이드 스테이지 높이를 정함
+const FRAME_HEIGHT = 852;
+
 function CategoryScreen({
   onBack,
   onCategorySelect,
@@ -674,23 +685,106 @@ function CategoryScreen({
   onBack: () => void;
   onCategorySelect: (cat: Category) => void;
 }) {
-  // 기존 디자인의 카드 스택 간격(세로 190px 간격, 좌측 84/80/84/90 지그재그)을 그대로 유지한 채
-  // DB 로우 수만큼 카드를 생성
-  const TOP_START = 115;
-  const TOP_STEP = 190;
-  const CARD_HEIGHT = 298;
-  const LEFT_OFFSETS = [84, 80, 84, 90];
+  const cards: { label: Category; subtitle: string; image: string }[] = CATEGORY_PAGE_DB.map(
+    (row) => ({ label: row.title, subtitle: row.subtitle, image: row.imageUrl })
+  );
+  const N = cards.length;
 
-  const cards: { label: Category; subtitle: string; image: string; top: number; left: number }[] =
-    CATEGORY_PAGE_DB.map((row, i) => ({
-      label: row.title,
-      subtitle: row.subtitle,
-      image: row.imageUrl,
-      top: TOP_START + i * TOP_STEP,
-      left: LEFT_OFFSETS[i % LEFT_OFFSETS.length],
-    }));
+  const containerRef = useRef<HTMLDivElement>(null); // Lenis wrapper / ScrollTrigger scroller
+  const contentRef = useRef<HTMLDivElement>(null); // Lenis content / scroll-length spacer
 
-  const stageHeight = TOP_START + (cards.length - 1) * TOP_STEP + CARD_HEIGHT + 40;
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    // 브라우저가 리로드 시 이전 스크롤 위치를 복원하는 경우가 있어, 항상 첫 카드(Today)부터 시작하도록 고정
+    container.scrollTop = 0;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // 세로 방향 고정 캐스케이드 상수(기존 디자인과 동일하게 좌우 이동 없음)
+    const STEP_Y = 132;
+    const PUSH = 46;
+    const DISTANCE_PER_CARD = 220;
+    const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
+    const DIM_PER_STEP = 0.35; // 뒤에 가려진 카드일수록 투명도·명도를 낮추는 정도
+
+    const els = Array.from(content.querySelectorAll<HTMLElement>(".cascade-card"));
+
+    let lenis: Lenis | null = null;
+    function raf(time: number) {
+      lenis?.raf(time * 1000);
+    }
+    if (!reduced) {
+      lenis = new Lenis({ wrapper: container, content, lerp: 0.1, smoothWheel: true });
+      lenis.on("scroll", ScrollTrigger.update);
+      gsap.ticker.add(raf);
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    function layout(progress: number) {
+      const focusIndex = progress * (N - 1);
+      els.forEach((el, i) => {
+        const pos = i - focusIndex;
+        const dist = Math.abs(pos);
+        const near = Math.max(0, 1 - dist);
+        const falloff = Math.max(0, 1 - dist / 1.8);
+        // Math.sign(pos)는 pos가 0을 지날 때 카드가 튀는 원인이라 tanh로 매끄럽게 처리
+        const push = Math.tanh(pos * 1.7) * PUSH * falloff;
+        // 화면 밖으로 멀어질수록 서서히 사라지는 전체 페이드
+        const t = gsap.utils.clamp(0, 1, dist / FADE_RANGE);
+        const farFade = 1 - t * t;
+        // 바로 뒤에 가려진 카드부터 곧바로 살짝 어둡고 흐리게 — 카드 한 장 거리(dist=1)면 최대로 적용
+        const depthT = gsap.utils.clamp(0, 1, dist);
+        const dim = 1 - depthT * DIM_PER_STEP;
+        gsap.set(el, {
+          xPercent: -50,
+          yPercent: -50,
+          x: 0,
+          y: pos * STEP_Y + push,
+          scale: 0.94 + near * 0.14,
+          opacity: dim * farFade,
+          filter: `brightness(${dim})`,
+          zIndex: Math.round((1 - dist) * 1000),
+        });
+      });
+    }
+
+    const proxy = { p: 0 };
+    const tween = gsap.to(proxy, {
+      p: 1,
+      ease: "none",
+      scrollTrigger: {
+        scroller: container,
+        trigger: content,
+        start: "top top",
+        end: () => "+=" + N * DISTANCE_PER_CARD,
+        scrub: true,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        snap: {
+          snapTo: 1 / (N - 1),
+          duration: { min: 0.15, max: 0.35 },
+          ease: "power2.inOut",
+        },
+      },
+      onUpdate() {
+        layout(proxy.p);
+      },
+    });
+
+    layout(0);
+    ScrollTrigger.refresh();
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+      lenis?.destroy();
+      gsap.ticker.remove(raf);
+    };
+  }, [N]);
 
   return (
     <div
@@ -701,18 +795,21 @@ function CategoryScreen({
       }}
     >
       <AppHeader dropdownLabel="카테고리" showBack onBackClick={onBack} onDropdownClick={() => {}} />
-      <div className="absolute inset-0 overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 40 }}>
-        <div className="relative" style={{ height: stageHeight }}>
-          {cards.map((c) => (
-            <CategoryCard
-              key={c.label}
-              label={c.label}
-              subtitle={c.subtitle}
-              image={c.image}
-              style={{ top: c.top, left: c.left }}
-              onClick={() => onCategorySelect(c.label)}
-            />
-          ))}
+      <div ref={containerRef} className="absolute inset-0 overflow-y-auto">
+        <div ref={contentRef} style={{ height: FRAME_HEIGHT + N * 220 }}>
+          <div className="relative" style={{ position: "sticky", top: 0, height: FRAME_HEIGHT }}>
+            {cards.map((c) => (
+              <CategoryCard
+                key={c.label}
+                label={c.label}
+                subtitle={c.subtitle}
+                image={c.image}
+                className="cascade-card"
+                style={{ top: "50%", left: "50%" }}
+                onClick={() => onCategorySelect(c.label)}
+              />
+            ))}
+          </div>
         </div>
       </div>
       <div
