@@ -2320,6 +2320,7 @@ const JULY_READS: Record<number, number> = {
   15: 2, 16: 7, 17: 1, 18: 1, 19: 5, 20: 1,
 };
 const TODAY_DAY = 21; // 오늘 = 7월 21일
+const TODAY_DATE_STR = `2026.07.${String(TODAY_DAY).padStart(2, "0")}`;
 const READ_GOAL = 5; // 완성 기준(하루 5개)
 const LEVEL_BG = ["", "var(--pt-read-1)", "var(--pt-read-2)", "var(--pt-read-3)", "var(--pt-read-4)", "var(--pt-read-5)"];
 const MONTH_BAR_H = [18, 14, 22, 16, 28, 18, 48, 24, 14, 20, 16, 12]; // 연간 독서량 막대(디자인 목업 높이)
@@ -2820,20 +2821,14 @@ function PenToolIcon({ name, color = "var(--pt-text-primary)" }: { name: PenTool
 }
 
 // ── Scrap Library Screen (스크랩 라이브러리) ──
-const SCRAP_ITEMS = [
-  { id: 1, title: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입", date: "2026.07.20" },
-  { id: 2, title: "삼성전자, HBM4 양산 속도 낸다", date: "2026.07.18" },
-  { id: 3, title: "코스피 3,200선 돌파, 외국인 순매수", date: "2026.07.15" },
-  { id: 4, title: "서울 아파트 매매가 8주 연속 상승", date: "2026.07.12" },
-  { id: 5, title: "한국은행 기준금리 연 3.0% 동결", date: "2026.07.10" },
-];
-
 function ScrapLibraryScreen({
+  items,
   onMenuOpen,
   onOpen,
   onNew,
   onShare,
 }: {
+  items: SavedScrap[];
   onMenuOpen: () => void;
   onOpen: (id: number) => void;
   onNew: () => void;
@@ -2875,7 +2870,7 @@ function ScrapLibraryScreen({
           className="grid justify-center gap-2 px-4"
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 114px))" }}
         >
-          {SCRAP_ITEMS.map((it) => (
+          {items.map((it) => (
             <article
               key={it.id}
               className="bg-white rounded-xl border flex w-full max-w-[114px] flex-col items-end text-left"
@@ -2940,10 +2935,27 @@ type ScrapDoc = { elements: ScrapEl[]; strokes: ScrapStroke[]; bg: ScrapBg };
 type ScrapBg = "none" | "paper" | "grid" | "lime" | "blue";
 type EraserMode = "stroke" | "area" | "all";
 type ScrapAction = { t: "stroke" | "el"; id: string } | { t: "clear"; strokes: ScrapStroke[]; els: ScrapEl[] };
+// 스크랩 라이브러리에 저장된 한 건 — 표지 제목은 만든 기사 헤드라인(또는 "제목 없음"), 목록은 항상 최신 수정순
+type SavedScrap = { id: number; title: string; date: string; doc: ScrapDoc };
 const scrapUid = () => Math.random().toString(36).slice(2, 9);
 const PEN_COLORS = ["#1a2535", "#6083f5", "#496de0", "#e6f997", "#ff6b6b", "#ffa94d", "#51cf66", "#845ef7"];
 const STICKERS = [imgSticker1, imgSticker2, imgSticker3, imgSticker4, imgToriDeco];
 const ERASE_R = 18;
+// 기존 목업 스크랩북 4종 — 신규 저장 항목이 없을 때 라이브러리 시드 데이터로도 재사용
+const DEFAULT_SCRAP_ELEMENTS: ScrapEl[] = [
+  { id: scrapUid(), kind: "note", x: 24, y: 16, text: "부동산 공급 대책", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
+  { id: scrapUid(), kind: "note", x: 60, y: 240, text: "일정한 선의 사회적 합의 필요", bg: "var(--pt-brand-secondary)", color: "#1a1a1a" },
+  { id: scrapUid(), kind: "note", x: 40, y: 360, text: "전세가율 반등, 실수요 유입 신호", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
+  { id: scrapUid(), kind: "sticker", x: 250, y: 300, src: imgToriDeco, size: 96 },
+];
+// 스크랩 라이브러리 시드 — 날짜는 이미 최신순으로 정렬돼 있음(맨 위=가장 최근)
+const SEED_SAVED_SCRAPS: SavedScrap[] = [
+  { id: 1, title: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입", date: "2026.07.20", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+  { id: 2, title: "삼성전자, HBM4 양산 속도 낸다", date: "2026.07.18", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+  { id: 3, title: "코스피 3,200선 돌파, 외국인 순매수", date: "2026.07.15", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+  { id: 4, title: "서울 아파트 매매가 8주 연속 상승", date: "2026.07.12", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+  { id: 5, title: "한국은행 기준금리 연 3.0% 동결", date: "2026.07.10", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+];
 // 편집·미리보기·이미지 저장이 모두 같은 좌표계를 사용한다.
 // 화면에서는 이 393×742 문서를 기기 너비에 맞춰 축소하고, 포인터 좌표는 다시 이 좌표계로 환산한다.
 const SCRAP_CANVAS_WIDTH = 393;
@@ -2967,7 +2979,21 @@ function scrapBgStyle(bg: ScrapBg): React.CSSProperties {
   return { backgroundColor: "var(--pt-bg-primary)" };
 }
 
-function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean; clippings: string[]; onBack: () => void; onShare: (doc: ScrapDoc) => void }) {
+function ScrapbookScreen({
+  isNew,
+  clippings,
+  initialDoc,
+  onBack,
+  onShare,
+  onAutoSave,
+}: {
+  isNew: boolean;
+  clippings: string[];
+  initialDoc?: ScrapDoc;
+  onBack: () => void;
+  onShare: (doc: ScrapDoc) => void;
+  onAutoSave?: (doc: ScrapDoc) => void;
+}) {
   const [tool, setTool] = useState<PenTool | "none">("none");
   const [penColor, setPenColor] = useState("#6083f5");
   const [hlColor, setHlColor] = useState("#e6f997");
@@ -2976,20 +3002,23 @@ function ScrapbookScreen({ isNew, clippings, onBack, onShare }: { isNew: boolean
   const [text, setText] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [eraserMode, setEraserMode] = useState<EraserMode>("stroke");
-  const [bg, setBg] = useState<ScrapBg>(isNew ? "none" : "paper");
+  const [bg, setBg] = useState<ScrapBg>(initialDoc?.bg ?? (isNew ? "none" : "paper"));
   const [bgOpen, setBgOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [strokes, setStrokes] = useState<ScrapStroke[]>([]);
+  const [strokes, setStrokes] = useState<ScrapStroke[]>(initialDoc?.strokes ?? []);
   const [elements, setElements] = useState<ScrapEl[]>(
-    isNew
-      ? []
-      : [
-          { id: scrapUid(), kind: "note", x: 24, y: 16, text: "부동산 공급 대책", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
-          { id: scrapUid(), kind: "note", x: 60, y: 240, text: "일정한 선의 사회적 합의 필요", bg: "var(--pt-brand-secondary)", color: "#1a1a1a" },
-          { id: scrapUid(), kind: "note", x: 40, y: 360, text: "전세가율 반등, 실수요 유입 신호", bg: "var(--pt-brand-primary)", color: "#ecf0f9" },
-          { id: scrapUid(), kind: "sticker", x: 250, y: 300, src: imgToriDeco, size: 96 },
-        ]
+    initialDoc?.elements ?? (isNew ? [] : DEFAULT_SCRAP_ELEMENTS)
   );
+
+  // 요소·필기·배경 중 하나라도 바뀌면 자동저장 — 최초 마운트(초기값 세팅)는 변경으로 치지 않음
+  const autoSaveMounted = useRef(false);
+  useEffect(() => {
+    if (!autoSaveMounted.current) {
+      autoSaveMounted.current = true;
+      return;
+    }
+    onAutoSave?.({ elements, strokes, bg });
+  }, [elements, strokes, bg]);
   const [history, setHistory] = useState<ScrapAction[]>([]);
   const [canvasScale, setCanvasScale] = useState(1);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -3983,10 +4012,37 @@ export default function App() {
   const [scrapNew, setScrapNew] = useState(false);
   const [clippings, setClippings] = useState<string[]>([]);
   const [scrapSnapshot, setScrapSnapshot] = useState<ScrapDoc | null>(null);
+  // 스크랩 라이브러리 — 항상 맨 앞이 가장 최근에 만들거나 수정한 스크랩
+  const [savedScraps, setSavedScraps] = useState<SavedScrap[]>(SEED_SAVED_SCRAPS);
+  const [scrapInitialDoc, setScrapInitialDoc] = useState<ScrapDoc | undefined>(undefined);
+  const currentScrapIdRef = useRef<number | null>(null);
+  const currentScrapTitleRef = useRef<string>("제목 없음");
+  const nextScrapIdRef = useRef(1000);
   const usesViewportScroller =
     screen === "start" || screen === "category" || screen === "scrapbook";
   const toggleClip = (t: string, on: boolean) =>
     setClippings((prev) => (on ? (prev.includes(t) ? prev : [...prev, t]) : prev.filter((x) => x !== t)));
+
+  // 요소·필기·배경이 한 번이라도 바뀌면 호출됨 — 신규 스크랩이면 이때 처음 목록에 생기고,
+  // 기존 스크랩이면 내용을 갱신하며 항상 맨 앞(최신순)으로 올라온다
+  const handleScrapAutoSave = (doc: ScrapDoc) => {
+    setSavedScraps((prev) => {
+      let id = currentScrapIdRef.current;
+      if (id == null) {
+        id = nextScrapIdRef.current++;
+        currentScrapIdRef.current = id;
+      }
+      const rest = prev.filter((s) => s.id !== id);
+      return [{ id, title: currentScrapTitleRef.current, date: TODAY_DATE_STR, doc }, ...rest];
+    });
+  };
+  const openNewScrap = (title: string) => {
+    currentScrapIdRef.current = null;
+    currentScrapTitleRef.current = title;
+    setScrapInitialDoc(undefined);
+    setScrapNew(true);
+    goTo("scrapbook");
+  };
 
   // 딥링크 진입: 공유 링크(#/s/{id})로 들어오면 스플래시를 건너뛰고 '공유 스크랩 뷰'로 순환 진입
   useEffect(() => {
@@ -4079,7 +4135,7 @@ export default function App() {
             onBack={() => goTo(prevScreen)}
             onComplete={markTodayRead}
             onToggleClip={toggleClip}
-            onOpenScrapbook={() => { setScrapNew(true); goTo("scrapbook"); }}
+            onOpenScrapbook={() => openNewScrap(selectedArticle.headline)}
           />
         );
 
@@ -4137,9 +4193,17 @@ export default function App() {
       case "scrap-library":
         return (
           <ScrapLibraryScreen
+            items={savedScraps}
             onMenuOpen={() => setDrawerOpen(true)}
-            onOpen={() => { setScrapNew(false); goTo("scrapbook"); }}
-            onNew={() => { setScrapNew(true); goTo("scrapbook"); }}
+            onOpen={(id) => {
+              const found = savedScraps.find((s) => s.id === id);
+              currentScrapIdRef.current = id;
+              currentScrapTitleRef.current = found?.title ?? "제목 없음";
+              setScrapInitialDoc(found?.doc);
+              setScrapNew(false);
+              goTo("scrapbook");
+            }}
+            onNew={() => openNewScrap("제목 없음")}
             onShare={() => { setScrapSnapshot(null); goTo("scrap-share"); }}
           />
         );
@@ -4149,8 +4213,10 @@ export default function App() {
           <ScrapbookScreen
             isNew={scrapNew}
             clippings={clippings}
+            initialDoc={scrapInitialDoc}
             onBack={() => goTo("scrap-library")}
             onShare={(doc) => { setScrapSnapshot(doc); goTo("scrap-share"); }}
+            onAutoSave={handleScrapAutoSave}
           />
         );
 
