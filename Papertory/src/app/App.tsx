@@ -2319,8 +2319,24 @@ const JULY_READS: Record<number, number> = {
   1: 1, 3: 3, 4: 2, 5: 1, 6: 2, 7: 3, 8: 4, 9: 1, 10: 5, 11: 1, 12: 5,
   15: 2, 16: 7, 17: 1, 18: 1, 19: 5, 20: 1,
 };
-const TODAY_DAY = 21; // 오늘 = 7월 21일
-const TODAY_DATE_STR = `2026.07.${String(TODAY_DAY).padStart(2, "0")}`;
+// 실제 한국(KST) 날짜를 "오늘"로 사용 — 목업 데이터(JULY_READS)는 2026년 7월 기준으로 고정돼 있으므로
+// 실제 날짜가 그 달을 벗어나면(다른 달/연도) 달력엔 "오늘" 표시가 나타나지 않음
+function getKstToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const map: Record<string, string> = {};
+  parts.forEach((p) => (map[p.type] = p.value));
+  return { year: Number(map.year), month: Number(map.month), day: Number(map.day) };
+}
+const KST_TODAY = getKstToday();
+const TODAY_YEAR = KST_TODAY.year;
+const TODAY_MONTH = KST_TODAY.month;
+const TODAY_DAY = KST_TODAY.day;
+const TODAY_DATE_STR = `${TODAY_YEAR}.${String(TODAY_MONTH).padStart(2, "0")}.${String(TODAY_DAY).padStart(2, "0")}`;
 const READ_GOAL = 5; // 완성 기준(하루 5개)
 const LEVEL_BG = ["", "var(--pt-read-1)", "var(--pt-read-2)", "var(--pt-read-3)", "var(--pt-read-4)", "var(--pt-read-5)"];
 const MONTH_BAR_H = [18, 14, 22, 16, 28, 18, 48, 24, 14, 20, 16, 12]; // 연간 독서량 막대(디자인 목업 높이)
@@ -2463,6 +2479,10 @@ function CalendarScreen({
                 const count = reads[d] || 0;
                 const lv = Math.min(count, 5);
                 const isToday = d === todayDay;
+                const isFuture =
+                  year > TODAY_YEAR ||
+                  (year === TODAY_YEAR && month > TODAY_MONTH) ||
+                  (year === TODAY_YEAR && month === TODAY_MONTH && d > TODAY_DAY);
                 const bg = isToday
                   ? "var(--pt-brand-secondary)"
                   : lv > 0
@@ -2477,9 +2497,15 @@ function CalendarScreen({
                 return (
                   <button
                     key={i}
-                    onClick={() => onDateClick(d)}
+                    disabled={isFuture}
+                    onClick={isFuture ? undefined : () => onDateClick(d)}
                     className="flex w-full max-w-10 items-center justify-center rounded-xl"
-                    style={{ aspectRatio: "4 / 5", backgroundColor: bg, border }}
+                    style={{
+                      aspectRatio: "4 / 5",
+                      backgroundColor: bg,
+                      border,
+                      cursor: isFuture ? "default" : "pointer",
+                    }}
                   >
                     <span style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 14, color: textColor }}>
                       {d}
@@ -4082,8 +4108,8 @@ export default function App() {
     };
   }, [drawerOpen, pickerOpen]);
 
-  const isJuly = calYear === 2026 && calMonth === 7;
-  const monthReads: Record<number, number> = isJuly ? readsByDate : {};
+  const isCurrentMonth = calYear === TODAY_YEAR && calMonth === TODAY_MONTH;
+  const monthReads: Record<number, number> = isCurrentMonth ? readsByDate : {};
   const markTodayRead = () =>
     setReadsByDate((prev) => ({ ...prev, [TODAY_DAY]: (prev[TODAY_DAY] || 0) + 1 }));
 
@@ -4178,7 +4204,7 @@ export default function App() {
             year={calYear}
             month={calMonth}
             reads={monthReads}
-            todayDay={isJuly ? TODAY_DAY : null}
+            todayDay={isCurrentMonth ? TODAY_DAY : null}
             onMenuOpen={() => setDrawerOpen(true)}
             onOpenPicker={() => setPickerOpen(true)}
             onDateClick={(d) => {
