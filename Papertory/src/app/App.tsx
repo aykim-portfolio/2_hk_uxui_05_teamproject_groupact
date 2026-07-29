@@ -20,6 +20,7 @@ import imgSticker3 from "@/imports/스크랩북/sticker-3.png";
 import imgSticker4 from "@/imports/스크랩북/sticker-4.png";
 import imgToriDeco from "@/imports/스크랩북/tori-deco.png";
 import imgBgPaper from "@/imports/스크랩북/bg-paper.png";
+import imgScrapColorPicker from "@/imports/기사원문/b3f46f82ad89489d80cc51b271cd3cc0.png";
 import articlesData from "./articles.json";
 
 type Screen =
@@ -39,6 +40,43 @@ type Screen =
   | "shared-scrap";
 type ArticleTab = "original" | "ai" | "easy";
 type ShopTab = "tape" | "sticker";
+// 기사 원문 FAB 툴바 — 형광펜(문장 강조)/펜(자유 필기)/지우개/가위(이미지 자르기)
+type ArticleTool = "none" | "highlighter" | "pencil" | "eraser" | "scissors";
+type ArticleStroke = { id: string; pts: { x: number; y: number }[] };
+// 형광펜은 문단 전체가 아니라 드래그로 고른 부분(start~end 문자 오프셋)만 강조한다
+type HighlightRange = { id: string; para: number; start: number; end: number; text: string };
+type ArticleAction = { t: "highlight"; id: string } | { t: "stroke"; id: string } | { t: "clip"; text: string };
+
+// 문단 안의 텍스트 노드를 순서대로 훑어 node/offset을 "문단 시작부터 문자 수" 오프셋으로 환산
+function textOffsetInPara(paraEl: HTMLElement, node: Node, nodeOffset: number): number {
+  let offset = 0;
+  const walker = document.createTreeWalker(paraEl, NodeFilter.SHOW_TEXT);
+  let cur: Node | null;
+  while ((cur = walker.nextNode())) {
+    if (cur === node) return offset + nodeOffset;
+    offset += (cur.textContent || "").length;
+  }
+  return offset;
+}
+
+// 강조 구간들을 하이라이트/일반 구간으로 쪼개 렌더링용 세그먼트 배열로 변환
+function paraHighlightSegments(text: string, ranges: HighlightRange[]): { text: string; on: boolean }[] {
+  if (!text) return [];
+  const mask = new Array(text.length).fill(false);
+  for (const r of ranges) {
+    for (let i = Math.max(0, r.start); i < Math.min(text.length, r.end); i++) mask[i] = true;
+  }
+  const segments: { text: string; on: boolean }[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const on = mask[i];
+    let j = i;
+    while (j < text.length && mask[j] === on) j++;
+    segments.push({ text: text.slice(i, j), on });
+    i = j;
+  }
+  return segments;
+}
 type Category = string;
 
 interface BeforeInstallPromptEvent extends Event {
@@ -423,6 +461,81 @@ function BookmarkIcon({ colorVar = "var(--pt-brand-primary)" }: { colorVar?: str
   );
 }
 
+// Lucide highlighter — 원문 스크랩 툴바 아이콘
+function HighlighterIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="21" height="18" viewBox="0 0 21 18" fill="none">
+      <path
+        d="M7 8L1 14V17H10L13 14M20 9L15.4 13.6C15.0261 13.9665 14.5235 14.1717 14 14.1717C13.4765 14.1717 12.9739 13.9665 12.6 13.6L7.4 8.4C7.03355 8.02614 6.82829 7.52351 6.82829 7C6.82829 6.47649 7.03355 5.97386 7.4 5.6L12 1"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Lucide pencil — 원문 스크랩 툴바 아이콘
+function PencilIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <path
+        d="M14 4L18 8M20.174 5.812C20.703 5.284 21 4.567 21 3.819C21 3.072 20.703 2.355 20.174 1.826C19.646 1.297 18.929 1 18.181 1C17.434 1 16.717 1.297 16.188 1.825L2.842 15.174C2.610 15.406 2.438 15.691 2.342 16.004L1.021 20.356C0.995 20.443 0.993 20.535 1.015 20.622C1.037 20.710 1.083 20.790 1.147 20.853C1.211 20.917 1.291 20.962 1.378 20.985C1.466 21.007 1.557 21.004 1.644 20.978L5.997 19.658C6.310 19.563 6.595 19.393 6.827 19.161L20.174 5.812Z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Lucide eraser — 원문 스크랩 툴바 아이콘
+function EraserIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="22" height="20" viewBox="0 0 22 20" fill="none">
+      <path
+        d="M20 19H11.834M11.834 19H7C6.736 19.001 6.475 18.949 6.231 18.848C5.987 18.748 5.766 18.600 5.580 18.413L1.586 14.414C1.211 14.039 1 13.530 1 13C1 12.470 1.211 11.961 1.586 11.586L11.586 1.586C11.771 1.400 11.992 1.253 12.235 1.152C12.477 1.052 12.737 1 13 1C13.263 1 13.523 1.052 13.766 1.152C14.008 1.253 14.229 1.400 14.415 1.586L20.414 7.586C20.789 7.961 20.999 8.470 20.999 9C20.999 9.530 20.789 10.039 20.414 10.414L11.834 19ZM4.082 9.090L12.910 17.918"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Lucide scissors — 원문 스크랩 툴바 아이콘
+function ScissorsIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="19" height="20" viewBox="0 0 19 20" fill="none">
+      <path
+        d="M6.12 6.12L10 10M18 2L6.12 13.88M12.8 12.8L18 18M7 4C7 5.65685 5.65685 7 4 7C2.34315 7 1 5.65685 1 4C1 2.34315 2.34315 1 4 1C5.65685 1 7 2.34315 7 4ZM7 16C7 17.6569 5.65685 19 4 19C2.34315 19 1 17.6569 1 16C1 14.3431 2.34315 13 4 13C5.65685 13 7 14.3431 7 16Z"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Lucide undo-2 — 원문 스크랩 툴바 아이콘
+function UndoIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path
+        d="M6 1L1 6L6 11M1 6H11.5C12.2223 6 12.9375 6.14226 13.6048 6.41866C14.272 6.69506 14.8784 7.10019 15.3891 7.61091C15.8998 8.12163 16.3049 8.72795 16.5813 9.39524C16.8577 10.0625 17 10.7777 17 11.5C17 12.2223 16.8577 12.9375 16.5813 13.6048C16.3049 14.272 15.8998 14.8784 15.3891 15.3891C14.8784 15.8998 14.272 16.3049 13.6048 16.5813C12.9375 16.8577 12.2223 17 11.5 17H8"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function DropdownTab({
   label,
   onClick,
@@ -709,56 +822,93 @@ function NewsRow({
 }
 
 // ── FAB + Toolbar ──
+const ARTICLE_TOOL_ITEMS: { tool: Exclude<ArticleTool, "none">; Icon: typeof HighlighterIcon; label: string }[] = [
+  { tool: "highlighter", Icon: HighlighterIcon, label: "형광펜" },
+  { tool: "pencil", Icon: PencilIcon, label: "펜" },
+  { tool: "eraser", Icon: EraserIcon, label: "지우개" },
+  { tool: "scissors", Icon: ScissorsIcon, label: "이미지 자르기" },
+];
+
 function FAB({
   onPress,
   showToolbar,
   onCloseToolbar,
+  tool,
+  onSelectTool,
+  onUndo,
+  canUndo,
 }: {
   onPress: () => void;
   showToolbar: boolean;
   onCloseToolbar: () => void;
+  tool: ArticleTool;
+  onSelectTool: (t: Exclude<ArticleTool, "none">) => void;
+  onUndo: () => void;
+  canUndo: boolean;
 }) {
+  const FabIcon =
+    tool === "pencil" ? PencilIcon : tool === "eraser" ? EraserIcon : tool === "scissors" ? ScissorsIcon : HighlighterIcon;
+
   return (
     <>
       {showToolbar && <div className="pt-fab-overlay absolute inset-0 z-20" onClick={onCloseToolbar} />}
       {showToolbar && (
         <div
-          className="pt-fab-toolbar absolute flex items-center gap-2 rounded-full px-4 py-2 z-30 overflow-x-auto no-scrollbar"
+          className="pt-fab-toolbar absolute flex items-center gap-5 rounded-full p-5 z-30 overflow-x-auto no-scrollbar"
           style={{
-            bottom: `calc(${APP_SAFE_BOTTOM} + 96px)`,
+            bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
             right: APP_INLINE_END,
             maxWidth: "calc(100% - 24px)",
             backgroundColor: "rgba(255,255,255,0.95)",
             boxShadow:
-              "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.15)",
+              "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
             backdropFilter: "blur(12px)",
           }}
         >
-          {[
-            ["✏️", "연필"],
-            ["🖊️", "형광펜"],
-            ["🧹", "지우개"],
-            ["✂️", "클리핑"],
-            ["↩️", "실행 취소"],
-            ["🎨", "색상"],
-          ].map(([icon, label]) => (
-            <button
-              key={icon}
-              aria-label={label}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="text-xl leading-none">{icon}</span>
-            </button>
-          ))}
-          <div className="w-px h-6 mx-1" style={{ backgroundColor: "var(--pt-border-default)" }} />
-          <button aria-label="북마크" onClick={(e) => e.stopPropagation()}>
-            <BookmarkIcon />
+          {ARTICLE_TOOL_ITEMS.map(({ Icon, label, tool: t }) => {
+            const active = tool === t;
+            return (
+              <button
+                key={label}
+                aria-label={label}
+                aria-pressed={active}
+                className="shrink-0 flex items-center justify-center rounded-full"
+                style={{ width: 36, height: 36, backgroundColor: active ? "var(--pt-brand-secondary)" : "transparent" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTool(t);
+                }}
+              >
+                <Icon color={active ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
+              </button>
+            );
+          })}
+          <button
+            aria-label="실행 취소"
+            disabled={!canUndo}
+            className="shrink-0 flex items-center justify-center rounded-full"
+            style={{ width: 36, height: 36, opacity: canUndo ? 1 : 0.35 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onUndo();
+            }}
+          >
+            <UndoIcon />
+          </button>
+          <button
+            aria-label="색상"
+            className="shrink-0 rounded-full overflow-hidden"
+            style={{ width: 24, height: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={imgScrapColorPicker} alt="" className="size-full object-cover" />
           </button>
         </div>
       )}
+      {!showToolbar && (
       <button
         onClick={onPress}
-        aria-label={showToolbar ? "스크랩 도구 닫기" : "스크랩 도구 열기"}
+        aria-label="스크랩 도구 열기"
         aria-expanded={showToolbar}
         className="pt-fab-button absolute z-30 flex items-center justify-center rounded-full"
         style={{
@@ -770,14 +920,16 @@ function FAB({
             "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
           backgroundImage:
             "linear-gradient(161.696deg, rgba(255,255,255,0.2) 31.933%, rgba(235,235,235,0.2) 144.03%)",
+          border: tool !== "none" ? "2px solid var(--pt-brand-primary)" : "none",
         }}
       >
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{ boxShadow: "inset 3px 4px 4px white, inset 0px 13px 12px rgba(255,255,255,0.2)" }}
         />
-        <BookmarkIcon />
+        <FabIcon color="var(--pt-brand-primary)" />
       </button>
+      )}
     </>
   );
 }
@@ -798,9 +950,9 @@ function HeroCard({ article, onClick }: { article: NewsItem; onClick?: () => voi
           </p>
         </div>
         <div className="relative rounded-xl overflow-hidden shrink-0 w-full aspect-[353/181]" style={{ marginBottom: 10 }}>
-          <img
+          <ArticleImage
             src={article.image}
-            alt=""
+            category={article.category}
             className="absolute inset-0 w-full h-full object-cover"
           />
         </div>
@@ -848,12 +1000,63 @@ const NEWS_IMG = {
     "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
 };
 
+// 기사 원본 이미지가 없거나 한경 CDN에서 내려간 경우 쓰는 카테고리 대표 이미지
+// (img.hankyung.com의 일부 경로는 200을 주면서 본문이 0바이트라 브라우저가 렌더하지 못함)
+const CATEGORY_FALLBACK_IMG: Record<string, string> = {
+  Today: "https://ik.imagekit.io/cuquvvrdw/%E1%84%92%E1%85%A1%E1%86%AB%E1%84%80%E1%85%AE%E1%86%A8%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png",
+  "한경 프리미엄9": "https://ik.imagekit.io/cuquvvrdw/%E1%84%91%E1%85%B3%E1%84%85%E1%85%B5%E1%84%86%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%B79.png",
+  경제: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%A7%E1%86%BC%E1%84%8C%E1%85%A6.png",
+  산업: "https://ik.imagekit.io/cuquvvrdw/%E1%84%89%E1%85%A1%E1%86%AB%E1%84%8B%E1%85%A5%E1%86%B8.png",
+  코리아마켓: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8F%E1%85%A9%E1%84%85%E1%85%B5%E1%84%8B%E1%85%A1%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+  글로벌마켓:
+    "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png?updatedAt=1784606570958",
+  집코노미: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8C%E1%85%B5%E1%86%B8%E1%84%8F%E1%85%A9%E1%84%82%E1%85%A9%E1%84%86%E1%85%B5.png",
+  오피니언:
+    "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%A9%E1%84%91%E1%85%B5%E1%84%82%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB.png?updatedAt=1784606571536",
+  국제: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%AE%E1%86%A8%E1%84%8C%E1%85%A6.png",
+  유통: "https://ik.imagekit.io/cuquvvrdw/%E1%84%8B%E1%85%B2%E1%84%90%E1%85%A9%E1%86%BC.png",
+};
+function fallbackImageFor(category: string): string {
+  return CATEGORY_FALLBACK_IMG[category] || CATEGORY_FALLBACK_IMG.Today;
+}
+
+// 기사 이미지 — 원본이 깨지면 카테고리 대표 이미지로 자동 교체해 빈 액자가 보이지 않게 한다
+function ArticleImage({
+  src,
+  category,
+  className,
+  style,
+}: {
+  src: string;
+  category: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const fallback = fallbackImageFor(category);
+  const [resolved, setResolved] = useState(src || fallback);
+
+  // 기사가 바뀌면 다시 원본부터 시도
+  useEffect(() => {
+    setResolved(src || fallback);
+  }, [src, fallback]);
+
+  return (
+    <img
+      src={resolved}
+      alt=""
+      className={className}
+      style={style}
+      onError={() => setResolved((cur) => (cur === fallback ? cur : fallback))}
+    />
+  );
+}
+
 function toNewsItem(a: (typeof articlesData.articles)[number]): NewsItem {
   return {
     id: a.id,
     category: a.category,
     headline: a.headline,
-    image: a.imageUrl || "",
+    image: a.imageUrl || fallbackImageFor(a.category),
     byline: `${a.author} · ${a.date}`,
     summary: a.ai.summary,
     body: a.body,
@@ -1106,8 +1309,10 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
 
 function CategoryScreen({
   onCategorySelect,
+  onBack,
 }: {
   onCategorySelect: (cat: Category) => void;
+  onBack?: () => void;
 }) {
   const cards: { label: Category; subtitle: string; image: string }[] = CATEGORY_PAGE_DB.map(
     (row) => ({ label: row.title, subtitle: row.subtitle, image: row.imageUrl })
@@ -1321,6 +1526,20 @@ function CategoryScreen({
           </div>
         </div>
       </div>
+      {/* 카테고리를 고르지 않고도 이전 지면으로 돌아갈 수 있게 하는 뒤로가기 */}
+      <div
+        className="pt-app-header absolute left-0 flex items-center z-20"
+        style={{
+          top: APP_HEADER_TOP,
+          height: APP_HEADER_HEIGHT,
+          paddingLeft: APP_INLINE_START,
+          filter: "drop-shadow(0px 2px 1px rgba(181,181,181,0.25))",
+        }}
+      >
+        <GlassBtn onClick={onBack} ariaLabel="뒤로 가기">
+          <BackArrowIcon />
+        </GlassBtn>
+      </div>
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none border-4"
@@ -1331,17 +1550,132 @@ function CategoryScreen({
 }
 
 // ── Original Tab Content ──
-function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggleClip?: (text: string, on: boolean) => void }) {
+// 가위 도구 — 히어로 이미지 위에서 드래그한 사각형을 그대로 잘라 클리핑으로 저장
+function ImageCropOverlay({ active, onCropped }: { active: boolean; onCropped: (dataUrl: string) => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  if (!active) return null;
+
+  const clampPt = (e: React.PointerEvent) => {
+    const r = overlayRef.current!.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max(e.clientX - r.left, 0), r.width),
+      y: Math.min(Math.max(e.clientY - r.top, 0), r.height),
+    };
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    const p = clampPt(e);
+    startRef.current = p;
+    setRect({ x: p.x, y: p.y, w: 0, h: 0 });
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!startRef.current) return;
+    const p = clampPt(e);
+    const s = startRef.current;
+    setRect({ x: Math.min(s.x, p.x), y: Math.min(s.y, p.y), w: Math.abs(p.x - s.x), h: Math.abs(p.y - s.y) });
+  };
+  const onUp = () => {
+    const r = rect;
+    startRef.current = null;
+    setRect(null);
+    if (!r || r.w < 12 || r.h < 12) return;
+    const img = overlayRef.current?.parentElement?.querySelector("img");
+    if (!(img instanceof HTMLImageElement) || !img.complete || !img.naturalWidth) return;
+    const cw = overlayRef.current!.clientWidth;
+    const ch = overlayRef.current!.clientHeight;
+    // object-fit: cover 매핑 — 화면 표시 좌표를 원본 이미지 픽셀 좌표로 환산
+    const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+    const offsetX = (img.naturalWidth * scale - cw) / 2;
+    const offsetY = (img.naturalHeight * scale - ch) / 2;
+    const sx = (r.x + offsetX) / scale;
+    const sy = (r.y + offsetY) / scale;
+    const sw = r.w / scale;
+    const sh = r.h / scale;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(sw));
+    canvas.height = Math.max(1, Math.round(sh));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    try {
+      onCropped(canvas.toDataURL("image/png"));
+    } catch {
+      // 캔버스가 오염된 경우(외부 도메인 이미지 등) 조용히 무시
+    }
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      className="absolute inset-0 z-10"
+      style={{ touchAction: "none", cursor: "crosshair" }}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+    >
+      {rect && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: rect.x,
+            top: rect.y,
+            width: rect.w,
+            height: rect.h,
+            border: "2px solid var(--pt-brand-primary)",
+            backgroundColor: "rgba(96,131,245,0.18)",
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function OriginalContent({
+  article,
+  tool = "none",
+  highlights,
+  onHighlightRange,
+  onImageCropped,
+}: {
+  article: NewsItem;
+  tool?: ArticleTool;
+  highlights?: HighlightRange[];
+  onHighlightRange?: (para: number, start: number, end: number, text: string) => void;
+  onImageCropped?: (dataUrl: string) => void;
+}) {
   const paras = article.body || [];
-  const [hl, setHl] = useState<Set<number>>(new Set());
-  const toggle = (i: number) => {
-    const on = !hl.has(i);
-    setHl((prev) => {
-      const next = new Set(prev);
-      on ? next.add(i) : next.delete(i);
-      return next;
-    });
-    onToggleClip?.(paras[i], on); // 업데이터 밖에서 부모 상태 갱신 (setState-in-render 방지)
+  const ranges = highlights ?? [];
+
+  // 형광펜 도구일 때만: 드래그로 고른 텍스트 범위를 문단 기준 문자 오프셋으로 환산해 강조
+  const handleSelectionUp = () => {
+    if (tool !== "highlighter") return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const startEl = (
+      range.startContainer.nodeType === 1 ? (range.startContainer as Element) : range.startContainer.parentElement
+    )?.closest<HTMLElement>("[data-para-index]");
+    const endEl = (
+      range.endContainer.nodeType === 1 ? (range.endContainer as Element) : range.endContainer.parentElement
+    )?.closest<HTMLElement>("[data-para-index]");
+    if (!startEl || !endEl || startEl !== endEl) {
+      sel.removeAllRanges();
+      return;
+    }
+    const idx = Number(startEl.dataset.paraIndex);
+    const a = textOffsetInPara(startEl, range.startContainer, range.startOffset);
+    const b = textOffsetInPara(startEl, range.endContainer, range.endOffset);
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    sel.removeAllRanges();
+    if (hi <= lo) return;
+    const text = (paras[idx] || "").slice(lo, hi);
+    if (text.trim()) onHighlightRange?.(idx, lo, hi, text);
   };
 
   return (
@@ -1356,7 +1690,12 @@ function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggl
         </p>
       </div>
       <div className="relative rounded-xl overflow-hidden w-full aspect-[353/181]">
-        <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <ArticleImage
+          src={article.image}
+          category={article.category}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <ImageCropOverlay active={tool === "scissors"} onCropped={(d) => onImageCropped?.(d)} />
       </div>
       <div
         className="rounded-lg px-3 py-2 flex items-center gap-2"
@@ -1364,27 +1703,48 @@ function OriginalContent({ article, onToggleClip }: { article: NewsItem; onToggl
       >
         <span className="rounded-full" style={{ width: 14, height: 14, backgroundColor: "var(--pt-brand-secondary)" }} />
         <span className="caption" style={{ color: "var(--pt-text-dark-green)" }}>
-          문장을 탭하면 형광펜으로 스크랩돼요 (클립보드에 저장)
+          {tool === "scissors"
+            ? "이미지를 드래그해서 자유롭게 오려보세요"
+            : tool === "pencil"
+              ? "펜으로 원문 위에 자유롭게 필기해보세요"
+              : tool === "eraser"
+                ? "형광펜 표시나 펜 필기 위를 눌러 지워보세요"
+                : tool === "highlighter"
+                  ? "원하는 부분을 드래그하면 그 부분만 형광펜으로 강조돼요 (클립보드에 저장)"
+                  : "하단 도구에서 형광펜을 선택하고 문장을 드래그해보세요"}
         </span>
       </div>
-      <div className="flex flex-col gap-4">
-        {paras.map((text, i) => (
-          <p
-            key={i}
-            onClick={() => toggle(i)}
-            className="body-2 cursor-pointer transition-colors"
-            style={{
-              color: "var(--pt-text-primary)",
-              textIndent: 8,
-              letterSpacing: "-0.32px",
-              backgroundColor: hl.has(i) ? "rgba(230,249,151,0.85)" : "transparent",
-              borderRadius: 4,
-              boxDecorationBreak: "clone",
-            }}
-          >
-            {text}
-          </p>
-        ))}
+      <div className="flex flex-col gap-4" onPointerUp={handleSelectionUp}>
+        {paras.map((text, i) => {
+          const paraRanges = ranges.filter((r) => r.para === i);
+          const segments = paraHighlightSegments(text, paraRanges);
+          return (
+            <p
+              key={i}
+              data-para-index={i}
+              className="body-2"
+              style={{
+                color: "var(--pt-text-primary)",
+                textIndent: 8,
+                letterSpacing: "-0.32px",
+                cursor: tool === "highlighter" ? "text" : undefined,
+              }}
+            >
+              {segments.map((seg, si) =>
+                seg.on ? (
+                  <span
+                    key={si}
+                    style={{ backgroundColor: "rgba(230,249,151,0.85)", borderRadius: 4, boxDecorationBreak: "clone" }}
+                  >
+                    {seg.text}
+                  </span>
+                ) : (
+                  <span key={si}>{seg.text}</span>
+                )
+              )}
+            </p>
+          );
+        })}
       </div>
     </div>
   );
@@ -1622,7 +1982,11 @@ function EasyContent({ article }: { article: NewsItem }) {
         </p>
       </div>
       <div className="relative rounded-xl overflow-hidden w-full aspect-[353/181]">
-        <img src={article.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <ArticleImage
+          src={article.image}
+          category={article.category}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </div>
       <div className="flex flex-col gap-4">
         {easyTexts.map((text, i) => (
@@ -1667,6 +2031,136 @@ function ArticleScreen({
   const completedRef = useRef(false);
   const screenRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 원문 스크랩 툴바 — 형광펜/펜/지우개/가위(이미지 자르기)/실행취소
+  const [tool, setTool] = useState<ArticleTool>("none");
+  const [highlights, setHighlights] = useState<HighlightRange[]>([]);
+  const [strokes, setStrokes] = useState<ArticleStroke[]>([]);
+  const [history, setHistory] = useState<ArticleAction[]>([]);
+  const drawingRef = useRef<ArticleStroke | null>(null);
+  const erasingRef = useRef(false);
+  const [, forceDraw] = useState(0);
+  const ERASE_R = 18;
+  const uid = () => Math.random().toString(36).slice(2, 9);
+
+  const removeHighlightById = (id: string) => {
+    setHighlights((prev) => {
+      const found = prev.find((h) => h.id === id);
+      if (found?.text) onToggleClip?.(found.text, false);
+      return prev.filter((h) => h.id !== id);
+    });
+  };
+  // 지우개로 짚은 문자 위치를 포함하는 강조 구간이 있으면 통째로 제거
+  const removeHighlightAt = (para: number, charOffset: number) => {
+    setHighlights((prev) => {
+      const hit = prev.find((h) => h.para === para && charOffset >= h.start && charOffset < h.end);
+      if (!hit) return prev;
+      if (hit.text) onToggleClip?.(hit.text, false);
+      return prev.filter((h) => h.id !== hit.id);
+    });
+  };
+  const addHighlightRange = (para: number, start: number, end: number, text: string) => {
+    const id = uid();
+    setHighlights((prev) => [...prev, { id, para, start, end, text }]);
+    if (text) onToggleClip?.(text, true);
+    setHistory((h) => [...h, { t: "highlight", id }]);
+  };
+  const addImageClip = (dataUrl: string) => {
+    onToggleClip?.(dataUrl, true);
+    setHistory((h) => [...h, { t: "clip", text: dataUrl }]);
+  };
+  const undo = () => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const last = h[h.length - 1];
+      if (last.t === "stroke") setStrokes((v) => v.filter((s) => s.id !== last.id));
+      else if (last.t === "highlight") removeHighlightById(last.id);
+      else if (last.t === "clip") onToggleClip?.(last.text, false);
+      return h.slice(0, -1);
+    });
+  };
+
+  const pointFromEvent = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const eraseStrokesNear = (p: { x: number; y: number }) =>
+    setStrokes((v) => v.filter((s) => !s.pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < ERASE_R)));
+  const eraseAt = (e: React.PointerEvent<SVGSVGElement>, p: { x: number; y: number }) => {
+    eraseStrokesNear(p);
+    // caretPositionFromPoint가 오버레이 자신이 아니라 아래 문단 텍스트를 찾도록 잠시 클릭 통과시킴
+    const svg = e.currentTarget;
+    const prevPE = svg.style.pointerEvents;
+    svg.style.pointerEvents = "none";
+    type CaretPosition = { offsetNode: Node; offset: number };
+    type DocWithCaret = Document & {
+      caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    };
+    const doc = document as DocWithCaret;
+    let caretNode: Node | null = null;
+    let caretOffset = 0;
+    if (doc.caretPositionFromPoint) {
+      const pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        caretNode = pos.offsetNode;
+        caretOffset = pos.offset;
+      }
+    } else if (doc.caretRangeFromPoint) {
+      const r = doc.caretRangeFromPoint(e.clientX, e.clientY);
+      if (r) {
+        caretNode = r.startContainer;
+        caretOffset = r.startOffset;
+      }
+    }
+    svg.style.pointerEvents = prevPE;
+    const caretEl = (caretNode?.nodeType === 1 ? (caretNode as Element) : caretNode?.parentElement)?.closest<HTMLElement>(
+      "[data-para-index]"
+    );
+    if (caretNode && caretEl) {
+      const idx = Number(caretEl.dataset.paraIndex);
+      if (!Number.isNaN(idx)) removeHighlightAt(idx, textOffsetInPara(caretEl, caretNode, caretOffset));
+    }
+  };
+  const onCanvasDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    const p = pointFromEvent(e);
+    if (tool === "pencil") {
+      drawingRef.current = { id: uid(), pts: [p] };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      forceDraw((n) => n + 1);
+    } else if (tool === "eraser") {
+      erasingRef.current = true;
+      eraseAt(e, p);
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+  };
+  const onCanvasMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const p = pointFromEvent(e);
+    if (drawingRef.current) {
+      drawingRef.current.pts.push(p);
+      forceDraw((n) => n + 1);
+    } else if (erasingRef.current) {
+      eraseAt(e, p);
+    }
+  };
+  const onCanvasUp = () => {
+    if (drawingRef.current) {
+      const s = drawingRef.current;
+      if (s.pts.length > 1) {
+        setStrokes((v) => [...v, s]);
+        setHistory((h) => [...h, { t: "stroke", id: s.id }]);
+      }
+      drawingRef.current = null;
+      forceDraw((n) => n + 1);
+    }
+    erasingRef.current = false;
+  };
+  const drawLive = drawingRef.current;
+
+  // AI모드로 넘어가면 FAB이 사라지므로 열려 있던 툴바도 함께 닫아 둔다
+  useEffect(() => {
+    if (activeTab === "ai") setShowToolbar(false);
+  }, [activeTab]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -1745,15 +2239,71 @@ function ArticleScreen({
         onScroll={handleScroll}
       >
         <TabSlider active={activeTab} onChange={onTabChange} />
-        {activeTab === "original" && <OriginalContent article={article} onToggleClip={onToggleClip} />}
-        {activeTab === "ai" && <AiContent article={article} />}
-        {activeTab === "easy" && <EasyContent article={article} />}
+        <div className="relative w-full">
+          {activeTab === "original" && (
+            <OriginalContent
+              article={article}
+              tool={tool}
+              highlights={highlights}
+              onHighlightRange={addHighlightRange}
+              onImageCropped={addImageClip}
+            />
+          )}
+          {activeTab === "ai" && <AiContent article={article} />}
+          {activeTab === "easy" && <EasyContent article={article} />}
+          {activeTab === "original" && (
+            <svg
+              className="absolute inset-0 w-full h-full"
+              style={{
+                zIndex: 15,
+                pointerEvents: tool === "pencil" || tool === "eraser" ? "auto" : "none",
+                touchAction: tool === "pencil" || tool === "eraser" ? "none" : "auto",
+              }}
+              onPointerDown={onCanvasDown}
+              onPointerMove={onCanvasMove}
+              onPointerUp={onCanvasUp}
+              onPointerCancel={onCanvasUp}
+            >
+              {strokes.map((s) => (
+                <polyline
+                  key={s.id}
+                  points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="none"
+                  stroke="var(--pt-brand-primary)"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+              {drawLive && (
+                <polyline
+                  points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="none"
+                  stroke="var(--pt-brand-primary)"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+          )}
+        </div>
       </div>
-      <FAB
-        onPress={() => setShowToolbar((v) => !v)}
-        showToolbar={showToolbar}
-        onCloseToolbar={() => setShowToolbar(false)}
-      />
+      {/* AI모드는 카드·대화형 화면이라 스크랩 도구를 쓸 수 없어 FAB 자체를 숨긴다 */}
+      {activeTab !== "ai" && (
+        <FAB
+          onPress={() => setShowToolbar((v) => !v)}
+          showToolbar={showToolbar}
+          onCloseToolbar={() => setShowToolbar(false)}
+          tool={tool}
+          onSelectTool={(t) => {
+            setTool((cur) => (cur === t ? "none" : t));
+            setShowToolbar(false);
+          }}
+          onUndo={undo}
+          canUndo={history.length > 0}
+        />
+      )}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none border-4"
@@ -3588,13 +4138,24 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
       {tab === "clip" ? (
         <div className="flex flex-col gap-2 p-4 min-h-0 max-h-[220px] overflow-y-auto no-scrollbar">
           {clippings.length === 0 ? (
-            <p className="caption text-center py-6" style={{ color: "var(--pt-text-secondary)" }}>원문에서 형광펜으로 문장을 스크랩하면 여기에 담겨요</p>
+            <p className="caption text-center py-6" style={{ color: "var(--pt-text-secondary)" }}>원문에서 형광펜으로 문장을 스크랩하거나 가위로 이미지를 오려보세요</p>
           ) : (
-            clippings.map((c, i) => (
-              <button key={i} onClick={() => onPickText(c)} className="text-left rounded-lg px-3 py-2.5" style={{ backgroundColor: "var(--pt-bg-accent-light)", border: "1px solid var(--pt-border-accent)" }}>
-                <span className="caption" style={{ color: "var(--pt-text-primary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c}</span>
-              </button>
-            ))
+            clippings.map((c, i) =>
+              c.startsWith("data:image") ? (
+                <button
+                  key={i}
+                  onClick={() => onPick(c)}
+                  className="rounded-lg overflow-hidden self-start"
+                  style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)", border: "1px solid var(--pt-border-accent)" }}
+                >
+                  <img src={c} alt="오려낸 이미지" className="w-full h-full object-cover pointer-events-none" />
+                </button>
+              ) : (
+                <button key={i} onClick={() => onPickText(c)} className="text-left rounded-lg px-3 py-2.5" style={{ backgroundColor: "var(--pt-bg-accent-light)", border: "1px solid var(--pt-border-accent)" }}>
+                  <span className="caption" style={{ color: "var(--pt-text-primary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c}</span>
+                </button>
+              )
+            )
           )}
         </div>
       ) : (
@@ -3910,13 +4471,13 @@ function NavigationDrawer({
     <>
       {/* Dim overlay */}
       <div
-        className="fixed inset-0 z-40"
+        className="pt-drawer-overlay fixed inset-0 z-40"
         style={{ backgroundColor: "var(--pt-overlay-medium)" }}
         onClick={onClose}
       />
       {/* Drawer panel */}
       <div
-        className="fixed top-0 bottom-0 z-50 flex flex-col overflow-hidden"
+        className="pt-drawer-panel fixed top-0 bottom-0 z-50 flex flex-col overflow-hidden"
         style={{
           left: APP_SAFE_LEFT,
           width: `min(312px, calc(100% - ${APP_SAFE_LEFT} - 16px))`,
@@ -4036,7 +4597,8 @@ function StartScreen({ onDone }: { onDone: () => void }) {
 // ── App ──
 export default function App() {
   const [screen, setScreen] = useState<Screen>("start");
-  const [prevScreen, setPrevScreen] = useState<Screen>("landing");
+  // 화면 이동 이력 스택 — 직전 화면 1칸만 기억하면 A→B→A 왕복(기사↔스크랩북)에 갇히므로 스택으로 관리
+  const [screenStack, setScreenStack] = useState<Screen[]>([]);
   const [articleTab, setArticleTab] = useState<ArticleTab>("original");
   const [category, setCategory] = useState<Category>("Today");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -4114,8 +4676,16 @@ export default function App() {
     setReadsByDate((prev) => ({ ...prev, [TODAY_DAY]: (prev[TODAY_DAY] || 0) + 1 }));
 
   const goTo = (s: Screen) => {
-    setPrevScreen(screen);
+    if (s === screen) return;
+    setScreenStack((h) => [...h, screen].slice(-20));
     setScreen(s);
+  };
+
+  // 스택을 한 칸 되감는다. 비어 있으면(딥링크 등 직접 진입) 지면으로 복귀
+  const goBack = () => {
+    const target = screenStack.length ? screenStack[screenStack.length - 1] : "landing";
+    setScreenStack((h) => h.slice(0, -1));
+    setScreen(target);
   };
 
   const handleDrawerNavigate = (s: Screen) => {
@@ -4149,6 +4719,7 @@ export default function App() {
               setCategory(cat);
               goTo("category-landing");
             }}
+            onBack={goBack}
           />
         );
 
@@ -4172,7 +4743,7 @@ export default function App() {
             article={selectedArticle}
             activeTab={articleTab}
             onTabChange={setArticleTab}
-            onBack={() => goTo(prevScreen)}
+            onBack={goBack}
             onComplete={markTodayRead}
             onToggleClip={toggleClip}
             onOpenScrapbook={() => openNewScrap(selectedArticle.headline)}
@@ -4190,7 +4761,7 @@ export default function App() {
       case "shop":
         return (
           <ShopScreen
-            onBack={() => goTo(prevScreen)}
+            onBack={goBack}
             onMenuOpen={() => setDrawerOpen(true)}
           />
         );
@@ -4220,7 +4791,7 @@ export default function App() {
             month={calMonth}
             day={selectedDay}
             count={monthReads[selectedDay] || 0}
-            onBack={() => goTo("calendar")}
+            onBack={goBack}
             onCardClick={() => {
               setArticleTab("original");
               goTo("article");
@@ -4254,14 +4825,14 @@ export default function App() {
             isNew={scrapNew}
             clippings={clippings}
             initialDoc={scrapInitialDoc}
-            onBack={() => goTo("scrap-library")}
+            onBack={goBack}
             onShare={(doc) => { setScrapSnapshot(doc); goTo("scrap-share"); }}
             onAutoSave={handleScrapAutoSave}
           />
         );
 
       case "scrap-share":
-        return <ScrapShareScreen doc={scrapSnapshot} onBack={() => goTo(prevScreen)} />;
+        return <ScrapShareScreen doc={scrapSnapshot} onBack={goBack} />;
 
       case "shared-scrap":
         return (

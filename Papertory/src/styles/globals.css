@@ -332,6 +332,33 @@ button {
   }
 }
 
+/* 전체 메뉴 드로어 — 열릴 때 왼쪽에서 슬라이드 인 + 딤 오버레이 페이드 인 */
+@keyframes pt-drawer-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pt-drawer-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pt-drawer-panel {
+  animation: pt-drawer-slide-in 300ms ease-out;
+}
+
+.pt-drawer-overlay {
+  animation: pt-drawer-fade-in 300ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
