@@ -471,26 +471,29 @@ function FAB({
 }
 
 // ── Hero Card ──
-function HeroCard({ category }: { category: Category }) {
+function HeroCard({ category, onClick }: { category: Category; onClick?: () => void }) {
   return (
     <div className="flex flex-col gap-5 px-5 w-full" style={{ paddingTop: 120, paddingBottom: 16 }}>
-      <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
-        <CategoryChip label={category === "Today" ? "산업" : category} />
-        <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
-          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+      {/* 헤드라인·썸네일·본문 클릭 시 기사 원문으로 이동 */}
+      <button onClick={onClick} className="flex flex-col gap-5 w-full text-left">
+        <div className="flex flex-col gap-2 items-start" style={{ paddingTop: 20 }}>
+          <CategoryChip label={category === "Today" ? "산업" : category} />
+          <p className="headline-1" style={{ color: "var(--pt-text-primary)" }}>
+            앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+          </p>
+        </div>
+        <div
+          className="relative rounded-xl overflow-hidden shrink-0 w-full"
+          style={{ height: 181, marginBottom: 10 }}
+        >
+          <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        </div>
+        <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
+          종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
+          제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
+          안내한다. AI 요약과 형광펜 스크랩을 활용한다.
         </p>
-      </div>
-      <div
-        className="relative rounded-xl overflow-hidden shrink-0 w-full"
-        style={{ height: 181, marginBottom: 10 }}
-      >
-        <img src={imgArticle} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      </div>
-      <p className="body-1 px-3" style={{ color: "var(--pt-text-primary)", textIndent: 8 }}>
-        종이신문의 편집 위계를 모바일에 그대로 옮겨, 하루치 뉴스를 한눈에 훑어보는 경험을
-        제공한다. 중요도에 따라 기사의 크기와 배치를 달리해 무엇을 먼저 읽어야 할지 자연스럽게
-        안내한다. AI 요약과 형광펜 스크랩을 활용한다.
-      </p>
+      </button>
       <p
         className="caption text-center"
         style={{ color: "var(--pt-text-secondary)", paddingTop: 10 }}
@@ -543,7 +546,7 @@ function LandingScreen({
         showAvatar
       />
       <div className="h-full overflow-y-auto pb-24">
-        <HeroCard category={category} />
+        <HeroCard category={category} onClick={onNewsClick} />
         <div className="flex flex-col gap-2 pt-8">
           <div className="px-5">
             <p className="subtitle" style={{ color: "var(--pt-text-primary)", fontSize: 18 }}>
