@@ -2,6 +2,9 @@
 // MARKER-MAKE-KIT-DISCOVERY-READ
 // MARKER-MAKE-KIT-TOKENS-READ
 import { useState, useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lenis from "lenis";
 import StartScreenImport from "@/imports/Start/index";
 import imgArticle from "@/imports/Landing/8db2a969b7cc2690d1ad5bbc3961b54f39a56d49.png";
 import imgTori from "@/imports/Landing/209e16e9a7b0e6466a84c310cffb3fdc38787db8.png";
@@ -569,18 +572,20 @@ function CategoryCard({
   subtitle,
   image,
   style,
+  className,
   onClick,
 }: {
   label: string;
   subtitle: string;
   image: string;
   style?: React.CSSProperties;
+  className?: string;
   onClick?: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="absolute rounded-xl overflow-hidden text-left"
+      className={`absolute rounded-xl overflow-hidden text-left${className ? ` ${className}` : ""}`}
       style={{
         width: 208,
         height: 298,
@@ -667,6 +672,9 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
 ];
 
 // ── Category Screen ──
+// 프레임 고정 크기(App()의 393×852 폰 목업)에 맞춰 스크롤 캐스케이드 스테이지 높이를 정함
+const FRAME_HEIGHT = 852;
+
 function CategoryScreen({
   onBack,
   onCategorySelect,
@@ -674,23 +682,101 @@ function CategoryScreen({
   onBack: () => void;
   onCategorySelect: (cat: Category) => void;
 }) {
-  // 기존 디자인의 카드 스택 간격(세로 190px 간격, 좌측 84/80/84/90 지그재그)을 그대로 유지한 채
-  // DB 로우 수만큼 카드를 생성
-  const TOP_START = 115;
-  const TOP_STEP = 190;
-  const CARD_HEIGHT = 298;
-  const LEFT_OFFSETS = [84, 80, 84, 90];
+  const cards: { label: Category; subtitle: string; image: string }[] = CATEGORY_PAGE_DB.map(
+    (row) => ({ label: row.title, subtitle: row.subtitle, image: row.imageUrl })
+  );
+  const N = cards.length;
 
-  const cards: { label: Category; subtitle: string; image: string; top: number; left: number }[] =
-    CATEGORY_PAGE_DB.map((row, i) => ({
-      label: row.title,
-      subtitle: row.subtitle,
-      image: row.imageUrl,
-      top: TOP_START + i * TOP_STEP,
-      left: LEFT_OFFSETS[i % LEFT_OFFSETS.length],
-    }));
+  const containerRef = useRef<HTMLDivElement>(null); // Lenis wrapper / ScrollTrigger scroller
+  const contentRef = useRef<HTMLDivElement>(null); // Lenis content / scroll-length spacer
 
-  const stageHeight = TOP_START + (cards.length - 1) * TOP_STEP + CARD_HEIGHT + 40;
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    // 브라우저가 리로드 시 이전 스크롤 위치를 복원하는 경우가 있어, 항상 첫 카드(Today)부터 시작하도록 고정
+    container.scrollTop = 0;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // 카드(208×298)에 맞춘 대각선 캐스케이드 상수
+    const STEP_X = -60;
+    const STEP_Y = 132;
+    const PUSH = 46;
+    const DISTANCE_PER_CARD = 220;
+    const FADE_RANGE = Math.max(3, Math.min(N - 1, 6));
+
+    const els = Array.from(content.querySelectorAll<HTMLElement>(".cascade-card"));
+
+    let lenis: Lenis | null = null;
+    function raf(time: number) {
+      lenis?.raf(time * 1000);
+    }
+    if (!reduced) {
+      lenis = new Lenis({ wrapper: container, content, lerp: 0.1, smoothWheel: true });
+      lenis.on("scroll", ScrollTrigger.update);
+      gsap.ticker.add(raf);
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    function layout(progress: number) {
+      const focusIndex = progress * (N - 1);
+      els.forEach((el, i) => {
+        const pos = i - focusIndex;
+        const dist = Math.abs(pos);
+        const near = Math.max(0, 1 - dist);
+        const falloff = Math.max(0, 1 - dist / 1.8);
+        // Math.sign(pos)는 pos가 0을 지날 때 카드가 튀는 원인이라 tanh로 매끄럽게 처리
+        const push = Math.tanh(pos * 1.7) * PUSH * falloff;
+        const t = gsap.utils.clamp(0, 1, dist / FADE_RANGE);
+        const opacity = 1 - t * t;
+        gsap.set(el, {
+          xPercent: -50,
+          yPercent: -50,
+          x: pos * STEP_X + push * (STEP_X / STEP_Y),
+          y: pos * STEP_Y + push,
+          scale: 0.94 + near * 0.14,
+          opacity,
+          zIndex: Math.round((1 - dist) * 1000),
+        });
+      });
+    }
+
+    const proxy = { p: 0 };
+    const tween = gsap.to(proxy, {
+      p: 1,
+      ease: "none",
+      scrollTrigger: {
+        scroller: container,
+        trigger: content,
+        start: "top top",
+        end: () => "+=" + N * DISTANCE_PER_CARD,
+        scrub: true,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        snap: {
+          snapTo: 1 / (N - 1),
+          duration: { min: 0.15, max: 0.35 },
+          ease: "power2.inOut",
+        },
+      },
+      onUpdate() {
+        layout(proxy.p);
+      },
+    });
+
+    layout(0);
+    ScrollTrigger.refresh();
+
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+      lenis?.destroy();
+      gsap.ticker.remove(raf);
+    };
+  }, [N]);
 
   return (
     <div
@@ -701,18 +787,21 @@ function CategoryScreen({
       }}
     >
       <AppHeader dropdownLabel="카테고리" showBack onBackClick={onBack} onDropdownClick={() => {}} />
-      <div className="absolute inset-0 overflow-y-auto" style={{ paddingTop: 110, paddingBottom: 40 }}>
-        <div className="relative" style={{ height: stageHeight }}>
-          {cards.map((c) => (
-            <CategoryCard
-              key={c.label}
-              label={c.label}
-              subtitle={c.subtitle}
-              image={c.image}
-              style={{ top: c.top, left: c.left }}
-              onClick={() => onCategorySelect(c.label)}
-            />
-          ))}
+      <div ref={containerRef} className="absolute inset-0 overflow-y-auto">
+        <div ref={contentRef} style={{ height: FRAME_HEIGHT + N * 220 }}>
+          <div className="relative" style={{ position: "sticky", top: 0, height: FRAME_HEIGHT }}>
+            {cards.map((c) => (
+              <CategoryCard
+                key={c.label}
+                label={c.label}
+                subtitle={c.subtitle}
+                image={c.image}
+                className="cascade-card"
+                style={{ top: "50%", left: "50%" }}
+                onClick={() => onCategorySelect(c.label)}
+              />
+            ))}
+          </div>
         </div>
       </div>
       <div
