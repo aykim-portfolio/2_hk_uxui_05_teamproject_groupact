@@ -7,7 +7,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import StartScreenImport from "@/imports/Start/index";
 import imgArticle from "@/imports/Landing/8db2a969b7cc2690d1ad5bbc3961b54f39a56d49.png";
-import imgTori from "@/imports/Landing/209e16e9a7b0e6466a84c310cffb3fdc38787db8.png";
 import imgToriChat from "@/imports/Ai모드/1036bf7c5b4c39f6cf61eba9b8b1c76e90e5dfb0.png";
 import imgToriMenu from "@/imports/햄버거메뉴활성화/9db62f1482f6077c23b2aaac03047a53e5f6f50c.png";
 import imgAcorn from "@/imports/미션리워드/8135e13e64481f72eb891bb72cb9db8c4c3a5dad.png";
@@ -257,9 +256,7 @@ function DropdownTab({ label, onClick }: { label: string; onClick?: () => void }
 function ToriAvatar({ onClick }: { onClick?: () => void }) {
   return (
     <GlassBtn onClick={onClick}>
-      <div className="relative" style={{ width: 24, height: 28, top: -3 }}>
-        <img src={imgTori} alt="Tori" className="absolute inset-0 w-full h-full object-cover" />
-      </div>
+      <ScrapIcon color="var(--pt-text-primary)" />
     </GlassBtn>
   );
 }
@@ -543,7 +540,7 @@ function LandingScreen({
         dropdownLabel={category === "Today" ? "Today" : category}
         onDropdownClick={onDropdownClick}
         onMenuOpen={onMenuOpen}
-        showAvatar
+        showAvatar={false}
       />
       <div className="h-full overflow-y-auto pb-24">
         <HeroCard category={category} onClick={onNewsClick} />
@@ -794,7 +791,13 @@ function CategoryScreen({
           "linear-gradient(162.946deg, #ffffff 2.5%, var(--pt-bg-primary) 50%, #EFF1F5 103%)",
       }}
     >
-      <AppHeader dropdownLabel="카테고리" showBack onBackClick={onBack} onDropdownClick={() => {}} />
+      <AppHeader
+        dropdownLabel="카테고리"
+        showBack
+        onBackClick={onBack}
+        onDropdownClick={() => {}}
+        showAvatar={false}
+      />
       <div ref={containerRef} className="absolute inset-0 overflow-y-auto">
         <div ref={contentRef} style={{ height: FRAME_HEIGHT + N * 220 }}>
           <div className="relative" style={{ position: "sticky", top: 0, height: FRAME_HEIGHT }}>
@@ -1136,7 +1139,7 @@ function MissionScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showBack showDropdown={false} onBackClick={onBack} showAvatar />
+      <AppHeader showBack showDropdown={false} onBackClick={onBack} showAvatar={false} />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 32 }}>
         {/* 도토리 줍기 section */}
@@ -1299,7 +1302,7 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
         showDropdown
         onDropdownClick={() => {}}
         onMenuOpen={onMenuOpen}
-        showAvatar
+        showAvatar={false}
       />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
@@ -1472,7 +1475,7 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar onMenuOpen={onMenuOpen} />
+      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
 
       <div
         className="h-full overflow-y-auto no-scrollbar"
@@ -1654,7 +1657,7 @@ function CalendarScreen({
       className="relative size-full rounded-[40px] overflow-hidden"
       style={{ backgroundColor: "var(--pt-bg-primary)" }}
     >
-      <AppHeader showDropdown={false} showAvatar onMenuOpen={onMenuOpen} />
+      <AppHeader showDropdown={false} showAvatar={false} onMenuOpen={onMenuOpen} />
 
       <div className="h-full overflow-y-auto no-scrollbar" style={{ paddingTop: 110, paddingBottom: 24 }}>
         <div className="px-4 flex flex-col gap-6">
