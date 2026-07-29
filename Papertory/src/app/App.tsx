@@ -650,7 +650,7 @@ const CATEGORY_PAGE_DB: { title: string; subtitle: string; imageUrl: string }[] 
   {
     title: "글로벌마켓",
     subtitle: "미국시세 · 투자의견 · 실적",
-    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png",
+    imageUrl: "https://ik.imagekit.io/cuquvvrdw/%E1%84%80%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A9%E1%84%87%E1%85%A5%E1%86%AF%E1%84%86%E1%85%A1%E1%84%8F%E1%85%A6%E1%86%BA.png?updatedAt=1784606570958",
   },
   {
     title: "집코노미",
