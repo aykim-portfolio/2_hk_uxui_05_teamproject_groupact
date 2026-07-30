@@ -3,15 +3,14 @@
   "configurations": [
     {
       "name": "papertory",
-      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "C:\\Users\\HKEDU\\Desktop\\2_hk_uxui_05_teamproject_groupact-main\\Papertory\\node_modules\\vite\\bin\\vite.js",
-        "C:\\Users\\HKEDU\\Desktop\\2_hk_uxui_05_teamproject_groupact-main\\Papertory",
-        "--port",
-        "5173",
-        "--strictPort"
+        "-C",
+        ".worktrees/main/Papertory",
+        "dev"
       ],
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }
