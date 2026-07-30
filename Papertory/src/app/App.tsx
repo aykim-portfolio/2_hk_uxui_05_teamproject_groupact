@@ -2034,7 +2034,7 @@ function ArticleScreen({
   const screenRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 기사 진입 10초 후 완독 처리 — 최신 콜백을 ref로 참조해 부모 리렌더로 콜백 참조가
+  // 기사 진입 7초 후 완독 처리 — 최신 콜백을 ref로 참조해 부모 리렌더로 콜백 참조가
   // 바뀌어도(예: 형광펜 클리핑) 타이머가 재시작되지 않도록 함
   const [readToastVisible, setReadToastVisible] = useState(false);
   const onReadCompleteRef = useRef(onReadComplete);
@@ -2044,7 +2044,7 @@ function ArticleScreen({
       onReadCompleteRef.current?.();
       setReadToastVisible(true);
       window.setTimeout(() => setReadToastVisible(false), 1800);
-    }, 10000);
+    }, 7000);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -2320,9 +2320,11 @@ function ArticleScreen({
           canUndo={history.length > 0}
         />
       )}
-      {/* 완독 토스트 — 상점 결제완료 토스트와 동일한 스타일, 하단에서 올라왔다가 다시 내려감 */}
+      {/* 완독 토스트 — 상점 결제완료 토스트와 동일한 스타일, 하단에서 올라왔다가 다시 내려감.
+          이 화면은 document 스크롤(article 콘텐츠가 길면 body 전체가 스크롤)이라 absolute로 두면
+          토스트가 화면이 아니라 "기사 맨 아래"에 위치해 스크롤해야만 보이는 문제가 있었음 → fixed로 고정 */}
       <div
-        className="absolute left-1/2 z-30 rounded-full"
+        className="fixed left-1/2 z-30 rounded-full"
         style={{
           bottom: `calc(28px + ${APP_SAFE_BOTTOM})`,
           padding: "10px 28px",
