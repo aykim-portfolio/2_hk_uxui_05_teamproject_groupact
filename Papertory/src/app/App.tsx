@@ -1947,7 +1947,7 @@ function AiContent({ article }: { article: NewsItem }) {
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="질문을 입력하세요"
-              className="caption flex-1 px-4 bg-transparent outline-none"
+              className="caption flex-1 min-w-0 px-4 bg-transparent outline-none"
               style={{ color: "var(--pt-text-primary)" }}
             />
             <button
