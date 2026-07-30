@@ -1007,6 +1007,8 @@ type NewsItem = {
   ai?: {
     easyBody?: string[];
     suggestedQuestions?: string[];
+    qna?: { q: string; a: string }[];
+    stakeholders?: { role: string; perspective: string }[];
   };
 };
 
@@ -1085,7 +1087,9 @@ function toNewsItem(a: (typeof articlesData.articles)[number]): NewsItem {
     body: a.body,
     ai: {
       easyBody: a.ai.easyBody,
-      suggestedQuestions: a.ai.suggestedQuestions
+      suggestedQuestions: a.ai.suggestedQuestions,
+      qna: a.ai.qna,
+      stakeholders: a.ai.stakeholders,
     }
   };
 }
@@ -1787,21 +1791,23 @@ function AiContent({ article }: { article: NewsItem }) {
   const [chat, setChat] = useState<{ from: "tori" | "user"; text: string }[]>([
     { from: "tori", text: "안녕! 나는 토리야. 궁금한 내용 쉽게 알려줄게!" },
   ]);
+  const [askedQuestions, setAskedQuestions] = useState<Set<string>>(new Set());
 
   const sendMessage = () => {
-    if (!message.trim()) return;
+    const q = message.trim();
+    if (!q) return;
+    const matched = article.ai?.qna?.find((item) => item.q === q);
+    const answer = matched?.a ?? "미안, 이 질문은 아직 준비된 답변이 없어! 다른 방식으로 다시 물어봐줄래?";
     setChat((prev) => [
       ...prev,
-      { from: "user", text: message },
-      {
-        from: "tori",
-        text: "좋은 질문이야! 앤트로픽은 안전한 AI 개발에 집중하는 회사로, IPO를 통해 더 많은 연구 자금을 확보하려는 것으로 알려져 있어.",
-      },
+      { from: "user", text: q },
+      { from: "tori", text: answer },
     ]);
+    setAskedQuestions((prev) => new Set(prev).add(q));
     setMessage("");
   };
 
-  const suggested = article && 'ai' in article && article.ai?.suggestedQuestions ? article.ai.suggestedQuestions : [];
+  const suggested = (article.ai?.qna?.map((item) => item.q) ?? []).filter((q) => !askedQuestions.has(q));
 
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
@@ -1855,28 +1861,19 @@ function AiContent({ article }: { article: NewsItem }) {
           다양한 시각 읽어보기
         </p>
         <div className="flex flex-col gap-5">
-          {[
-            {
-              label: "투자업계 시각",
-              text: '투자업계는 "지면형 UX가 체류시간을 늘릴 것"이라 보는 반면, 일부 개발진은 "제스처 학습 비용"을 우려한다.',
-            },
-            {
-              label: "소비자 시각",
-              text: "구독자들은 광고 없는 깔끔한 뉴스 경험에 긍정적이며, 특히 40대 이상 독자층에서 호응이 높을 것으로 예상된다.",
-            },
-          ].map((item) => (
-            <div key={item.label} className="flex flex-col gap-3">
+          {(article.ai?.stakeholders ?? []).map((item) => (
+            <div key={item.role} className="flex flex-col gap-3">
               <div
                 className="relative flex items-center rounded-full self-start"
                 style={{ padding: "4px 24px", backgroundColor: "var(--pt-chip-bg)" }}
               >
                 <div className="absolute inset-[-3px] rounded-full pointer-events-none border-[3px] border-white" />
                 <span className="label" style={{ color: "var(--pt-text-brand-strong)" }}>
-                  {item.label}
+                  {item.role}
                 </span>
               </div>
-              <p className="caption leading-5 opacity-80 px-1" style={{ color: "var(--pt-text-indigo)" }}>
-                {item.text}
+              <p className="caption leading-5 opacity-80 px-1 whitespace-pre-line" style={{ color: "var(--pt-text-indigo)" }}>
+                {item.perspective}
               </p>
             </div>
           ))}
