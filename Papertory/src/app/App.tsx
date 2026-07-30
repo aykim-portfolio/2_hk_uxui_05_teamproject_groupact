@@ -4070,6 +4070,7 @@ function ScrapbookScreen({
     if (!text.trim()) return;
     addEl({ id: scrapUid(), kind: "text", x: 40, y: 130, text: text.trim(), color: textColor });
     setText("");
+    setTool("none");
   };
   const addSticker = (src: string) => addEl({ id: scrapUid(), kind: "sticker", x: 140, y: 300, src, size: 72 });
   const addClip = (t: string) => addEl({ id: scrapUid(), kind: "note", x: 40, y: 150, text: t.length > 42 ? t.slice(0, 42) + "…" : t, bg: "var(--pt-brand-secondary)", color: "#1a1a1a" });
@@ -4391,9 +4392,6 @@ function ScrapbookScreen({
             />
             <button onClick={addText} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
               <span className="label" style={{ color: "#fff" }}>추가</span>
-            </button>
-            <button onClick={() => { setText(""); setTool("none"); }} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-bg-card)" }}>
-              <span className="label" style={{ color: "var(--pt-text-secondary)" }}>완료</span>
             </button>
           </div>
         </div>
