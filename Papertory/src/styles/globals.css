@@ -202,6 +202,8 @@ button {
   --pt-tape-handle: #4E6CDC;                   /* masking tape handle accent */
   --pt-overlay-medium: rgba(26, 37, 53, 0.35); /* overlay/medium — drawer backdrop */
   --pt-overlay-heavy: rgba(26, 37, 53, 0.60);  /* overlay/heavy — modal backdrop */
+  --pt-status-error-bg: #F6E8EA;                /* status/error-bg — error/light, 에러 배경 */
+  --pt-status-error: #BF5055;                   /* status/error — error/strong, 에러 강조 */
 
   /* 읽기 기록 히트맵 레벨 ramp — primary/100~600 (읽은 기사 수 1~5단계, design.md §데이터 시각화) */
   --pt-read-1: #d0dafc;                        /* primary/100 — 1개 */
