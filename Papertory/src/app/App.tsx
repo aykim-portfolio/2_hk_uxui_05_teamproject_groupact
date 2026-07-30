@@ -4203,7 +4203,7 @@ function ScrapbookScreen({
           <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>크기</span>
           <button onClick={() => resizeSel(-16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
           <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>
-            {selectedEl.kind === "sticker" ? selectedEl.size ?? 72 : selectedEl.size ?? 100}{selectedEl.kind === "sticker" ? "px" : "%"}
+            {Math.round(selectedEl.kind === "sticker" ? selectedEl.size ?? 72 : selectedEl.size ?? 100)}{selectedEl.kind === "sticker" ? "px" : "%"}
           </span>
           <button onClick={() => resizeSel(16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>+</span></button>
           <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
