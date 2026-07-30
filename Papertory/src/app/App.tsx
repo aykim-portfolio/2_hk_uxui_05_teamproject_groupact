@@ -2062,19 +2062,24 @@ function ArticleScreen({
   const screenRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 기사 진입 7초 후 완독 처리 — 최신 콜백을 ref로 참조해 부모 리렌더로 콜백 참조가
-  // 바뀌어도(예: 형광펜 클리핑) 타이머가 재시작되지 않도록 함
+  // 완독 판정 = "원문(original) 탭을 끝까지 스크롤"했을 때만. (시간 경과·형광펜 등으로는 완독 처리하지 않음)
+  // 스크롤이 끝에 닿으면 오늘 읽기 기록 반영(onComplete) + 미션·도토리(onReadComplete) + '완독했어요!' 토스트를
+  // 한 번에 처리한다. 콜백/활성 탭은 최신 값을 ref로 잡아, 아래 window 스크롤 리스너를 재구독하지 않고도 최신 상태를 참조.
   const [readToastVisible, setReadToastVisible] = useState(false);
-  const onReadCompleteRef = useRef(onReadComplete);
-  onReadCompleteRef.current = onReadComplete;
+  const markCompletedRef = useRef<() => void>(() => {});
+  markCompletedRef.current = () => {
+    if (completedRef.current || activeTab !== "original") return;
+    completedRef.current = true;
+    onComplete?.();
+    onReadComplete?.();
+    setReadToastVisible(true);
+    window.setTimeout(() => setReadToastVisible(false), 1800);
+  };
+
+  // 다른 기사로 바뀌면 완독 상태 초기화 (같은 화면 인스턴스가 재사용될 때 대비)
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      onReadCompleteRef.current?.();
-      setReadToastVisible(true);
-      window.setTimeout(() => setReadToastVisible(false), 1800);
-    }, 7000);
-    return () => window.clearTimeout(t);
-  }, []);
+    completedRef.current = false;
+  }, [article.id]);
 
   // 원문 스크랩 툴바 — 형광펜/펜/지우개/가위(이미지 자르기)/실행취소
   const [tool, setTool] = useState<ArticleTool>("none");
@@ -2247,27 +2252,22 @@ function ArticleScreen({
     };
   }, []);
 
+  // 원문을 끝까지 스크롤하면 완독 처리 (document 모드의 window 스크롤)
   useEffect(() => {
     const handleDocumentScroll = () => {
       const remaining =
         document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
-      if (!completedRef.current && remaining < 24) {
-        completedRef.current = true;
-        onComplete?.();
-      }
+      if (remaining < 24) markCompletedRef.current();
     };
 
     window.addEventListener("scroll", handleDocumentScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleDocumentScroll);
-  }, [onComplete]);
+  }, []);
 
-  // 기사를 끝까지 스크롤하면 완독 처리 → 오늘 읽기 기록에 반영 (마운트당 1회)
+  // 원문을 끝까지 스크롤하면 완독 처리 (locked 모드의 내부 스크롤 컨테이너)
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    if (!completedRef.current && el.scrollHeight - el.scrollTop - el.clientHeight < 24) {
-      completedRef.current = true;
-      onComplete?.();
-    }
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 24) markCompletedRef.current();
   };
 
   return (
