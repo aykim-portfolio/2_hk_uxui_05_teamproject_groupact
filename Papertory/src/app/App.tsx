@@ -2228,12 +2228,14 @@ function ArticleScreen({
     if (!viewport || !screenEl) return;
 
     const updateInset = () => {
-      const visibleBottom = viewport.offsetTop + viewport.height;
-      const overlap = Math.max(0, screenEl.getBoundingClientRect().bottom - visibleBottom);
-      setKeyboardInset(overlap);
+      // 소프트 키보드 높이 = 레이아웃 뷰포트와 비주얼 뷰포트의 차이. 키보드가 없으면 0.
+      // (기존엔 screenEl 바닥 − 뷰포트 바닥으로 재서, 화면이 뷰포트보다 길기만 하면
+      //  접힌 콘텐츠 높이가 통째로 잡혀 하단 패딩이 2000px대로 부풀던 버그가 있었음 — HKGA-187)
+      const keyboardH = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+      setKeyboardInset(keyboardH);
 
       if (
-        overlap > 0 &&
+        keyboardH > 0 &&
         document.activeElement instanceof HTMLInputElement &&
         screenEl.contains(document.activeElement)
       ) {
