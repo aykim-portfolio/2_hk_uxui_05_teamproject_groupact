@@ -1579,6 +1579,49 @@ function CategoryScreen({
 }
 
 // ── Original Tab Content ──
+// 오려낸 이미지 참조 — 같은 출처/데이터 URL 이미지는 실제 픽셀을 캔버스로 잘라 data URL로
+// 저장하지만, 한경 기사 이미지 같은 외부 CDN은 CORS를 지원하지 않아 캔버스에 그리는 순간
+// "오염(tainted)"돼 toDataURL()이 SecurityError를 던진다. 이 경우 원본 URL과 잘라낸 영역만
+// 기억해두고, 화면에는 background-position/size로 그 영역만 보이도록 그린다(실제 픽셀을
+// 추출하지 않으므로 CORS 제약과 무관하게 항상 동작함)
+type ImageCropRef = { url: string; x: number; y: number; w: number; h: number; natW: number; natH: number };
+const CROP_REF_PREFIX = "crop-ref:";
+function encodeCropRef(c: ImageCropRef): string {
+  return CROP_REF_PREFIX + JSON.stringify(c);
+}
+function decodeCropRef(s: string): ImageCropRef | null {
+  if (!s.startsWith(CROP_REF_PREFIX)) return null;
+  try {
+    return JSON.parse(s.slice(CROP_REF_PREFIX.length)) as ImageCropRef;
+  } catch {
+    return null;
+  }
+}
+function isImageClip(s: string): boolean {
+  return s.startsWith("data:image") || s.startsWith(CROP_REF_PREFIX);
+}
+// crop 영역을 box×box 정사각형 안에 contain(레터박스)으로 보여주는 공용 미리보기 —
+// 클리핑 목록 썸네일, 스티커로 캔버스에 올렸을 때, 공유 미리보기에서 모두 재사용
+function CropRefView({ crop, box }: { crop: ImageCropRef; box: number }) {
+  const scale = Math.min(box / crop.w, box / crop.h);
+  const boxW = crop.w * scale;
+  const boxH = crop.h * scale;
+  return (
+    <div className="flex items-center justify-center" style={{ width: box, height: box }}>
+      <div
+        style={{
+          width: boxW,
+          height: boxH,
+          backgroundImage: `url(${crop.url})`,
+          backgroundSize: `${crop.natW * scale}px ${crop.natH * scale}px`,
+          backgroundPosition: `-${crop.x * scale}px -${crop.y * scale}px`,
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+    </div>
+  );
+}
+
 // 가위 도구 — 히어로 이미지 위에서 드래그한 사각형을 그대로 잘라 클리핑으로 저장
 function ImageCropOverlay({ active, onCropped }: { active: boolean; onCropped: (dataUrl: string) => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -1633,7 +1676,9 @@ function ImageCropOverlay({ active, onCropped }: { active: boolean; onCropped: (
     try {
       onCropped(canvas.toDataURL("image/png"));
     } catch {
-      // 캔버스가 오염된 경우(외부 도메인 이미지 등) 조용히 무시
+      // 캔버스가 오염된 경우(한경 CDN 등 CORS 미지원 외부 이미지) — 실제 픽셀 대신
+      // 원본 URL + 잘라낸 영역만 기억해 background-position으로 그리는 참조로 대체
+      onCropped(encodeCropRef({ url: img.src, x: sx, y: sy, w: sw, h: sh, natW: img.naturalWidth, natH: img.naturalHeight }));
     }
   };
 
@@ -1780,12 +1825,33 @@ function OriginalContent({
 }
 
 // ── AI Tab Content ──
-// 내지갑 번역기 목업 — 기사 수치·용어를 "내 자산 관점"으로 풀어주는 카드(PRD P1).
-// 보유 종목/해설은 추후 기사별 데이터로 교체 예정이라 상수로 분리해 둠.
-const WALLET_TRANSLATION = {
-  holding: "아마존·구글 주식 보유중 - 12주",
-  body:
-    "아마존과 구글은 앤트로픽의 핵심 주주에요.\n앤트로픽이 거대한 기업가치로 상장에 성공하면, 빅테크 기업의 지분 가치 재평가로 인해 주가가 동반 상승하는 수혜를 누릴 가능성이 높아요.",
+// 내지갑 번역기 — 사용자가 보유 중인 자산(아마존·구글 주식 12주) 관점에서
+// 기사가 내 자산에 미치는 영향을 풀어주는 카드(PRD P1). 실제로는 기사 본문을 AI가
+// 실시간 분석해 생성하지만, 이 데모에서는 기사 내용이 고정돼 있어 기사 id별로
+// 미리 분석해 둔 결과를 매핑해 둠 — 새 기사 대응 로직이 아니라 캐시된 배치 결과 목업.
+const WALLET_HOLDING = "아마존·구글 주식 보유중 - 12주";
+const WALLET_IRRELEVANT = "내 지갑에 미치는 영향이 없는 기사에요! 지금 보유 중인 아마존·구글 주식과는 관련이 적으니 편하게 읽어보세요.";
+const WALLET_ANALYSIS: Record<string, string> = {
+  "today-main":
+    "구글은 앤트로픽의 핵심 주주이자, 오늘 급락한 시장 불안의 배경인 AI 투자 둔화 이슈의 당사자예요.\n서킷브레이커까지 발동된 이번 폭락장은 AI 인프라 투자 심리 전반을 위축시킬 수 있어, 보유 중인 구글 주식의 단기 변동성이 커질 수 있어요.",
+  "today-2":
+    "SK하이닉스의 HBM 투자 확대는 구글 등 글로벌 빅테크의 AI 데이터센터 수요와 맞닿아 있어요.\nAI 인프라 투자가 계속된다는 신호인 만큼, 보유 중인 아마존·구글 주식에도 긍정적인 흐름이에요.",
+  "premium-1":
+    "SK하이닉스 HBM 수요 증가는 아마존·구글 같은 빅테크의 AI 데이터센터 확장과 직결돼 있어요.\n예상보다 실적은 낮았지만 AI 메모리 수요 자체는 견조해, 두 종목의 클라우드·AI 사업에는 우호적인 소식이에요.",
+  "premium-2":
+    "싱가포르 중앙은행이 경고한 'AI 투자 둔화 리스크'는 아마존·구글의 실적과 직결되는 이슈예요.\nAI 인프라 투자가 예상보다 빨리 꺾이면 두 기업의 클라우드·AI 사업 성장 속도에도 제동이 걸릴 수 있어 주의 깊게 볼 필요가 있어요.",
+  "economy-4":
+    "원/달러 환율이 오르면 아마존·구글처럼 달러로 보유한 해외 주식의 원화 환산 가치는 오히려 높아져요.\n다만 외환당국의 개입으로 환율 변동성이 커질 수 있으니, 환차익 폭은 예상보다 줄어들 수 있어요.",
+  "globalmarket-1":
+    "나스닥이 빅테크 실적 우려로 급락한 날이라, 보유 중인 아마존·구글 주식도 함께 흔들렸을 가능성이 높아요.\n빅테크 ETF에서 자금이 빠져나가는 흐름이 이어지고 있어 당분간 변동성에 대비할 필요가 있어요.",
+  "globalmarket-2":
+    "반도체·빅테크에서 자금이 빠져나가 전통 가치주로 이동하는 순환매 장세라, 아마존·구글 같은 성장주 비중이 큰 포트폴리오엔 부담이 될 수 있어요.\n시장이 방어주 중심으로 재편되는 동안은 단기 조정을 겪을 수 있어요.",
+  "globalmarket-3":
+    "FOMC의 금리 결정은 아마존·구글 같은 고밸류 성장주 주가에 큰 영향을 줘요.\n금리 동결이 유력한 만큼 큰 충격은 없겠지만, 파월 의장의 발언 톤에 따라 단기 변동성은 커질 수 있어요.",
+  "tech-1":
+    "애플이 엔비디아를 제치고 시총 1위를 탈환한 건 AI 주도권 경쟁이 그만큼 치열하다는 신호예요.\n같은 빅테크 진영인 구글의 AI 경쟁력에도 시장의 관심이 쏠릴 수 있어, 보유 주식의 향방을 지켜볼 만해요.",
+  "tech-4":
+    "국내 빅테크의 자체 AI 클라우드 구축은 장기적으로 아마존 AWS·구글 클라우드의 국내 시장 점유율 경쟁이 심화된다는 뜻이에요.\n당장 실적에 영향은 적지만, 글로벌 클라우드 경쟁 구도의 변화로 지켜볼 필요가 있어요.",
 };
 
 function AiContent({ article }: { article: NewsItem }) {
@@ -1810,6 +1876,7 @@ function AiContent({ article }: { article: NewsItem }) {
   };
 
   const suggested = (article.ai?.qna?.map((item) => item.q) ?? []).filter((q) => !askedQuestions.has(q));
+  const walletBody = WALLET_ANALYSIS[article.id] ?? WALLET_IRRELEVANT;
 
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
@@ -1836,7 +1903,7 @@ function AiContent({ article }: { article: NewsItem }) {
 
         <div className="flex flex-col gap-1">
           <p className="title" style={{ color: "var(--pt-text-primary)" }}>
-            {WALLET_TRANSLATION.holding}
+            {WALLET_HOLDING}
           </p>
           <p className="label" style={{ color: "var(--pt-brand-primary)" }}>
             {article.headline}
@@ -1847,7 +1914,7 @@ function AiContent({ article }: { article: NewsItem }) {
           className="caption leading-5 whitespace-pre-line"
           style={{ color: "var(--pt-text-primary)" }}
         >
-          {WALLET_TRANSLATION.body}
+          {walletBody}
         </p>
       </div>
 
@@ -4164,7 +4231,13 @@ function ScrapbookScreen({
                 }}
               >
                 {el.kind === "sticker" ? (
-                  <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
+                  decodeCropRef(el.src) ? (
+                    <div style={{ pointerEvents: "none" }}>
+                      <CropRefView crop={decodeCropRef(el.src)!} box={el.size} />
+                    </div>
+                  ) : (
+                    <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
+                  )
                 ) : (
                   <div className="rounded-3xl" style={{ maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
                     <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap" }}>{el.text}</p>
@@ -4416,22 +4489,23 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
           {clippings.length === 0 ? (
             <p className="caption text-center py-6" style={{ color: "var(--pt-text-secondary)" }}>원문에서 형광펜으로 문장을 스크랩하거나 가위로 이미지를 오려보세요</p>
           ) : (
-            clippings.map((c, i) =>
-              c.startsWith("data:image") ? (
+            clippings.map((c, i) => {
+              const cropRef = decodeCropRef(c);
+              return isImageClip(c) ? (
                 <button
                   key={i}
                   onClick={() => onPick(c)}
                   className="rounded-lg overflow-hidden self-start"
                   style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)", border: "1px solid var(--pt-border-accent)" }}
                 >
-                  <img src={c} alt="오려낸 이미지" className="w-full h-full object-cover pointer-events-none" />
+                  {cropRef ? <CropRefView crop={cropRef} box={64} /> : <img src={c} alt="오려낸 이미지" className="w-full h-full object-cover pointer-events-none" />}
                 </button>
               ) : (
                 <button key={i} onClick={() => onPickText(c)} className="text-left rounded-lg px-3 py-2.5" style={{ backgroundColor: "var(--pt-bg-accent-light)", border: "1px solid var(--pt-border-accent)" }}>
                   <span className="caption" style={{ color: "var(--pt-text-primary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c}</span>
                 </button>
               )
-            )
+            })
           )}
         </div>
       ) : tab === "sticker" ? (
@@ -4517,9 +4591,16 @@ function ScrapPreview({ doc }: { doc: ScrapDoc }) {
             <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
           ))}
         </svg>
-        {doc.elements.map((el) =>
-          el.kind === "sticker" ? (
-            <img key={el.id} src={el.src} alt="" className="absolute" style={{ left: el.x, top: el.y, width: el.size, height: el.size, objectFit: "contain" }} />
+        {doc.elements.map((el) => {
+          const cropRef = el.kind === "sticker" ? decodeCropRef(el.src) : null;
+          return el.kind === "sticker" ? (
+            cropRef ? (
+              <div key={el.id} className="absolute" style={{ left: el.x, top: el.y }}>
+                <CropRefView crop={cropRef} box={el.size} />
+              </div>
+            ) : (
+              <img key={el.id} src={el.src} alt="" className="absolute" style={{ left: el.x, top: el.y, width: el.size, height: el.size, objectFit: "contain" }} />
+            )
           ) : (
             <div
               key={el.id}
@@ -4538,8 +4619,8 @@ function ScrapPreview({ doc }: { doc: ScrapDoc }) {
             >
               <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", whiteSpace: "pre-wrap" }}>{el.text}</p>
             </div>
-          )
-        )}
+          );
+        })}
       </div>
     </div>
   );
