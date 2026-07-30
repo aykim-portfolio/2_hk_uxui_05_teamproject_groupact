@@ -3943,7 +3943,6 @@ function ScrapbookScreen({
       erasingRef.current = eraserMode !== "all";
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     } else {
-      if (tool === "keyboard") setTool("none"); // 키보드 모드에서 캔버스 탭 → 입력 종료(완료 버튼 대체)
       setSelectedId(null); // 빈 캔버스 탭 → 선택 해제
     }
   };
@@ -4160,12 +4159,12 @@ function ScrapbookScreen({
             <div className="absolute inset-0 pointer-events-none" style={scrapBgStyle(bg)} />
             {bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ opacity: 0.4 }} />}
 
-            {/* strokes */}
+            {/* strokes — 스티커·텍스트 위에 그려지도록 최상단(zIndex). pointer-events-none이라 아래 요소 조작은 통과 */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
               viewBox={`0 0 ${SCRAP_CANVAS_WIDTH} ${SCRAP_CANVAS_HEIGHT}`}
               preserveAspectRatio="none"
-              style={{ overflow: "visible" }}
+              style={{ overflow: "visible", zIndex: 20 }}
             >
               {strokes.map((s) => (
                 <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.opacity ?? (s.tool === "highlighter" ? 0.4 : 1)} />
@@ -4370,6 +4369,9 @@ function ScrapbookScreen({
             />
             <button onClick={addText} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
               <span className="label" style={{ color: "#fff" }}>추가</span>
+            </button>
+            <button onClick={() => { setText(""); setTool("none"); }} aria-label="키보드 닫기" className="rounded-full flex items-center justify-center shrink-0" style={{ width: 40, height: 40, backgroundColor: "var(--pt-bg-card)" }}>
+              <span style={{ fontSize: 18, color: "var(--pt-text-secondary)", lineHeight: 1 }}>✕</span>
             </button>
           </div>
         </div>
