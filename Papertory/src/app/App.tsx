@@ -2946,6 +2946,10 @@ function firstWeekdayMon(y: number, m: number) {
   return (new Date(y, m - 1, 1).getDay() + 6) % 7;
 }
 
+// 읽기 기록 카드가 표시하는 목업 기사 — 스크랩북 아이콘 클릭 시 이 제목으로 저장된
+// 기존 스크랩(SEED_SAVED_SCRAPS)을 찾아 보여준다
+const READING_HISTORY_ARTICLE_TITLE = "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입";
+
 // ── Reading History Card ──
 function ReadingHistoryCard({
   date,
@@ -2984,7 +2988,7 @@ function ReadingHistoryCard({
           className="subtitle overflow-hidden text-ellipsis whitespace-nowrap w-full"
           style={{ color: "var(--pt-text-primary)" }}
         >
-          앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
+          {READING_HISTORY_ARTICLE_TITLE}
         </p>
         <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
           {date} 09:12
@@ -3583,7 +3587,7 @@ const DEFAULT_SCRAP_ELEMENTS: ScrapEl[] = [
 ];
 // 스크랩 라이브러리 시드 — 날짜는 이미 최신순으로 정렬돼 있음(맨 위=가장 최근)
 const SEED_SAVED_SCRAPS: SavedScrap[] = [
-  { id: 1, title: "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입", date: "2026.07.20", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
+  { id: 1, title: READING_HISTORY_ARTICLE_TITLE, date: "2026.07.20", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
   { id: 2, title: "삼성전자, HBM4 양산 속도 낸다", date: "2026.07.18", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
   { id: 3, title: "코스피 3,200선 돌파, 외국인 순매수", date: "2026.07.15", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
   { id: 4, title: "서울 아파트 매매가 8주 연속 상승", date: "2026.07.12", doc: { elements: DEFAULT_SCRAP_ELEMENTS, strokes: [], bg: "paper" } },
@@ -4871,7 +4875,14 @@ export default function App() {
               setArticleTab("original");
               goTo("article");
             }}
-            onScrapClick={() => {}}
+            onScrapClick={() => {
+              const found = savedScraps.find((s) => s.title === READING_HISTORY_ARTICLE_TITLE);
+              currentScrapIdRef.current = found ? found.id : null;
+              currentScrapTitleRef.current = found?.title ?? READING_HISTORY_ARTICLE_TITLE;
+              setScrapInitialDoc(found?.doc);
+              setScrapNew(!found);
+              goTo("scrapbook");
+            }}
             onGoFeed={() => goTo("landing")}
           />
         );
