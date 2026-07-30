@@ -22,6 +22,7 @@ import imgToriDeco from "@/imports/스크랩북/tori-deco.png";
 import imgBgPaper from "@/imports/스크랩북/bg-paper.png";
 import imgScrapColorPicker from "@/imports/기사원문/b3f46f82ad89489d80cc51b271cd3cc0.png";
 import articlesData from "./articles.json";
+import { Type, Italic, AlignLeft, AlignCenter, AlignRight, List, ListChecks, Table2 } from "lucide-react";
 
 // 실제 한국(KST) 날짜를 "오늘"로 사용 — 목업 데이터(JULY_READS)는 2026년 7월 기준으로 고정돼 있으므로
 // 실제 날짜가 그 달을 벗어나면(다른 달/연도) 달력엔 "오늘" 표시가 나타나지 않음.
@@ -3650,8 +3651,8 @@ function ScrapLibraryScreen({
 }
 
 // ── Scrapbook Editor (스크랩북) ──
-type ScrapEl = { id: string; kind: "note" | "text" | "sticker"; x: number; y: number; text?: string; bg?: string; color?: string; src?: string; size?: number; rot?: number };
-type ScrapStroke = { id: string; tool: "pencil" | "highlighter"; color: string; width: number; pts: { x: number; y: number }[] };
+type ScrapEl = { id: string; kind: "note" | "text" | "sticker"; x: number; y: number; text?: string; bg?: string; color?: string; src?: string; size?: number; rot?: number; italic?: boolean; align?: "left" | "center" | "right" };
+type ScrapStroke = { id: string; tool: "pencil" | "highlighter"; color: string; width: number; opacity?: number; pts: { x: number; y: number }[] };
 type ScrapDoc = { elements: ScrapEl[]; strokes: ScrapStroke[]; bg: ScrapBg };
 type ScrapBg = "none" | "paper" | "grid" | "lime" | "blue";
 type EraserMode = "stroke" | "area" | "all";
@@ -3724,6 +3725,29 @@ function scrapBgStyle(bg: ScrapBg): React.CSSProperties {
   return { backgroundColor: "var(--pt-bg-primary)" };
 }
 
+// 스크랩북 펜 디테일 슬라이더 — 트랙 위 노브를 드래그해 0~100 값 조절 (투명도·굵기 공용)
+function ScrapSlider({ value, onChange, track }: { value: number; onChange: (v: number) => void; track: React.CSSProperties }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const set = (clientX: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    onChange(Math.max(0, Math.min(100, Math.round(((clientX - r.left) / r.width) * 100))));
+  };
+  return (
+    <div
+      ref={ref}
+      onPointerDown={(e) => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); set(e.clientX); }}
+      onPointerMove={(e) => { if (dragging.current) set(e.clientX); }}
+      onPointerUp={() => (dragging.current = false)}
+      onPointerCancel={() => (dragging.current = false)}
+      className="relative flex-1 rounded-full"
+      style={{ height: 20, minWidth: 120, touchAction: "none", cursor: "pointer", ...track }}
+    >
+      <span className="absolute rounded-full" style={{ left: `${value}%`, top: "50%", width: 26, height: 26, transform: "translate(-50%, -50%)", background: "#fff", border: "3px solid var(--pt-brand-primary)", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+    </div>
+  );
+}
+
 function ScrapbookScreen({
   isNew,
   clippings,
@@ -3743,6 +3767,13 @@ function ScrapbookScreen({
   const [penColor, setPenColor] = useState("#6083f5");
   const [hlColor, setHlColor] = useState("#e6f997");
   const [penWidth, setPenWidth] = useState(4);
+  const [hlWidth, setHlWidth] = useState(16);
+  const [penOpacity, setPenOpacity] = useState(1);
+  const [hlOpacity, setHlOpacity] = useState(0.4);
+  // 텍스트 서식 (작성 중 설정 → 요소 생성 시 반영)
+  const [textItalic, setTextItalic] = useState(false);
+  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
+  const [textScale, setTextScale] = useState(100);
   const [textColor, setTextColor] = useState("#1a2535");
   const [text, setText] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -3791,6 +3822,11 @@ function ScrapbookScreen({
 
   const isDraw = tool === "pencil" || tool === "highlighter";
   const activeColor = tool === "highlighter" ? hlColor : penColor;
+  const activeWidth = tool === "highlighter" ? hlWidth : penWidth;
+  const activeOpacity = tool === "highlighter" ? hlOpacity : penOpacity;
+  const setActiveColor = (c: string) => (tool === "highlighter" ? setHlColor(c) : setPenColor(c));
+  const setActiveWidth = (w: number) => (tool === "highlighter" ? setHlWidth(w) : setPenWidth(w));
+  const setActiveOpacity = (o: number) => (tool === "highlighter" ? setHlOpacity(o) : setPenOpacity(o));
   const selectedEl = elements.find((el) => el.id === selectedId) || null;
 
   // 문서 좌표는 항상 393×742로 유지하고, 화면 너비에 맞춰 보이는 크기만 조절한다.
@@ -3896,7 +3932,7 @@ function ScrapbookScreen({
     if (activePointersRef.current.size > 1) return; // 세 번째 이상 손가락은 무시
     if (isDraw) {
       const p = pt(e);
-      drawingRef.current = { id: scrapUid(), tool: tool as "pencil" | "highlighter", color: activeColor, width: tool === "highlighter" ? 16 : penWidth, pts: [p] };
+      drawingRef.current = { id: scrapUid(), tool: tool as "pencil" | "highlighter", color: activeColor, width: activeWidth, opacity: activeOpacity, pts: [p] };
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       force((n) => n + 1);
     } else if (tool === "eraser") {
@@ -3907,6 +3943,7 @@ function ScrapbookScreen({
       erasingRef.current = eraserMode !== "all";
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     } else {
+      if (tool === "keyboard") setTool("none"); // 키보드 모드에서 캔버스(바깥) 탭 → 입력 종료
       setSelectedId(null); // 빈 캔버스 탭 → 선택 해제
     }
   };
@@ -3996,7 +4033,7 @@ function ScrapbookScreen({
   };
   const addText = () => {
     if (!text.trim()) return;
-    addEl({ id: scrapUid(), kind: "text", x: 40, y: 130, text: text.trim(), color: textColor });
+    addEl({ id: scrapUid(), kind: "text", x: 40, y: 130, text: text.trim(), color: textColor, italic: textItalic, align: textAlign, size: textScale });
     setText("");
     setTool("none");
   };
@@ -4123,18 +4160,18 @@ function ScrapbookScreen({
             <div className="absolute inset-0 pointer-events-none" style={scrapBgStyle(bg)} />
             {bg === "paper" && <img src={imgBgPaper} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ opacity: 0.4 }} />}
 
-            {/* strokes */}
+            {/* strokes — 스티커·텍스트 위에 그려지도록 최상단(zIndex). pointer-events-none이라 아래 요소 조작은 통과 */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
               viewBox={`0 0 ${SCRAP_CANVAS_WIDTH} ${SCRAP_CANVAS_HEIGHT}`}
               preserveAspectRatio="none"
-              style={{ overflow: "visible" }}
+              style={{ overflow: "visible", zIndex: 20 }}
             >
               {strokes.map((s) => (
-                <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.tool === "highlighter" ? 0.4 : 1} />
+                <polyline key={s.id} points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" opacity={s.opacity ?? (s.tool === "highlighter" ? 0.4 : 1)} />
               ))}
               {drawLive && (
-                <polyline points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={drawLive.color} strokeWidth={drawLive.width} strokeLinecap="round" strokeLinejoin="round" opacity={drawLive.tool === "highlighter" ? 0.4 : 1} />
+                <polyline points={drawLive.pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={drawLive.color} strokeWidth={drawLive.width} strokeLinecap="round" strokeLinejoin="round" opacity={drawLive.opacity ?? (drawLive.tool === "highlighter" ? 0.4 : 1)} />
               )}
             </svg>
 
@@ -4169,7 +4206,7 @@ function ScrapbookScreen({
                   )
                 ) : (
                   <div className="rounded-3xl" style={{ maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
-                    <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap" }}>{el.text}</p>
+                    <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", pointerEvents: "none", whiteSpace: "pre-wrap", fontStyle: el.kind === "text" && el.italic ? "italic" : "normal", textAlign: el.kind === "text" ? el.align ?? "left" : "left" }}>{el.text}</p>
                   </div>
                 )}
               </div>
@@ -4211,48 +4248,55 @@ function ScrapbookScreen({
         </div>
       )}
 
-      {/* Picker (내 색상 팔레트) */}
-      {isDraw && pickerOpen && (
-        <div
-          className="absolute z-40 rounded-3xl p-3 flex flex-wrap gap-2 justify-center"
-          style={{
-            left: APP_PANEL_START,
-            right: APP_PANEL_END,
-            bottom: `calc(168px + ${APP_SAFE_BOTTOM})`,
-            width: 260,
-            maxWidth: "calc(100% - 16px)",
-            marginInline: "auto",
-            backgroundColor: "var(--pt-bg-surface)",
-            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
-          }}
-        >
-          {PEN_COLORS.map((c) => (
-            <button key={c} onClick={() => { tool === "highlighter" ? setHlColor(c) : setPenColor(c); setPickerOpen(false); }} className="rounded-full" style={{ width: 32, height: 32, backgroundColor: c, border: activeColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
-          ))}
-        </div>
-      )}
-      {/* Pen detail (형광펜/펜 선택 시) */}
+      {/* Pen detail 바텀시트 (형광펜/펜 선택 시) — 색 그리드 + 투명도·굵기 슬라이더 (글래스) */}
       {isDraw && (
         <div
-          className="absolute z-40 rounded-full px-4 py-2 flex items-center gap-3"
+          className="pt-glass absolute z-40 flex flex-col gap-3"
           style={{
             left: APP_PANEL_START,
             right: APP_PANEL_END,
-            bottom: `calc(110px + ${APP_SAFE_BOTTOM})`,
-            width: "fit-content",
-            maxWidth: "calc(100% - 16px)",
+            bottom: `calc(104px + ${APP_SAFE_BOTTOM})`,
+            maxWidth: 360,
             marginInline: "auto",
-            backgroundColor: "var(--pt-bg-surface)",
-            boxShadow: "0px 4px 16px rgba(0,0,0,0.15)",
+            borderRadius: 24,
+            padding: "14px 16px",
           }}
         >
-          {[3, 6, 10].map((w) => (
-            <button key={w} onClick={() => setPenWidth(w)} className="flex items-center justify-center" style={{ width: 28, height: 28 }}>
-              <span className="rounded-full" style={{ width: w + 4, height: w + 4, backgroundColor: penWidth === w && tool === "pencil" ? "var(--pt-text-primary)" : "var(--pt-text-secondary)" }} />
+          {/* 색 그리드 + 닫기 */}
+          <div className="flex items-start gap-2">
+            <div className="flex flex-wrap gap-2 flex-1">
+              {PEN_COLORS.map((c) => (
+                <button key={c} onClick={() => setActiveColor(c)} className="rounded-full shrink-0" style={{ width: 26, height: 26, backgroundColor: c, boxShadow: activeColor === c ? "0 0 0 2px #fff, 0 0 0 4px var(--pt-brand-primary)" : "0 1px 3px rgba(0,0,0,0.2)" }} />
+              ))}
+            </div>
+            <button onClick={() => setTool("none")} aria-label="닫기" className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24 }}>
+              <span style={{ fontSize: 18, color: "var(--pt-text-secondary)", lineHeight: 1 }}>✕</span>
             </button>
-          ))}
-          <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
-          <button onClick={() => setPickerOpen((v) => !v)} className="rounded-full" style={{ width: 26, height: 26, backgroundColor: activeColor, border: "2px solid #fff", boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }} />
+          </div>
+          {/* 투명도 */}
+          <div className="flex flex-col gap-1">
+            <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>투명도</span>
+            <div className="flex items-center gap-2">
+              <ScrapSlider
+                value={Math.round(activeOpacity * 100)}
+                onChange={(v) => setActiveOpacity(v / 100)}
+                track={{ backgroundImage: `linear-gradient(to right, rgba(255,255,255,0), ${activeColor}), repeating-conic-gradient(#c9c9c9 0% 25%, #ffffff 0% 50%)`, backgroundSize: "auto, 12px 12px" }}
+              />
+              <span className="label shrink-0 rounded-lg px-2 py-1" style={{ color: "var(--pt-text-primary)", minWidth: 48, textAlign: "center", backgroundColor: "var(--pt-bg-surface)" }}>{Math.round(activeOpacity * 100)}%</span>
+            </div>
+          </div>
+          {/* 굵기 */}
+          <div className="flex flex-col gap-1">
+            <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>굵기</span>
+            <div className="flex items-center gap-2">
+              <ScrapSlider
+                value={Math.round((activeWidth / 30) * 100)}
+                onChange={(v) => setActiveWidth(Math.max(1, Math.round((v / 100) * 30)))}
+                track={{ background: "linear-gradient(to right, #e2e5eb, var(--pt-brand-primary))" }}
+              />
+              <span className="label shrink-0 rounded-lg px-2 py-1" style={{ color: "var(--pt-text-primary)", minWidth: 48, textAlign: "center", backgroundColor: "var(--pt-bg-surface)" }}>{Math.round((activeWidth / 30) * 100)}%</span>
+            </div>
+          </div>
         </div>
       )}
       {/* Eraser mode submenu */}
@@ -4288,17 +4332,23 @@ function ScrapbookScreen({
             boxShadow: "0px -4px 16px rgba(0,0,0,0.12)",
           }}
         >
+          {/* 색 선택 + 텍스트 서식 툴바 (한 줄, hug) — 크기·기울임·정렬 동작, 리스트·체크·표는 후속 */}
           <div
-            className="flex items-center gap-2 pt-2"
-            style={{
-              paddingLeft: APP_INLINE_START,
-              paddingRight: APP_INLINE_END,
-            }}
+            className="pt-glass flex items-center gap-1 overflow-x-auto no-scrollbar mt-2"
+            style={{ marginLeft: APP_INLINE_START, width: "fit-content", maxWidth: `calc(100% - ${APP_INLINE_START} - ${APP_INLINE_END})`, borderRadius: 999, padding: "6px 10px" }}
           >
             {["#1a2535", "#6083f5", "#ff6b6b", "#51cf66"].map((c) => (
-              <button key={c} onClick={() => setTextColor(c)} className="rounded-full" style={{ width: 22, height: 22, backgroundColor: c, border: textColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff" }} />
+              <button key={c} onClick={() => setTextColor(c)} className="shrink-0 rounded-full" style={{ width: 22, height: 22, backgroundColor: c, border: textColor === c ? "2px solid var(--pt-text-primary)" : "2px solid #fff" }} />
             ))}
-            <span className="caption ml-auto" style={{ color: "var(--pt-text-secondary)" }}>텍스트 서식</span>
+            <div className="shrink-0 w-px h-5 mx-1" style={{ backgroundColor: "var(--pt-border-default)" }} />
+            <button onClick={() => setTextScale((s) => (s >= 160 ? 100 : s + 30))} aria-label="글자 크기" className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 30, height: 30 }}><Type size={18} color="var(--pt-text-primary)" /></button>
+            <button onClick={() => setTextItalic((v) => !v)} aria-label="기울임" className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 30, height: 30, backgroundColor: textItalic ? "var(--pt-brand-secondary)" : "transparent" }}><Italic size={18} color={textItalic ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} /></button>
+            {([["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight]] as const).map(([a, Icon]) => (
+              <button key={a} onClick={() => setTextAlign(a)} aria-label={`정렬 ${a}`} className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 30, height: 30, backgroundColor: textAlign === a ? "var(--pt-brand-secondary)" : "transparent" }}><Icon size={18} color={textAlign === a ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} /></button>
+            ))}
+            {[List, ListChecks, Table2].map((Icon, i) => (
+              <button key={i} aria-label="서식(후속 지원)" className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 30, height: 30, opacity: 0.35 }}><Icon size={18} color="var(--pt-text-primary)" /></button>
+            ))}
           </div>
           <div
             className="flex items-center gap-2 py-3"
@@ -4348,7 +4398,12 @@ function ScrapbookScreen({
               className="flex items-center justify-center rounded-full shrink-0"
               style={{ width: "clamp(24px, 8vw, 28px)", height: "clamp(24px, 8vw, 28px)", backgroundColor: tool === t ? "var(--pt-brand-secondary)" : "transparent" }}
             >
-              <PenToolIcon name={t} color={tool === t ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
+              {/* 형광펜은 원문 플로팅 툴바와 동일한 Lucide HighlighterIcon 사용 */}
+              {t === "highlighter" ? (
+                <HighlighterIcon color={tool === t ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
+              ) : (
+                <PenToolIcon name={t} color={tool === t ? "var(--pt-brand-primary)" : "var(--pt-text-primary)"} />
+              )}
             </button>
           ))}
         </div>
