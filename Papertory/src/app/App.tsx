@@ -2015,6 +2015,7 @@ function ArticleScreen({
   onTabChange,
   onBack,
   onComplete,
+  onReadComplete,
   onToggleClip,
   onOpenScrapbook,
 }: {
@@ -2023,6 +2024,7 @@ function ArticleScreen({
   onTabChange: (t: ArticleTab) => void;
   onBack: () => void;
   onComplete?: () => void;
+  onReadComplete?: () => void;
   onToggleClip?: (text: string, on: boolean) => void;
   onOpenScrapbook?: () => void;
 }) {
@@ -2031,6 +2033,20 @@ function ArticleScreen({
   const completedRef = useRef(false);
   const screenRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 기사 진입 10초 후 완독 처리 — 최신 콜백을 ref로 참조해 부모 리렌더로 콜백 참조가
+  // 바뀌어도(예: 형광펜 클리핑) 타이머가 재시작되지 않도록 함
+  const [readToastVisible, setReadToastVisible] = useState(false);
+  const onReadCompleteRef = useRef(onReadComplete);
+  onReadCompleteRef.current = onReadComplete;
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      onReadCompleteRef.current?.();
+      setReadToastVisible(true);
+      window.setTimeout(() => setReadToastVisible(false), 1800);
+    }, 10000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // 원문 스크랩 툴바 — 형광펜/펜/지우개/가위(이미지 자르기)/실행취소
   const [tool, setTool] = useState<ArticleTool>("none");
@@ -2304,6 +2320,24 @@ function ArticleScreen({
           canUndo={history.length > 0}
         />
       )}
+      {/* 완독 토스트 — 상점 결제완료 토스트와 동일한 스타일, 하단에서 올라왔다가 다시 내려감 */}
+      <div
+        className="absolute left-1/2 z-30 rounded-full"
+        style={{
+          bottom: `calc(28px + ${APP_SAFE_BOTTOM})`,
+          padding: "10px 28px",
+          backgroundColor: "var(--pt-bg-accent)",
+          boxShadow: "0px 4px 8px rgba(0,0,0,0.15)",
+          transform: `translate(-50%, ${readToastVisible ? "0" : "140%"})`,
+          opacity: readToastVisible ? 1 : 0,
+          transition: "transform 0.35s ease, opacity 0.35s ease",
+          pointerEvents: "none",
+        }}
+      >
+        <span style={{ fontFamily: "Paperlogy", fontWeight: 700, fontSize: 14, color: "var(--pt-brand-primary)" }}>
+          완독했어요!
+        </span>
+      </div>
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none border-4"
@@ -2315,15 +2349,19 @@ function ArticleScreen({
 
 // ── Mission Screen (미션리워드) ──
 function MissionScreen({
+  acornCount,
+  articleMissionDone,
   onMenuOpen,
   onShopPress,
 }: {
+  acornCount: number;
+  articleMissionDone: boolean;
   onMenuOpen: () => void;
   onShopPress: () => void;
 }) {
   const missions = [
     { label: "출석체크 하기", reward: 30, done: true },
-    { label: "기사 3개 완독하기", reward: 10, done: false },
+    { label: "기사 3개 완독하기", reward: 10, done: articleMissionDone },
     { label: "스크랩 공유하기", reward: 20, done: false },
     { label: "스티커 구매하기", reward: 5, done: false },
   ];
@@ -2370,7 +2408,7 @@ function MissionScreen({
                 />
               </div>
               <span className="caption" style={{ color: "var(--pt-text-primary)" }}>
-                0개
+                {acornCount}개
               </span>
             </div>
           </div>
@@ -2499,7 +2537,15 @@ const STICKER_ITEMS: ShopItem[] = [
   { id: "sticker-wave", name: "인사하는 토리", price: 150, img: imgToriDeco },
 ];
 
-function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: () => void }) {
+function ShopScreen({
+  acornCount,
+  onBack,
+  onMenuOpen,
+}: {
+  acornCount: number;
+  onBack: () => void;
+  onMenuOpen: () => void;
+}) {
   const [activeTab, setActiveTab] = useState<ShopTab>("tape");
   const items = activeTab === "tape" ? TAPE_ITEMS : STICKER_ITEMS;
 
@@ -2582,7 +2628,7 @@ function ShopScreen({ onBack, onMenuOpen }: { onBack: () => void; onMenuOpen: ()
               />
             </div>
             <span className="caption" style={{ color: "var(--pt-text-primary)" }}>
-              0개
+              {acornCount}개
             </span>
           </div>
         </div>
@@ -4636,6 +4682,19 @@ export default function App() {
   const toggleClip = (t: string, on: boolean) =>
     setClippings((prev) => (on ? (prev.includes(t) ? prev : [...prev, t]) : prev.filter((x) => x !== t)));
 
+  // 도토리 줍기 — 출석체크(30개)는 이미 완료된 상태로 시작. 기사를 3번 완독하면
+  // "기사 3개 완독하기" 미션이 자동 완료되며 보상(10개)이 한 번만 지급된다.
+  const [acornCount, setAcornCount] = useState(30);
+  const [articleReadCount, setArticleReadCount] = useState(0);
+  const articleMissionDone = articleReadCount >= 3;
+  const handleArticleReadComplete = () => {
+    setArticleReadCount((prev) => {
+      const next = prev + 1;
+      if (prev < 3 && next >= 3) setAcornCount((a) => a + 10);
+      return next;
+    });
+  };
+
   // 요소·필기·배경이 한 번이라도 바뀌면 호출됨 — 신규 스크랩이면 이때 처음 목록에 생기고,
   // 기존 스크랩이면 내용을 갱신하며 항상 맨 앞(최신순)으로 올라온다
   const handleScrapAutoSave = (doc: ScrapDoc) => {
@@ -4756,6 +4815,7 @@ export default function App() {
             onTabChange={setArticleTab}
             onBack={goBack}
             onComplete={markTodayRead}
+            onReadComplete={handleArticleReadComplete}
             onToggleClip={toggleClip}
             onOpenScrapbook={() => openNewScrap(selectedArticle.headline)}
           />
@@ -4764,6 +4824,8 @@ export default function App() {
       case "mission":
         return (
           <MissionScreen
+            acornCount={acornCount}
+            articleMissionDone={articleMissionDone}
             onMenuOpen={() => setDrawerOpen(true)}
             onShopPress={() => goTo("shop")}
           />
@@ -4772,6 +4834,7 @@ export default function App() {
       case "shop":
         return (
           <ShopScreen
+            acornCount={acornCount}
             onBack={goBack}
             onMenuOpen={() => setDrawerOpen(true)}
           />
