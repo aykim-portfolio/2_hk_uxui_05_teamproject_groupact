@@ -166,29 +166,10 @@ function GlassBtn({
     <button
       onClick={onClick}
       aria-label={ariaLabel}
-      className="relative flex items-center justify-center rounded-full shrink-0 overflow-hidden"
-      style={{
-        width: size,
-        height: size,
-        boxShadow:
-          "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
-      }}
+      className="pt-glass relative flex items-center justify-center rounded-full shrink-0"
+      style={{ width: size, height: size }}
     >
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(161.696deg, rgba(255,255,255,0.2) 31.933%, rgba(235,235,235,0.2) 144.03%)",
-        }}
-      />
       {children}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          boxShadow:
-            "inset 3px 4px 4px white, inset 0px 13px 12px 4px rgba(255,255,255,0.2)",
-        }}
-      />
     </button>
   );
 }
@@ -573,24 +554,10 @@ function DropdownTab({
   return (
     <button
       onClick={onClick}
-      className="relative flex min-w-0 max-w-full gap-2 items-center justify-center rounded-3xl"
+      className="pt-glass relative flex min-w-0 max-w-full gap-2 items-center justify-center rounded-3xl"
       // chevron이 없으면 좌우 여백을 같게 맞춰 라벨이 가운데 오도록 함
       style={{ height: 40, paddingLeft: 24, paddingRight: showChevron ? 20 : 24 }}
     >
-      <div
-        className="absolute inset-0 rounded-3xl pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(174.232deg, rgba(255,255,255,0.2) 31.933%, rgba(235,235,235,0.2) 144.03%)",
-        }}
-      />
-      <div
-        className="absolute inset-0 rounded-3xl pointer-events-none border border-white"
-        style={{
-          boxShadow:
-            "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
-        }}
-      />
       <span
         className="title relative min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
         style={{ color: "var(--pt-text-primary)" }}
@@ -598,13 +565,6 @@ function DropdownTab({
         {label}
       </span>
       {showChevron && <ChevronDownIcon />}
-      <div
-        className="absolute inset-0 pointer-events-none rounded-3xl"
-        style={{
-          boxShadow:
-            "inset 3px 4px 4px white, inset 0px 13px 12px rgba(255,255,255,0.2)",
-        }}
-      />
     </button>
   );
 }
@@ -879,15 +839,11 @@ function FAB({
       {showToolbar && <div className="pt-fab-overlay absolute inset-0 z-20" onClick={onCloseToolbar} />}
       {showToolbar && (
         <div
-          className="pt-fab-toolbar absolute flex items-center gap-5 rounded-full p-5 z-30 overflow-x-auto no-scrollbar"
+          className="pt-fab-toolbar pt-glass absolute flex items-center gap-5 rounded-full p-5 z-30 overflow-x-auto no-scrollbar"
           style={{
             bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
             right: APP_INLINE_END,
             maxWidth: "calc(100% - 24px)",
-            backgroundColor: "rgba(255,255,255,0.95)",
-            boxShadow:
-              "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
-            backdropFilter: "blur(12px)",
           }}
         >
           {ARTICLE_TOOL_ITEMS.map(({ Icon, label, tool: t }) => {
@@ -935,23 +891,16 @@ function FAB({
         onClick={onPress}
         aria-label="스크랩 도구 열기"
         aria-expanded={showToolbar}
-        className="pt-fab-button absolute z-30 flex items-center justify-center rounded-full"
+        className="pt-fab-button pt-glass absolute z-30 flex items-center justify-center rounded-full"
         style={{
           bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
           right: APP_INLINE_END,
           width: 64,
           height: 64,
-          boxShadow:
-            "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
-          backgroundImage:
-            "linear-gradient(161.696deg, rgba(255,255,255,0.2) 31.933%, rgba(235,235,235,0.2) 144.03%)",
-          border: tool !== "none" ? "2px solid var(--pt-brand-primary)" : "none",
+          // 도구 선택 중일 땐 글래스 흰 엣지 대신 브랜드 컬러 2px 테두리로 활성 표시
+          ...(tool !== "none" ? { border: "2px solid var(--pt-brand-primary)" } : {}),
         }}
       >
-        <div
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ boxShadow: "inset 3px 4px 4px white, inset 0px 13px 12px rgba(255,255,255,0.2)" }}
-        />
         <FabIcon color="var(--pt-brand-primary)" />
       </button>
       )}
@@ -3574,25 +3523,21 @@ function PenToolIcon({ name, color = "var(--pt-text-primary)" }: { name: PenTool
 // ── Scrap Library Screen (스크랩 라이브러리) ──
 function ScrapLibraryScreen({
   items,
+  liked,
+  onLike,
   onMenuOpen,
   onOpen,
   onNew,
   onShare,
 }: {
   items: SavedScrap[];
+  liked: Set<number>;
+  onLike: (id: number) => void;
   onMenuOpen: () => void;
   onOpen: (id: number) => void;
   onNew: () => void;
   onShare: (id: number) => void;
 }) {
-  const [liked, setLiked] = useState<Set<number>>(new Set([1]));
-  const toggleLike = (id: number) =>
-    setLiked((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-
   // 날짜별 필터링 — 기본은 전체보기, 날짜 선택시트에서 하루를 고르면 그 날짜에 추가된
   // 스크랩만 보여준다. items의 date는 자동저장 시점의 실제 날짜(TODAY_DATE_STR)라서
   // 읽기 기록 달력에서 만든 스크랩도 같은 값으로 자연스럽게 연동된다
@@ -3665,7 +3610,7 @@ function ScrapLibraryScreen({
               <div className="flex gap-1.5 items-center">
                 <button
                   aria-label={liked.has(it.id) ? `${it.title} 좋아요 취소` : `${it.title} 좋아요`}
-                  onClick={() => toggleLike(it.id)}
+                  onClick={() => onLike(it.id)}
                   className="flex items-center"
                 >
                   <HeartIcon filled={liked.has(it.id)} />
@@ -3682,23 +3627,6 @@ function ScrapLibraryScreen({
           ))}
         </div>
       </div>
-
-      {/* FAB → 새 스크랩북 */}
-      <button
-        onClick={onNew}
-        aria-label="새 스크랩북 만들기"
-        className="absolute z-30 flex items-center justify-center rounded-full"
-        style={{
-          bottom: `calc(${APP_SAFE_BOTTOM} + 24px)`,
-          right: APP_INLINE_END,
-          width: 60,
-          height: 60,
-          backgroundColor: "var(--pt-bg-surface)",
-          boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
-        }}
-      >
-        <ScrapIcon color="var(--pt-brand-primary)" />
-      </button>
 
       {pickerOpen && (
         <DatePickerSheet
@@ -4404,7 +4332,7 @@ function ScrapbookScreen({
       {/* Pen bar (툴바) */}
       {tool !== "keyboard" && (
         <div
-          className="absolute z-40 flex items-center justify-between gap-1 rounded-full py-3 border border-white"
+          className="pt-glass absolute z-40 flex items-center justify-between gap-1 rounded-full py-3"
           style={{
             left: APP_PANEL_START,
             right: APP_PANEL_END,
@@ -4413,9 +4341,6 @@ function ScrapbookScreen({
             marginInline: "auto",
             paddingLeft: "clamp(8px, 3vw, 16px)",
             paddingRight: "clamp(8px, 3vw, 16px)",
-            backgroundColor: "rgba(255,255,255,0.85)",
-            backdropFilter: "blur(12px)",
-            boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)",
           }}
         >
           {(["keyboard", "highlighter", "pencil", "eraser", "clipboard", "scissors", "undo"] as PenTool[]).map((t) => (
@@ -5053,6 +4978,25 @@ export default function App() {
   const [scrapSnapshot, setScrapSnapshot] = useState<ScrapDoc | null>(null);
   // 스크랩 라이브러리 — 항상 맨 앞이 가장 최근에 만들거나 수정한 스크랩
   const [savedScraps, setSavedScraps] = useState<SavedScrap[]>(SEED_SAVED_SCRAPS);
+  // 하트 = 즐겨찾기 표시 + 해당 스크랩을 라이브러리 맨 위(최신)로 끌어올림.
+  // 표시(likedScraps)와 순서(savedScraps) 모두 부모에 두어 재진입해도 유지. 날짜 필터와는 독립적인 축.
+  const [likedScraps, setLikedScraps] = useState<Set<number>>(() => new Set([1]));
+  const likeScrap = (id: number) => {
+    const willLike = !likedScraps.has(id);
+    setLikedScraps((prev) => {
+      const next = new Set(prev);
+      if (willLike) next.add(id);
+      else next.delete(id); // 하트 해제 — 순서는 그대로, 표시만 끔
+      return next;
+    });
+    if (willLike) {
+      // 하트 켜면 라이브러리 맨 위(최신)로 부상
+      setSavedScraps((list) => {
+        const it = list.find((s) => s.id === id);
+        return it ? [it, ...list.filter((s) => s.id !== id)] : list;
+      });
+    }
+  };
   const [scrapInitialDoc, setScrapInitialDoc] = useState<ScrapDoc | undefined>(undefined);
   const currentScrapIdRef = useRef<number | null>(null);
   const currentScrapTitleRef = useRef<string>("제목 없음");
@@ -5295,6 +5239,8 @@ export default function App() {
         return (
           <ScrapLibraryScreen
             items={savedScraps}
+            liked={likedScraps}
+            onLike={likeScrap}
             onMenuOpen={() => setDrawerOpen(true)}
             onOpen={(id) => {
               const found = savedScraps.find((s) => s.id === id);
@@ -5347,7 +5293,8 @@ export default function App() {
         style={{ backgroundColor: "var(--pt-bg-primary)" }}
       >
         <main className="pt-screen-host h-full w-full">{renderScreen()}</main>
-        <PwaInstallControl visible={screen !== "start"} />
+        {/* 앱 설치(PWA) 버튼은 스크랩 라이브러리·스크랩북 편집 화면에선 숨김 — FAB·툴바와 겹치지 않도록 */}
+        <PwaInstallControl visible={screen !== "start" && screen !== "scrap-library" && screen !== "scrapbook"} />
         {drawerOpen && (
           <NavigationDrawer
             currentScreen={screen}

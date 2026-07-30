@@ -282,9 +282,13 @@
 | Sticky Note Shadow | offset (0, 2) · blur 4 · spread 0 · opacity 6% | sticky-note, 스크랩북 메모 그림자 |
 | 토리 AI Shadow | offset (2, 2) · blur 8 · spread 0 · #D3D8E9 100% | AI-Insight-Card-QnA, AI 인사이트 카드 전용 |
 
-### Glass Effect (복합 이펙트)
+### Glass Effect (복합 이펙트 — 글래스모피즘)
 
-버튼·드롭다운·FAB에 사용하는 5겹 글래스모피즘 효과임.
+**무엇인가:** 배경을 흐리게 굴절시키는 반투명 "프로스티드 글래스" 표면. 앱 콘텐츠 위에 떠 있는 인터랙션 요소가 배경과 분리돼 보이면서도 지면 몰입을 해치지 않도록, 불투명 카드가 아니라 유리처럼 처리함. 반투명 그라디언트 + 흰색 엣지(빛 반사) + 5겹 그림자 + 배경 blur의 조합.
+
+**언제 쓰나:** 플로팅 인터랙션 요소 — 상단바 버튼(햄버거·뒤로가기·아바타)·드롭다운 탭, 모든 FAB, 원문/스크랩북 툴바. **정적 카드·리스트에는 사용 금지**(§9 사용 가이드 참조).
+
+**레이어 정의 (Figma):**
 
 | 레이어 | 값 |
 |---|---|
@@ -294,7 +298,18 @@
 | ④ Drop Shadow | offset (0, 0) · blur 0.3 · #DBDBDB 25% |
 | ⑤ Inner Shadow | offset (3, 4) · blur 4 · #FFFFFF 100% |
 
-> 사용처: dropdown-tab, FAB, 아이콘 버튼
+**CSS 구현 (SSOT: `globals.css` `--pt-glass-*` 토큰 + `.pt-glass` 유틸 클래스):**
+
+| 토큰 | 값 | 대응 |
+|---|---|---|
+| `--pt-glass-bg` | `linear-gradient(162deg, rgba(255,255,255,0.20) -31.93%, rgba(235,235,235,0.20) 144.03%)` | ① Glass 표면 (흰색 alpha **0.20**) |
+| `--pt-glass-border` | `#ffffff` (1px) | 빛 반사 엣지 |
+| `--pt-glass-blur` | `12px` (`backdrop-filter: blur()`) | ① 배경 굴절 |
+| `--pt-glass-shadow` | `3px 4px 4px 0 #fff inset, 0 0 0.3px 0 rgba(219,219,219,.25), 0 13px 12px 4px rgba(255,255,255,.20) inset, 4px 4px 16px 0 rgba(0,0,0,.12)` | ⑤→④→③→② 5겹 |
+| `--pt-radius-full` | `9999px` | pill·원형 요소 radius |
+
+- **적용법:** 요소에 `.pt-glass` 클래스만 추가하고 radius는 요소별 클래스(`rounded-full`/`rounded-3xl` 등)로 지정. 개별 컴포넌트에 그라디언트·그림자를 직접 인라인하지 말 것(제각각 값이 흩어졌던 이유). 활성 상태 등으로 테두리를 바꿔야 하면 인라인 `border`로 오버라이드(예: 도구 선택 중 FAB = `2px brand/primary`).
+- **투명도 주의:** 표면 alpha가 **0.20**이라, 기사 이미지 등 콘텐츠 위에선 유리처럼 또렷하지만 **평평한 밝은 배경(bg/primary) 위에선 거의 투명**하게(엣지·그림자만) 보임 — 의도된 동작. 배경이 단조로운 화면에서 더 또렷한 표면감이 필요하면 alpha 상향을 검토(디자인 결정 필요).
 
 ---
 

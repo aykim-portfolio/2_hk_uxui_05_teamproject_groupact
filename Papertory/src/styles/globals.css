@@ -82,6 +82,17 @@ button {
   margin-inline: auto;
 }
 
+/* 글래스모피즘 유틸 — 플로팅 인터랙션 요소(상단바 버튼·드롭다운, FAB, 툴바)에 적용.
+   반투명 그라디언트 + 흰색 엣지 + 5겹 그림자 + 배경 굴절(backdrop blur)로 프로스티드 글래스 표현.
+   radius는 요소별 클래스(rounded-full / rounded-3xl 등)로 지정. 상세는 guidelines/design.md §5 Glass Effect. */
+.pt-glass {
+  background: var(--pt-glass-bg);
+  border: 1px solid var(--pt-glass-border);
+  box-shadow: var(--pt-glass-shadow);
+  -webkit-backdrop-filter: blur(var(--pt-glass-blur));
+  backdrop-filter: blur(var(--pt-glass-blur));
+}
+
 /*
  * 모바일 브라우저에서는 문서(body)가 스크롤되어야 주소창과 하단 툴바가
  * 브라우저의 기본 동작에 따라 접힌다. 카테고리 카드 스택과 스크랩 편집기는
@@ -212,6 +223,17 @@ button {
   --pt-read-4: #6083f5;                        /* primary/400 — 4개 */
   --pt-read-5: #496de0;                        /* primary/600 — 5개 이상 */
   --pt-border-strong: #cdd2da;                 /* border/strong — 빈 날짜 셀 테두리 */
+
+  /* 글래스모피즘 — 플로팅 인터랙션 요소(상단바 버튼·드롭다운, FAB, 툴바) 전용. design.md §5 Glass Effect */
+  --pt-radius-full: 9999px;
+  --pt-glass-bg: linear-gradient(162deg, rgba(255, 255, 255, 0.20) -31.93%, rgba(235, 235, 235, 0.20) 144.03%);
+  --pt-glass-border: #ffffff;                  /* 1px 흰색 엣지(빛 반사) */
+  --pt-glass-blur: 12px;                        /* 배경 굴절 — backdrop blur */
+  --pt-glass-shadow:                            /* 5겹: ⑤inset 하이라이트 → ④미세 엣지 → ③넓은 inset → ②드롭섀도 */
+    3px 4px 4px 0 #ffffff inset,
+    0 0 0.3px 0 rgba(219, 219, 219, 0.25),
+    0 13px 12px 4px rgba(255, 255, 255, 0.20) inset,
+    4px 4px 16px 0 rgba(0, 0, 0, 0.12);
 
   /* Font families — 제목·UI = Paperlogy, 본문 = Open Sans (혼용 금지) */
   --pt-font-title: 'Paperlogy', 'Noto Sans KR', sans-serif;
