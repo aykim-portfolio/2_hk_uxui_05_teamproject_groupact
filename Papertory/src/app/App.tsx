@@ -3777,6 +3777,19 @@ function ScrapbookScreen({
   const drawingRef = useRef<ScrapStroke | null>(null);
   const dragRef = useRef<{ id: string; ox: number; oy: number } | null>(null);
   const erasingRef = useRef(false);
+  // 두 손가락 핀치(확대·축소)·회전 — 스티커/노트/텍스트 공통. 손가락이 어디에 닿든(캔버스
+  // 배경 포함) 선택된 요소를 대상으로 동작해, 두 번째 손가락이 요소 밖으로 살짝 벗어나도 끊기지 않는다
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ size: number; rot: number; dist: number; angle: number } | null>(null);
+  const pinchMetrics = () => {
+    const pts = Array.from(activePointersRef.current.values());
+    if (pts.length < 2) return null;
+    const [p1, p2] = pts;
+    return {
+      dist: Math.hypot(p2.x - p1.x, p2.y - p1.y),
+      angle: (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI,
+    };
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isDraw = tool === "pencil" || tool === "highlighter";
@@ -3863,7 +3876,27 @@ function ScrapbookScreen({
     setSelectedId(null);
   };
 
+  const startPinch = (el: ScrapEl) => {
+    const metrics = pinchMetrics();
+    if (!metrics) return;
+    pinchRef.current = {
+      size: el.size ?? (el.kind === "sticker" ? 72 : 100),
+      rot: el.rot ?? 0,
+      dist: metrics.dist,
+      angle: metrics.angle,
+    };
+    dragRef.current = null;
+  };
+
   const onDown = (e: React.PointerEvent) => {
+    activePointersRef.current.set(e.pointerId, pt(e));
+    if (activePointersRef.current.size === 2 && selectedId) {
+      const el = elements.find((x) => x.id === selectedId);
+      if (el) startPinch(el);
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      return;
+    }
+    if (activePointersRef.current.size > 1) return; // 세 번째 이상 손가락은 무시
     if (isDraw) {
       const p = pt(e);
       drawingRef.current = { id: scrapUid(), tool: tool as "pencil" | "highlighter", color: activeColor, width: tool === "highlighter" ? 16 : penWidth, pts: [p] };
@@ -3881,6 +3914,26 @@ function ScrapbookScreen({
     }
   };
   const onMove = (e: React.PointerEvent) => {
+    if (activePointersRef.current.has(e.pointerId)) activePointersRef.current.set(e.pointerId, pt(e));
+    if (pinchRef.current && activePointersRef.current.size === 2 && selectedId) {
+      const metrics = pinchMetrics();
+      if (metrics) {
+        const scaleRatio = metrics.dist / pinchRef.current.dist;
+        const rotDelta = metrics.angle - pinchRef.current.angle;
+        const { size: baseSize, rot: baseRot } = pinchRef.current;
+        setElements((els) =>
+          els.map((el) => {
+            if (el.id !== selectedId) return el;
+            const nextSize =
+              el.kind === "sticker"
+                ? Math.max(32, Math.min(220, baseSize * scaleRatio))
+                : Math.max(50, Math.min(200, baseSize * scaleRatio));
+            return { ...el, size: nextSize, rot: baseRot + rotDelta };
+          })
+        );
+      }
+      return;
+    }
     if (drawingRef.current) {
       drawingRef.current.pts.push(pt(e));
       force((n) => n + 1);
@@ -3893,7 +3946,9 @@ function ScrapbookScreen({
       setElements((els) => els.map((el) => (el.id === id ? { ...el, x: p.x - ox, y: p.y - oy } : el)));
     }
   };
-  const onUp = () => {
+  const onUp = (e: React.PointerEvent) => {
+    activePointersRef.current.delete(e.pointerId);
+    if (activePointersRef.current.size < 2) pinchRef.current = null;
     if (drawingRef.current) {
       const s = drawingRef.current;
       if (s.pts.length > 1) {
@@ -3915,6 +3970,13 @@ function ScrapbookScreen({
       return;
     }
     if (tool !== "none") return; // drawing tools: let canvas handle
+    activePointersRef.current.set(e.pointerId, pt(e));
+    if (activePointersRef.current.size === 2 && selectedId) {
+      startPinch(el);
+      e.stopPropagation();
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      return;
+    }
     e.stopPropagation();
     setSelectedId(el.id);
     const p = pt(e);
@@ -4092,7 +4154,10 @@ function ScrapbookScreen({
                   outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none",
                   outlineOffset: 2,
                   borderRadius: 6,
-                  transform: el.kind === "sticker" ? undefined : `scale(${(el.size ?? 100) / 100})`,
+                  transform:
+                    el.kind === "sticker"
+                      ? `rotate(${el.rot ?? 0}deg)`
+                      : `scale(${(el.size ?? 100) / 100}) rotate(${el.rot ?? 0}deg)`,
                   transformOrigin: "top left",
                 }}
               >
