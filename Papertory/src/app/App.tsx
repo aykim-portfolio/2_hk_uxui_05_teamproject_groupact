@@ -4296,6 +4296,30 @@ function ScrapbookScreen({
   );
 }
 
+// 클리핑 시트의 "테이프" 탭 미리보기 크기 — 상점의 TAPE_WIDTH(80)는 79px짜리 카드용이라
+// 여기 64px 버튼에는 살짝 작게 잡아야 회전한 테이프가 버튼 밖으로 삐져나오지 않는다
+const CLIP_SHEET_TAPE_WIDTH = 48;
+// 클릭한 테이프 영역만 실제로 잘라 독립된 이미지로 반환 — 스크랩 요소는 <img src>를 그대로
+// 그리므로, 잘리지 않은 시트 전체를 넘기면 캔버스에 엉뚱한 통짜 시트 이미지가 올라간다
+function cropTapeToDataUrl(item: ShopItem): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!item.crop) { reject(new Error("no crop")); return; }
+    const crop = item.crop;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = crop.w;
+      canvas.height = crop.h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("no ctx")); return; }
+      ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+      resolve(canvas.toDataURL());
+    };
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = imgTape;
+  });
+}
+
 function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings: string[]; onPick: (src: string) => void; onPickText: (t: string) => void; onClose: () => void }) {
   const [tab, setTab] = useState<"clip" | "sticker" | "tape">("clip");
   const tabs: [typeof tab, string][] = [["clip", "클리핑"], ["sticker", "스티커"], ["tape", "테이프"]];
@@ -4343,13 +4367,39 @@ function ClipboardSheet({ clippings, onPick, onPickText, onClose }: { clippings:
             )
           )}
         </div>
-      ) : (
+      ) : tab === "sticker" ? (
         <div className="flex flex-wrap justify-center gap-2.5 p-4 min-h-0 max-h-[220px] overflow-y-auto no-scrollbar">
-          {(tab === "sticker" ? STICKERS : [imgTape, imgTape, imgTape]).map((src, i) => (
+          {STICKERS.map((src, i) => (
             <button key={i} onClick={() => onPick(src)} className="rounded-lg overflow-hidden" style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)" }}>
               <img src={src} alt="스티커" className="w-full h-full object-contain pointer-events-none" />
             </button>
           ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-2.5 p-4 min-h-0 max-h-[220px] overflow-y-auto no-scrollbar">
+          {TAPE_ITEMS.map((item) => {
+            const scale = CLIP_SHEET_TAPE_WIDTH / item.crop!.w;
+            return (
+              <button
+                key={item.id}
+                onClick={() => { cropTapeToDataUrl(item).then(onPick).catch(() => {}); }}
+                className="rounded-lg overflow-hidden flex items-center justify-center"
+                style={{ width: 64, height: 64, backgroundColor: "var(--pt-bg-primary)" }}
+              >
+                <div
+                  style={{
+                    width: CLIP_SHEET_TAPE_WIDTH,
+                    height: item.crop!.h * scale,
+                    transform: "rotate(-18deg)",
+                    backgroundImage: `url(${imgTape})`,
+                    backgroundSize: `${TAPE_SHEET.w * scale}px ${TAPE_SHEET.h * scale}px`,
+                    backgroundPosition: `-${item.crop!.x * scale}px -${item.crop!.y * scale}px`,
+                    backgroundRepeat: "no-repeat",
+                  }}
+                />
+              </button>
+            );
+          })}
         </div>
       )}
       <button onClick={onClose} className="w-full py-2 caption shrink-0" style={{ color: "var(--pt-text-secondary)" }}>닫기</button>
