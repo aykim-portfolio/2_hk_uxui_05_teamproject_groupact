@@ -2901,7 +2901,15 @@ function firstWeekdayMon(y: number, m: number) {
 }
 
 // ── Reading History Card ──
-function ReadingHistoryCard({ onClick, onScrap }: { onClick?: () => void; onScrap?: () => void }) {
+function ReadingHistoryCard({
+  date,
+  onClick,
+  onScrap,
+}: {
+  date: string;
+  onClick?: () => void;
+  onScrap?: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -2933,7 +2941,7 @@ function ReadingHistoryCard({ onClick, onScrap }: { onClick?: () => void; onScra
           앤트로픽, 10월 IPO 추진…투자자 미팅 돌입
         </p>
         <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
-          2026.07.20 09:12
+          {date} 09:12
         </p>
       </div>
       <span className="caption self-end" style={{ color: "var(--pt-text-secondary)" }}>
@@ -3123,6 +3131,7 @@ function CalendarScreen({
 
 // ── Reading Detail Screen (날짜별 읽기 기록) ──
 function ReadingDetailScreen({
+  year,
   month,
   day,
   count,
@@ -3131,6 +3140,7 @@ function ReadingDetailScreen({
   onScrapClick,
   onGoFeed,
 }: {
+  year: number;
   month: number;
   day: number;
   count: number;
@@ -3140,6 +3150,7 @@ function ReadingDetailScreen({
   onGoFeed: () => void;
 }) {
   const remaining = Math.max(0, READ_GOAL - count);
+  const dateStr = `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
 
   return (
     <div
@@ -3187,7 +3198,7 @@ function ReadingDetailScreen({
           <div className="flex flex-col items-center gap-8">
             <div className="flex flex-col gap-2 px-4 w-full">
               {Array.from({ length: count }).map((_, i) => (
-                <ReadingHistoryCard key={i} onClick={onCardClick} onScrap={onScrapClick} />
+                <ReadingHistoryCard key={i} date={dateStr} onClick={onCardClick} onScrap={onScrapClick} />
               ))}
             </div>
             {count < READ_GOAL && (
@@ -4788,6 +4799,7 @@ export default function App() {
       case "reading-detail":
         return (
           <ReadingDetailScreen
+            year={calYear}
             month={calMonth}
             day={selectedDay}
             count={monthReads[selectedDay] || 0}
