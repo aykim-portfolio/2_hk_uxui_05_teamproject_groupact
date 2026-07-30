@@ -4293,7 +4293,24 @@ function ScrapPreview({ doc }: { doc: ScrapDoc }) {
 function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () => void }) {
   const d = doc && (doc.elements.length || doc.strokes.length) ? doc : SAMPLE_DOC;
   const [toast, setToast] = useState("");
-  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1800); };
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMobileDevice =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const showToast = (m: string) => {
+    setToast(m);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(""), 1800);
+  };
+  // 모바일은 클립보드·다운로드·외부 앱 실행 시 브라우저/OS가 자체 피드백을 표시한다.
+  // 성공 토스트는 PC에서만 띄워 같은 동작에 알림이 두 번 보이지 않게 한다.
+  const showActionSuccess = (m: string) => {
+    if (!isMobileDevice) showToast(m);
+  };
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
 
   // 공유 딥링크 — 이 링크를 누르면 앱의 '공유 스크랩 뷰'로 돌아와 순환됨
   const [shareId] = useState(() => Math.random().toString(36).slice(2, 8));
@@ -4301,13 +4318,16 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
   const shareText = "페이퍼토리에서 내 경제공부 스크랩을 공유했어요 #직장인공부 #공스타그램 #페이퍼토리";
 
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(shareUrl); showToast("링크를 복사했어요"); }
+    try { await navigator.clipboard.writeText(shareUrl); showActionSuccess("링크를 복사했어요"); }
     catch { showToast(shareUrl); }
   };
   const openShare = (intentUrl: string, name: string) => {
     const w = window.open(intentUrl, "_blank", "noopener");
-    if (!w) { navigator.clipboard?.writeText(shareUrl).catch(() => {}); showToast(`${name} 공유 링크를 복사했어요`); }
-    else showToast(`${name}(으)로 공유해요`);
+    if (!w) {
+      navigator.clipboard?.writeText(shareUrl)
+        .then(() => showActionSuccess(`${name} 공유 링크를 복사했어요`))
+        .catch(() => showToast(`${name} 공유 창을 열지 못했어요`));
+    } else showActionSuccess(`${name}(으)로 공유해요`);
   };
 
   const loadImg = (src: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
@@ -4339,11 +4359,20 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
     // 딥링크 URL을 이미지 하단에 찍어, 이미지를 본 사람도 앱으로 돌아올 수 있게 함
     ctx.globalAlpha = 0.9; ctx.fillStyle = "#6083f5"; ctx.font = "600 12px sans-serif";
     ctx.fillText("📌 " + shareUrl.replace(/^https?:\/\//, ""), 16, H - 20); ctx.globalAlpha = 1;
-    cv.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "papertory-scrap.png"; a.click(); URL.revokeObjectURL(a.href); showToast("이미지를 저장했어요"); });
+    cv.toBlob((b) => { if (!b) return; const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "papertory-scrap.png"; a.click(); URL.revokeObjectURL(a.href); showActionSuccess("이미지를 저장했어요"); });
   };
 
   const targets = [
-    { label: "카카오", bg: "#FEE500", fg: "#3C1E1E", onClick: () => { navigator.clipboard?.writeText(shareUrl).catch(() => {}); showToast("카카오 공유 링크를 복사했어요"); } },
+    {
+      label: "카카오",
+      bg: "#FEE500",
+      fg: "#3C1E1E",
+      onClick: () => {
+        navigator.clipboard?.writeText(shareUrl)
+          .then(() => showActionSuccess("카카오 공유 링크를 복사했어요"))
+          .catch(() => showToast("카카오 공유 링크를 복사하지 못했어요"));
+      },
+    },
     { label: "X", bg: "#000000", fg: "#ffffff", onClick: () => openShare(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "X") },
     { label: "스레드", bg: "#101010", fg: "#ffffff", onClick: () => openShare(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "스레드") },
     { label: "링크복사", bg: "var(--pt-bg-card)", fg: "var(--pt-text-primary)", onClick: copyLink },
