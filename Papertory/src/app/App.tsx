@@ -23,6 +23,29 @@ import imgBgPaper from "@/imports/스크랩북/bg-paper.png";
 import imgScrapColorPicker from "@/imports/기사원문/b3f46f82ad89489d80cc51b271cd3cc0.png";
 import articlesData from "./articles.json";
 
+// 실제 한국(KST) 날짜를 "오늘"로 사용 — 목업 데이터(JULY_READS)는 2026년 7월 기준으로 고정돼 있으므로
+// 실제 날짜가 그 달을 벗어나면(다른 달/연도) 달력엔 "오늘" 표시가 나타나지 않음.
+// toNewsItem(article 목업 변환)이 모듈 로드 시 바로 실행되므로, 이 블록은 그보다 앞에 있어야 함
+function getKstToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const map: Record<string, string> = {};
+  parts.forEach((p) => (map[p.type] = p.value));
+  const weekday = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", weekday: "short" }).format(new Date());
+  return { year: Number(map.year), month: Number(map.month), day: Number(map.day), weekday };
+}
+const KST_TODAY = getKstToday();
+const TODAY_YEAR = KST_TODAY.year;
+const TODAY_MONTH = KST_TODAY.month;
+const TODAY_DAY = KST_TODAY.day;
+const TODAY_DATE_STR = `${TODAY_YEAR}.${String(TODAY_MONTH).padStart(2, "0")}.${String(TODAY_DAY).padStart(2, "0")}`;
+// 랜딩 히어로 카드 하단 날짜 표기 — 읽기 기록 달력의 "오늘"과 동일하게 실제 KST 날짜 반영
+const TODAY_DATE_LABEL = `${TODAY_DATE_STR}  (${KST_TODAY.weekday})`;
+
 type Screen =
   | "start"
   | "landing"
@@ -964,7 +987,7 @@ function HeroCard({ article, onClick }: { article: NewsItem; onClick?: () => voi
         className="caption text-center"
         style={{ color: "var(--pt-text-secondary)", paddingTop: 10 }}
       >
-        2026.07.22 &nbsp;(수)
+        {TODAY_DATE_LABEL}
       </p>
     </div>
   );
@@ -1057,7 +1080,7 @@ function toNewsItem(a: (typeof articlesData.articles)[number]): NewsItem {
     category: a.category,
     headline: a.headline,
     image: a.imageUrl || fallbackImageFor(a.category),
-    byline: `${a.author} · ${a.date}`,
+    byline: `${a.author} · ${TODAY_DATE_STR}`,
     summary: a.ai.summary,
     body: a.body,
     ai: {
@@ -2018,6 +2041,9 @@ function ArticleScreen({
   onReadComplete,
   onToggleClip,
   onOpenScrapbook,
+  initialHighlights,
+  initialStrokes,
+  onAnnotationsChange,
 }: {
   article: NewsItem;
   activeTab: ArticleTab;
@@ -2027,6 +2053,9 @@ function ArticleScreen({
   onReadComplete?: () => void;
   onToggleClip?: (text: string, on: boolean) => void;
   onOpenScrapbook?: () => void;
+  initialHighlights?: HighlightRange[];
+  initialStrokes?: ArticleStroke[];
+  onAnnotationsChange?: (highlights: HighlightRange[], strokes: ArticleStroke[]) => void;
 }) {
   const [showToolbar, setShowToolbar] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -2050,13 +2079,24 @@ function ArticleScreen({
 
   // 원문 스크랩 툴바 — 형광펜/펜/지우개/가위(이미지 자르기)/실행취소
   const [tool, setTool] = useState<ArticleTool>("none");
-  const [highlights, setHighlights] = useState<HighlightRange[]>([]);
-  const [strokes, setStrokes] = useState<ArticleStroke[]>([]);
+  const [highlights, setHighlights] = useState<HighlightRange[]>(initialHighlights ?? []);
+  const [strokes, setStrokes] = useState<ArticleStroke[]>(initialStrokes ?? []);
   const [history, setHistory] = useState<ArticleAction[]>([]);
   const drawingRef = useRef<ArticleStroke | null>(null);
   const erasingRef = useRef(false);
   const [, forceDraw] = useState(0);
   const ERASE_R = 18;
+
+  // 형광펜/볼펜 필기는 기사별로 자동저장 — 나갔다가 같은 기사로 돌아와도 그대로 보이도록.
+  // 최초 마운트(초기값 세팅)는 변경으로 치지 않음
+  const annotationsMounted = useRef(false);
+  useEffect(() => {
+    if (!annotationsMounted.current) {
+      annotationsMounted.current = true;
+      return;
+    }
+    onAnnotationsChange?.(highlights, strokes);
+  }, [highlights, strokes]);
   const uid = () => Math.random().toString(36).slice(2, 9);
 
   const removeHighlightById = (id: string) => {
@@ -2917,24 +2957,6 @@ const JULY_READS: Record<number, number> = {
   1: 1, 3: 3, 4: 2, 5: 1, 6: 2, 7: 3, 8: 4, 9: 1, 10: 5, 11: 1, 12: 5,
   15: 2, 16: 7, 17: 1, 18: 1, 19: 5, 20: 1,
 };
-// 실제 한국(KST) 날짜를 "오늘"로 사용 — 목업 데이터(JULY_READS)는 2026년 7월 기준으로 고정돼 있으므로
-// 실제 날짜가 그 달을 벗어나면(다른 달/연도) 달력엔 "오늘" 표시가 나타나지 않음
-function getKstToday() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const map: Record<string, string> = {};
-  parts.forEach((p) => (map[p.type] = p.value));
-  return { year: Number(map.year), month: Number(map.month), day: Number(map.day) };
-}
-const KST_TODAY = getKstToday();
-const TODAY_YEAR = KST_TODAY.year;
-const TODAY_MONTH = KST_TODAY.month;
-const TODAY_DAY = KST_TODAY.day;
-const TODAY_DATE_STR = `${TODAY_YEAR}.${String(TODAY_MONTH).padStart(2, "0")}.${String(TODAY_DAY).padStart(2, "0")}`;
 const READ_GOAL = 5; // 완성 기준(하루 5개)
 const LEVEL_BG = ["", "var(--pt-read-1)", "var(--pt-read-2)", "var(--pt-read-3)", "var(--pt-read-4)", "var(--pt-read-5)"];
 const MONTH_BAR_H = [18, 14, 22, 16, 28, 18, 48, 24, 14, 20, 16, 12]; // 연간 독서량 막대(디자인 목업 높이)
@@ -3879,13 +3901,6 @@ function ScrapbookScreen({
           >
             <ShareIcon color="var(--pt-brand-primary)" />
           </button>
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center rounded-full px-3 shrink-0"
-            style={{ height: 40, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 0px 0.3px rgba(219,219,219,0.25), 4px 4px 16px rgba(0,0,0,0.12)" }}
-          >
-            <span className="label" style={{ color: "var(--pt-brand-primary)" }}>저장</span>
-          </button>
         </div>
       </div>
 
@@ -4705,6 +4720,10 @@ export default function App() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scrapNew, setScrapNew] = useState(false);
   const [clippings, setClippings] = useState<string[]>([]);
+  // 기사별 형광펜/볼펜 필기 기록 — 기사 id로 보관해 다시 들어와도 그대로 보이도록 함
+  const [articleAnnotations, setArticleAnnotations] = useState<
+    Record<string, { highlights: HighlightRange[]; strokes: ArticleStroke[] }>
+  >({});
   const [scrapSnapshot, setScrapSnapshot] = useState<ScrapDoc | null>(null);
   // 스크랩 라이브러리 — 항상 맨 앞이 가장 최근에 만들거나 수정한 스크랩
   const [savedScraps, setSavedScraps] = useState<SavedScrap[]>(SEED_SAVED_SCRAPS);
@@ -4748,6 +4767,17 @@ export default function App() {
     currentScrapTitleRef.current = title;
     setScrapInitialDoc(undefined);
     setScrapNew(true);
+    goTo("scrapbook");
+  };
+  // 1기사 1스크랩북 원칙 — 이미 이 기사로 만든 스크랩이 있으면 그걸 이어서 열고,
+  // 없을 때만 새로 만든다. 뒤로가기/앱 재진입 후에도 꾸미던 내용이 그대로 보이는 이유이기도 함
+  // (자동저장이 항상 같은 id로 갱신되므로)
+  const openScrapForArticle = (title: string) => {
+    const found = savedScraps.find((s) => s.title === title);
+    currentScrapIdRef.current = found ? found.id : null;
+    currentScrapTitleRef.current = found?.title ?? title;
+    setScrapInitialDoc(found?.doc);
+    setScrapNew(!found);
     goTo("scrapbook");
   };
 
@@ -4852,7 +4882,12 @@ export default function App() {
             onComplete={markTodayRead}
             onReadComplete={handleArticleReadComplete}
             onToggleClip={toggleClip}
-            onOpenScrapbook={() => openNewScrap(selectedArticle.headline)}
+            onOpenScrapbook={() => openScrapForArticle(selectedArticle.headline)}
+            initialHighlights={articleAnnotations[selectedArticle.id]?.highlights}
+            initialStrokes={articleAnnotations[selectedArticle.id]?.strokes}
+            onAnnotationsChange={(highlights, strokes) =>
+              setArticleAnnotations((prev) => ({ ...prev, [selectedArticle.id]: { highlights, strokes } }))
+            }
           />
         );
 
@@ -4906,14 +4941,7 @@ export default function App() {
               setArticleTab("original");
               goTo("article");
             }}
-            onScrapClick={() => {
-              const found = savedScraps.find((s) => s.title === READING_HISTORY_ARTICLE_TITLE);
-              currentScrapIdRef.current = found ? found.id : null;
-              currentScrapTitleRef.current = found?.title ?? READING_HISTORY_ARTICLE_TITLE;
-              setScrapInitialDoc(found?.doc);
-              setScrapNew(!found);
-              goTo("scrapbook");
-            }}
+            onScrapClick={() => openScrapForArticle(READING_HISTORY_ARTICLE_TITLE)}
             onGoFeed={() => goTo("landing")}
           />
         );
