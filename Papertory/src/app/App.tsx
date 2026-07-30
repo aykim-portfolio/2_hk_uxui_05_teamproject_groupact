@@ -1957,13 +1957,13 @@ function EasyContent({ article }: { article: NewsItem }) {
   return (
     <div className="flex flex-col gap-5 px-5 py-4 w-full">
       <div
-        className="rounded-xl flex items-start gap-4 px-4 py-2.5"
+        className="rounded-xl flex items-center gap-4 px-4 py-2.5"
         style={{
           backgroundColor: "#FCFFF1",
           filter: "drop-shadow(2px 2px 4px var(--pt-shadow-card))",
         }}
       >
-        <div className="flex flex-col gap-3 flex-1">
+        <div className="flex flex-col flex-1">
           <p className="label opacity-80 leading-5" style={{ color: "#354B0E" }}>
             어려운 경제뉴스, 토리가 읽기 쉽게 바꿨어요!
           </p>
