@@ -3522,6 +3522,18 @@ function ScrapLibraryScreen({
       return next;
     });
 
+  // 날짜별 필터링 — 기본은 전체보기, 날짜 선택시트에서 하루를 고르면 그 날짜에 추가된
+  // 스크랩만 보여준다. items의 date는 자동저장 시점의 실제 날짜(TODAY_DATE_STR)라서
+  // 읽기 기록 달력에서 만든 스크랩도 같은 값으로 자연스럽게 연동된다
+  const [dateFilter, setDateFilter] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(TODAY_YEAR);
+  const [pickerMonth, setPickerMonth] = useState(TODAY_MONTH);
+  const visibleItems = dateFilter ? items.filter((it) => it.date === dateFilter) : items;
+  const filterLabel = dateFilter
+    ? `${Number(dateFilter.split(".")[1])}월 ${Number(dateFilter.split(".")[2])}일`
+    : "전체보기";
+
   return (
     <div className="relative size-full overflow-hidden" style={{ backgroundColor: "var(--pt-bg-primary)" }}>
       <AppHeader
@@ -3543,14 +3555,28 @@ function ScrapLibraryScreen({
         }}
       >
         <div className="flex flex-col items-center" style={{ padding: "16px 20px" }}>
-          <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>7월 20일</p>
+          <button onClick={() => setPickerOpen(true)} className="flex items-center gap-2">
+            <span style={{ fontFamily: "var(--pt-font-title)", fontWeight: 700, fontSize: 20, color: "var(--pt-text-secondary)" }}>
+              {filterLabel}
+            </span>
+            <ChevronDownIcon />
+          </button>
+          {dateFilter && (
+            <button
+              onClick={() => setDateFilter(null)}
+              className="caption"
+              style={{ color: "var(--pt-text-brand)", marginTop: 4 }}
+            >
+              전체보기로 돌아가기
+            </button>
+          )}
         </div>
 
         <div
           className="grid justify-center gap-2 px-4"
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 114px))" }}
         >
-          {items.map((it) => (
+          {visibleItems.map((it) => (
             <article
               key={it.id}
               className="bg-white rounded-xl border flex w-full max-w-[114px] flex-col items-end text-left"
@@ -3602,6 +3628,22 @@ function ScrapLibraryScreen({
       >
         <ScrapIcon color="var(--pt-brand-primary)" />
       </button>
+
+      {pickerOpen && (
+        <DatePickerSheet
+          year={pickerYear}
+          month={pickerMonth}
+          onChangeMonth={(y, m) => {
+            setPickerYear(y);
+            setPickerMonth(m);
+          }}
+          onPickDay={(y, m, d) => {
+            setDateFilter(`${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
 
       <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
