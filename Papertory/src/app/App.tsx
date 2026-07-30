@@ -4567,7 +4567,7 @@ function ScrapShareScreen({ doc, title, onBack }: { doc: ScrapDoc | null; title:
         </div>
 
         {/* Share targets */}
-        <div className="flex flex-wrap justify-center gap-2 mt-3 px-3">
+        <div className="flex flex-wrap justify-center gap-2 mt-6 px-3">
           {targets.map((t) => (
             <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1">
               <span className="rounded-full flex items-center justify-center" style={{ width: 40, height: 40, backgroundColor: t.bg }}>
