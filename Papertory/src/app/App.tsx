@@ -2563,45 +2563,56 @@ type ShopItem = {
 };
 
 const TAPE_ITEMS: ShopItem[] = [
-  { id: "tape-olive", name: "올리브 패턴 테이프", price: 100, crop: { x: 72, y: 81, w: 419, h: 127 } },
-  { id: "tape-berry", name: "베리 도트 테이프", price: 120, crop: { x: 521, y: 84, w: 419, h: 122 } },
-  { id: "tape-blue-check", name: "블루 체크 테이프", price: 100, crop: { x: 69, y: 262, w: 414, h: 123 } },
-  { id: "tape-coral", name: "코랄 퍼즐 테이프", price: 140, crop: { x: 521, y: 261, w: 424, h: 123 } },
-  { id: "tape-mint", name: "민트 버블 테이프", price: 110, crop: { x: 85, y: 419, w: 389, h: 144 } },
-  { id: "tape-mustard", name: "머스터드 스트라이프 테이프", price: 130, crop: { x: 545, y: 438, w: 377, h: 126 } },
+  { id: "tape-olive", name: "올리브 패턴 테이프", price: 10, crop: { x: 72, y: 81, w: 419, h: 127 } },
+  { id: "tape-berry", name: "베리 도트 테이프", price: 12, crop: { x: 521, y: 84, w: 419, h: 122 } },
+  { id: "tape-blue-check", name: "블루 체크 테이프", price: 10, crop: { x: 69, y: 262, w: 414, h: 123 } },
+  { id: "tape-coral", name: "코랄 퍼즐 테이프", price: 14, crop: { x: 521, y: 261, w: 424, h: 123 } },
+  { id: "tape-mint", name: "민트 버블 테이프", price: 11, crop: { x: 85, y: 419, w: 389, h: 144 } },
+  { id: "tape-mustard", name: "머스터드 스트라이프 테이프", price: 13, crop: { x: 545, y: 438, w: 377, h: 126 } },
 ];
 
 const STICKER_ITEMS: ShopItem[] = [
-  { id: "sticker-smile", name: "방긋 토리", price: 80, img: imgSticker1 },
-  { id: "sticker-glasses", name: "안경 토리", price: 90, img: imgSticker2 },
-  { id: "sticker-tears", name: "눈물 토리", price: 90, img: imgSticker3 },
-  { id: "sticker-pout", name: "뾰루퉁 토리", price: 100, img: imgSticker4 },
-  { id: "sticker-wave", name: "인사하는 토리", price: 150, img: imgToriDeco },
+  { id: "sticker-smile", name: "방긋 토리", price: 8, img: imgSticker1 },
+  { id: "sticker-glasses", name: "안경 토리", price: 9, img: imgSticker2 },
+  { id: "sticker-tears", name: "눈물 토리", price: 9, img: imgSticker3 },
+  { id: "sticker-pout", name: "뾰루퉁 토리", price: 10, img: imgSticker4 },
+  { id: "sticker-wave", name: "인사하는 토리", price: 15, img: imgToriDeco },
 ];
 
 function ShopScreen({
   acornCount,
+  onPurchase,
   onBack,
   onMenuOpen,
 }: {
   acornCount: number;
+  onPurchase: (price: number) => void;
   onBack: () => void;
   onMenuOpen: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<ShopTab>("tape");
   const items = activeTab === "tape" ? TAPE_ITEMS : STICKER_ITEMS;
 
-  // 구매(보유중 전환) + 결제완료 토스트 상태
+  // 구매(보유중 전환) + 결제완료/도토리 부족 토스트 상태
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
-  const [toastVisible, setToastVisible] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
-  const handlePurchase = (id: string) => {
-    if (ownedIds.has(id)) return; // 이미 보유중이면 재구매 없음
-    setOwnedIds((prev) => new Set(prev).add(id));
-    setToastVisible(true);
+  const showToast = (message: string, variant: "success" | "error") => {
+    setToast({ message, variant });
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToastVisible(false), 1000);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 1000);
+  };
+
+  const handlePurchase = (id: string, price: number) => {
+    if (ownedIds.has(id)) return; // 이미 보유중이면 재구매 없음
+    if (acornCount < price) {
+      showToast("도토리가 부족해요!", "error");
+      return;
+    }
+    setOwnedIds((prev) => new Set(prev).add(id));
+    onPurchase(price);
+    showToast("결제완료!", "success");
   };
 
   useEffect(() => {
@@ -2711,7 +2722,7 @@ function ShopScreen({
 
                 {/* Product card */}
                 <button
-                  onClick={() => handlePurchase(item.id)}
+                  onClick={() => handlePurchase(item.id, item.price)}
                   className="relative rounded-3xl w-full flex-1 flex flex-col overflow-hidden text-left"
                   style={{
                     backgroundColor: isTape
@@ -2809,22 +2820,30 @@ function ShopScreen({
         </div>
       </div>
 
-      {/* 결제완료 토스트 — 하단에서 올라왔다가 다시 내려감 */}
+      {/* 결제완료/도토리 부족 토스트 — 하단에서 올라왔다가 다시 내려감.
+          이 화면도 document 스크롤이라 absolute면 콘텐츠 길이에 따라 화면 밖에 위치할 수 있어 fixed로 고정 */}
       <div
-        className="absolute left-1/2 z-30 rounded-full"
+        className="fixed left-1/2 z-30 rounded-full"
         style={{
           bottom: `calc(28px + ${APP_SAFE_BOTTOM})`,
           padding: "10px 28px",
-          backgroundColor: "var(--pt-bg-accent)",
+          backgroundColor: toast?.variant === "error" ? "var(--pt-status-error-bg)" : "var(--pt-bg-accent)",
           boxShadow: "0px 4px 8px rgba(0,0,0,0.15)",
-          transform: `translate(-50%, ${toastVisible ? "0" : "140%"})`,
-          opacity: toastVisible ? 1 : 0,
+          transform: `translate(-50%, ${toast ? "0" : "140%"})`,
+          opacity: toast ? 1 : 0,
           transition: "transform 0.35s ease, opacity 0.35s ease",
           pointerEvents: "none",
         }}
       >
-        <span style={{ fontFamily: "Paperlogy", fontWeight: 700, fontSize: 14, color: "var(--pt-brand-primary)" }}>
-          결제완료!
+        <span
+          style={{
+            fontFamily: "Paperlogy",
+            fontWeight: 700,
+            fontSize: 14,
+            color: toast?.variant === "error" ? "var(--pt-status-error)" : "var(--pt-brand-primary)",
+          }}
+        >
+          {toast?.message}
         </span>
       </div>
 
@@ -4905,6 +4924,7 @@ export default function App() {
         return (
           <ShopScreen
             acornCount={acornCount}
+            onPurchase={(price) => setAcornCount((a) => a - price)}
             onBack={goBack}
             onMenuOpen={() => setDrawerOpen(true)}
           />
