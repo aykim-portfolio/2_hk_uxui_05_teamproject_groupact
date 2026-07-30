@@ -4428,7 +4428,7 @@ function ScrapPreview({ doc }: { doc: ScrapDoc }) {
   );
 }
 
-function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () => void }) {
+function ScrapShareScreen({ doc, title, onBack }: { doc: ScrapDoc | null; title: string; onBack: () => void }) {
   const d = doc && (doc.elements.length || doc.strokes.length) ? doc : SAMPLE_DOC;
   const [toast, setToast] = useState("");
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -4542,39 +4542,41 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
         style={{
           paddingTop: APP_CONTENT_TOP,
           paddingRight: APP_SAFE_RIGHT,
-          paddingBottom: `calc(32px + ${APP_SAFE_BOTTOM})`,
+          paddingBottom: `calc(16px + ${APP_SAFE_BOTTOM})`,
           paddingLeft: APP_SAFE_LEFT,
         }}
       >
-        {/* Share template card — 실제 스크랩 내용 */}
-        <div className="rounded-[24px] overflow-hidden" style={{ width: `min(${SCRAP_CANVAS_WIDTH}px, calc(100% - 24px))`, backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
-          <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
-            <div style={{ width: 26, height: 26 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
-            <span className="label" style={{ color: "#fff" }}>페이퍼토리</span>
-            <span className="caption ml-auto" style={{ color: "#dfe7ff" }}>나의 스크랩</span>
+        {/* Share template card — 실제 스크랩 내용. 화면 하나에 공유 버튼·안내문구까지 스크롤 없이
+            다 보이도록 미리보기 카드 자체를 작게 고정한다(고정폭 393px 그대로 쓰면 세로로 너무 길어짐).
+            iPhone SE(375×667)처럼 가장 작은 화면에서도 안내문구까지 잘리지 않도록 190px로 더 줄임 */}
+        <div className="rounded-[24px] overflow-hidden" style={{ width: "min(190px, calc(100% - 24px))", backgroundColor: "var(--pt-bg-surface)", boxShadow: "0px 8px 24px rgba(26,37,53,0.18)" }}>
+          <div className="flex items-center gap-2 px-3 py-1.5" style={{ backgroundColor: "var(--pt-brand-primary)" }}>
+            <div style={{ width: 16, height: 16 }}><img src={imgToriDeco} alt="Tori" className="w-full h-full object-contain" /></div>
+            <span className="caption" style={{ color: "#fff", fontSize: 10 }}>페이퍼토리</span>
+            <span className="caption ml-auto" style={{ color: "#dfe7ff", fontSize: 8 }}>나의 스크랩</span>
           </div>
           <div style={{ aspectRatio: `${SCRAP_CANVAS_WIDTH} / ${SCRAP_CANVAS_HEIGHT}`, overflow: "hidden", backgroundColor: "var(--pt-bg-primary)" }}>
             <ScrapPreview doc={d} />
           </div>
-          <div className="px-4 py-3 flex flex-col gap-1">
-            <p className="subtitle" style={{ color: "var(--pt-text-primary)" }}>앤트로픽, 10월 IPO 추진</p>
-            <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>2026.07.20 · 나의 경제공부 기록</p>
-            <p className="caption" style={{ color: "var(--pt-brand-primary)" }}>#직장인공부 #공스타그램 #페이퍼토리</p>
-            <p className="caption break-all" style={{ color: "var(--pt-text-secondary)", fontSize: 10, marginTop: 2 }}>🔗 {shareUrl.replace(/^https?:\/\//, "")}</p>
+          <div className="px-3 py-1.5 flex flex-col gap-0.5">
+            <p className="caption overflow-hidden text-ellipsis whitespace-nowrap" style={{ color: "var(--pt-text-primary)", fontWeight: 700, fontSize: 10 }}>{title}</p>
+            <p className="caption" style={{ color: "var(--pt-text-secondary)", fontSize: 8 }}>{TODAY_DATE_STR} · 나의 경제공부 기록</p>
+            <p className="caption" style={{ color: "var(--pt-brand-primary)", fontSize: 8 }}>#직장인공부 #공스타그램 #페이퍼토리</p>
+            <p className="caption break-all" style={{ color: "var(--pt-text-secondary)", fontSize: 7, marginTop: 2 }}>🔗 {shareUrl.replace(/^https?:\/\//, "")}</p>
           </div>
         </div>
 
         {/* Share targets */}
-        <div className="flex flex-wrap justify-center gap-2.5 mt-8 px-3">
+        <div className="flex flex-wrap justify-center gap-2 mt-3 px-3">
           {targets.map((t) => (
-            <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1.5">
-              <span className="rounded-full flex items-center justify-center" style={{ width: 48, height: 48, backgroundColor: t.bg }}>
-                <span className="caption" style={{ color: t.fg, fontSize: 10 }}>{t.label}</span>
+            <button key={t.label} onClick={t.onClick} className="flex flex-col items-center gap-1">
+              <span className="rounded-full flex items-center justify-center" style={{ width: 40, height: 40, backgroundColor: t.bg }}>
+                <span className="caption" style={{ color: t.fg, fontSize: 9 }}>{t.label}</span>
               </span>
             </button>
           ))}
         </div>
-        <p className="caption mt-4 px-8 text-center" style={{ color: "var(--pt-text-secondary)" }}>
+        <p className="caption mt-2 px-8 text-center" style={{ color: "var(--pt-text-secondary)" }}>
           링크를 받은 사람이 누르면 이 스크랩으로 돌아와요 🔁
         </p>
       </div>
@@ -5122,7 +5124,7 @@ export default function App() {
         );
 
       case "scrap-share":
-        return <ScrapShareScreen doc={scrapSnapshot} onBack={goBack} />;
+        return <ScrapShareScreen doc={scrapSnapshot} title={currentScrapTitleRef.current} onBack={goBack} />;
 
       case "shared-scrap":
         return (
