@@ -45,6 +45,8 @@ const TODAY_DAY = KST_TODAY.day;
 const TODAY_DATE_STR = `${TODAY_YEAR}.${String(TODAY_MONTH).padStart(2, "0")}.${String(TODAY_DAY).padStart(2, "0")}`;
 // 랜딩 히어로 카드 하단 날짜 표기 — 읽기 기록 달력의 "오늘"과 동일하게 실제 KST 날짜 반영
 const TODAY_DATE_LABEL = `${TODAY_DATE_STR}  (${KST_TODAY.weekday})`;
+// 기사 원문은 실제 수집 기사(전부 2026.07.29자)라 바이라인 날짜는 고정. "오늘"(동적)과 구분됨
+const ARTICLE_DATE_STR = "2026.07.29";
 
 type Screen =
   | "start"
@@ -1082,7 +1084,7 @@ function toNewsItem(a: (typeof articlesData.articles)[number]): NewsItem {
     category: a.category,
     headline: a.headline,
     image: a.imageUrl || fallbackImageFor(a.category),
-    byline: `${a.author} · ${TODAY_DATE_STR}`,
+    byline: `${a.author} · ${ARTICLE_DATE_STR}`,
     summary: a.ai.summary,
     body: a.body,
     ai: {
@@ -2973,6 +2975,14 @@ const JULY_READS: Record<number, number> = {
   1: 1, 3: 3, 4: 2, 5: 1, 6: 2, 7: 3, 8: 4, 9: 1, 10: 5, 11: 1, 12: 5,
   15: 2, 16: 7, 17: 1, 18: 1, 19: 5, 20: 1,
 };
+// 읽기 기록은 "그날 완독한 실제 기사(id) 목록"으로 저장 (HKGA-141: 앤트로픽 목업 → Today 피드 기사 연결).
+// 과거 예시 시드는 JULY_READS의 개수를 Today 피드(ALL_NEWS) 기사로 순환 치환해 채운다.
+const SEED_READS: Record<number, string[]> = Object.fromEntries(
+  Object.entries(JULY_READS).map(([d, n]) => [
+    Number(d),
+    Array.from({ length: n }, (_, i) => ALL_NEWS[i % Math.max(1, ALL_NEWS.length)]?.id).filter(Boolean) as string[],
+  ])
+);
 const READ_GOAL = 5; // 완성 기준(하루 5개)
 const LEVEL_BG = ["", "var(--pt-read-1)", "var(--pt-read-2)", "var(--pt-read-3)", "var(--pt-read-4)", "var(--pt-read-5)"];
 const MONTH_BAR_H = [18, 14, 22, 16, 28, 18, 48, 24, 14, 20, 16, 12]; // 연간 독서량 막대(디자인 목업 높이)
@@ -2990,13 +3000,13 @@ function firstWeekdayMon(y: number, m: number) {
 // 기존 스크랩(SEED_SAVED_SCRAPS)을 찾아 보여준다
 const READING_HISTORY_ARTICLE_TITLE = "앤트로픽, 10월 IPO 추진…투자자 미팅 돌입";
 
-// ── Reading History Card ──
+// ── Reading History Card ── (그날 완독한 실제 기사 1건)
 function ReadingHistoryCard({
-  date,
+  article,
   onClick,
   onScrap,
 }: {
-  date: string;
+  article: NewsItem;
   onClick?: () => void;
   onScrap?: () => void;
 }) {
@@ -3011,7 +3021,7 @@ function ReadingHistoryCard({
     >
       <div className="flex flex-col gap-3 w-full">
         <div className="flex items-center justify-between w-full">
-          <CategoryChip label="산업" />
+          <CategoryChip label={article.category} />
           <span
             role="button"
             tabIndex={0}
@@ -3028,15 +3038,12 @@ function ReadingHistoryCard({
           className="subtitle overflow-hidden text-ellipsis whitespace-nowrap w-full"
           style={{ color: "var(--pt-text-primary)" }}
         >
-          {READING_HISTORY_ARTICLE_TITLE}
+          {article.headline}
         </p>
         <p className="caption" style={{ color: "var(--pt-text-secondary)" }}>
-          {date} 09:12
+          {article.byline}
         </p>
       </div>
-      <span className="caption self-end" style={{ color: "var(--pt-text-secondary)" }}>
-        1시간 전
-      </span>
     </button>
   );
 }
@@ -3221,26 +3228,24 @@ function CalendarScreen({
 
 // ── Reading Detail Screen (날짜별 읽기 기록) ──
 function ReadingDetailScreen({
-  year,
   month,
   day,
-  count,
+  articles,
   onBack,
   onCardClick,
   onScrapClick,
   onGoFeed,
 }: {
-  year: number;
   month: number;
   day: number;
-  count: number;
+  articles: NewsItem[];
   onBack: () => void;
-  onCardClick: () => void;
-  onScrapClick: () => void;
+  onCardClick: (a: NewsItem) => void;
+  onScrapClick: (a: NewsItem) => void;
   onGoFeed: () => void;
 }) {
+  const count = articles.length;
   const remaining = Math.max(0, READ_GOAL - count);
-  const dateStr = `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
 
   return (
     <div
@@ -3287,8 +3292,8 @@ function ReadingDetailScreen({
         ) : (
           <div className="flex flex-col items-center gap-8">
             <div className="flex flex-col gap-2 px-4 w-full">
-              {Array.from({ length: count }).map((_, i) => (
-                <ReadingHistoryCard key={i} date={dateStr} onClick={onCardClick} onScrap={onScrapClick} />
+              {articles.map((a, i) => (
+                <ReadingHistoryCard key={i} article={a} onClick={() => onCardClick(a)} onScrap={() => onScrapClick(a)} />
               ))}
             </div>
             {count < READ_GOAL && (
@@ -4834,7 +4839,7 @@ export default function App() {
   const [selectedArticle, setSelectedArticle] = useState<NewsItem>(ALL_NEWS[0]);
 
   // 읽기 기록(완독) 상태 — 메인 피드 완독 시 오늘 카운트 +1 되어 달력에 반영
-  const [readsByDate, setReadsByDate] = useState<Record<number, number>>({ ...JULY_READS });
+  const [readsByDate, setReadsByDate] = useState<Record<number, string[]>>({ ...SEED_READS });
   const [selectedDay, setSelectedDay] = useState<number>(TODAY_DAY);
   const [calYear, setCalYear] = useState(2026);
   const [calMonth, setCalMonth] = useState(7);
@@ -4928,9 +4933,16 @@ export default function App() {
   }, [drawerOpen, pickerOpen]);
 
   const isCurrentMonth = calYear === TODAY_YEAR && calMonth === TODAY_MONTH;
-  const monthReads: Record<number, number> = isCurrentMonth ? readsByDate : {};
+  // 달력 히트맵은 '개수'만 필요 → 날짜별 기사 배열 길이로 환산
+  const monthReads: Record<number, number> = isCurrentMonth
+    ? Object.fromEntries(Object.entries(readsByDate).map(([d, arr]) => [Number(d), arr.length]))
+    : {};
+  // 완독 시 그날(오늘) 기록에 방금 읽은 실제 기사를 추가 (중복 방지)
   const markTodayRead = () =>
-    setReadsByDate((prev) => ({ ...prev, [TODAY_DAY]: (prev[TODAY_DAY] || 0) + 1 }));
+    setReadsByDate((prev) => {
+      const cur = prev[TODAY_DAY] || [];
+      return cur.includes(selectedArticle.id) ? prev : { ...prev, [TODAY_DAY]: [...cur, selectedArticle.id] };
+    });
 
   const goTo = (s: Screen) => {
     if (s === screen) return;
@@ -5057,22 +5069,27 @@ export default function App() {
           />
         );
 
-      case "reading-detail":
+      case "reading-detail": {
+        const dayIds = (isCurrentMonth ? readsByDate[selectedDay] : undefined) || [];
+        const dayArticles = dayIds
+          .map((id) => ALL_NEWS.find((a) => a.id === id))
+          .filter(Boolean) as NewsItem[];
         return (
           <ReadingDetailScreen
-            year={calYear}
             month={calMonth}
             day={selectedDay}
-            count={monthReads[selectedDay] || 0}
+            articles={dayArticles}
             onBack={goBack}
-            onCardClick={() => {
+            onCardClick={(a) => {
+              setSelectedArticle(a);
               setArticleTab("original");
               goTo("article");
             }}
-            onScrapClick={() => openScrapForArticle(READING_HISTORY_ARTICLE_TITLE)}
+            onScrapClick={(a) => openScrapForArticle(a.headline)}
             onGoFeed={() => goTo("landing")}
           />
         );
+      }
 
       case "scrap-library":
         return (
