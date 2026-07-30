@@ -3943,6 +3943,7 @@ function ScrapbookScreen({
       erasingRef.current = eraserMode !== "all";
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     } else {
+      if (tool === "keyboard") setTool("none"); // 키보드 모드에서 캔버스(바깥) 탭 → 입력 종료
       setSelectedId(null); // 빈 캔버스 탭 → 선택 해제
     }
   };
@@ -4369,9 +4370,6 @@ function ScrapbookScreen({
             />
             <button onClick={addText} className="rounded-full px-3 flex items-center shrink-0" style={{ height: 40, backgroundColor: "var(--pt-brand-primary)" }}>
               <span className="label" style={{ color: "#fff" }}>추가</span>
-            </button>
-            <button onClick={() => { setText(""); setTool("none"); }} aria-label="키보드 닫기" className="rounded-full flex items-center justify-center shrink-0" style={{ width: 40, height: 40, backgroundColor: "var(--pt-bg-card)" }}>
-              <span style={{ fontSize: 18, color: "var(--pt-text-secondary)", lineHeight: 1 }}>✕</span>
             </button>
           </div>
         </div>
