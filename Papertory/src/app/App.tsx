@@ -3657,6 +3657,30 @@ type ScrapAction = { t: "stroke" | "el"; id: string } | { t: "clear"; strokes: S
 // 스크랩 라이브러리에 저장된 한 건 — 표지 제목은 만든 기사 헤드라인(또는 "제목 없음"), 목록은 항상 최신 수정순
 type SavedScrap = { id: number; title: string; date: string; doc: ScrapDoc };
 const scrapUid = () => Math.random().toString(36).slice(2, 9);
+// 기사에서 스크랩북을 처음 열 때 빈 캔버스 대신 기사 제목 + 그 기사에서 형광펜으로
+// 표시해둔 문장들을 노트로 미리 올려둔다. 각 노트는 스티커처럼 자유롭게 옮기고
+// 크기를 바꾸고 지울 수 있다(ScrapbookScreen의 이동/삭제/크기조절이 kind와 무관하게 동작)
+function buildArticleScrapSeed(headline: string, highlights: HighlightRange[]): ScrapDoc {
+  const titleEl: ScrapEl = {
+    id: scrapUid(),
+    kind: "note",
+    x: 24,
+    y: 16,
+    text: headline,
+    bg: "var(--pt-brand-primary)",
+    color: "#ecf0f9",
+  };
+  const highlightEls: ScrapEl[] = highlights.map((h, i) => ({
+    id: scrapUid(),
+    kind: "note",
+    x: 24 + (i % 2) * 30,
+    y: 140 + i * 130,
+    text: h.text.length > 42 ? h.text.slice(0, 42) + "…" : h.text,
+    bg: "var(--pt-brand-secondary)",
+    color: "#1a1a1a",
+  }));
+  return { elements: [titleEl, ...highlightEls], strokes: [], bg: "paper" };
+}
 const PEN_COLORS = ["#1a2535", "#6083f5", "#496de0", "#e6f997", "#ff6b6b", "#ffa94d", "#51cf66", "#845ef7"];
 const STICKERS = [imgSticker1, imgSticker2, imgSticker3, imgSticker4, imgToriDeco];
 const ERASE_R = 18;
@@ -3913,7 +3937,15 @@ function ScrapbookScreen({
   };
   const addSticker = (src: string) => addEl({ id: scrapUid(), kind: "sticker", x: 140, y: 300, src, size: 72 });
   const addClip = (t: string) => addEl({ id: scrapUid(), kind: "note", x: 40, y: 150, text: t.length > 42 ? t.slice(0, 42) + "…" : t, bg: "var(--pt-brand-secondary)", color: "#1a1a1a" });
-  const resizeSel = (d: number) => setElements((v) => v.map((el) => (el.id === selectedId && el.kind === "sticker" ? { ...el, size: Math.max(32, Math.min(220, (el.size || 72) + d)) } : el)));
+  // 스티커는 size를 실제 px 한 변 길이로, 노트/텍스트는 배율(%)로 사용 — 둘 다 같은 +/-16 버튼으로 조절
+  const resizeSel = (d: number) =>
+    setElements((v) =>
+      v.map((el) => {
+        if (el.id !== selectedId) return el;
+        if (el.kind === "sticker") return { ...el, size: Math.max(32, Math.min(220, (el.size || 72) + d)) };
+        return { ...el, size: Math.max(50, Math.min(200, (el.size || 100) + d)) };
+      })
+    );
   const deleteSel = () => { setElements((v) => v.filter((el) => el.id !== selectedId)); setSelectedId(null); };
 
   const selectTool = (t: PenTool) => {
@@ -4047,7 +4079,17 @@ function ScrapbookScreen({
                 key={el.id}
                 onPointerDown={(e) => elDown(e, el)}
                 className="absolute"
-                style={{ left: el.x, top: el.y, touchAction: "none", cursor: tool === "none" ? "grab" : tool === "eraser" ? "pointer" : "default", outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none", outlineOffset: 2, borderRadius: 6 }}
+                style={{
+                  left: el.x,
+                  top: el.y,
+                  touchAction: "none",
+                  cursor: tool === "none" ? "grab" : tool === "eraser" ? "pointer" : "default",
+                  outline: selectedId === el.id ? "2px dashed var(--pt-brand-primary)" : "none",
+                  outlineOffset: 2,
+                  borderRadius: 6,
+                  transform: el.kind === "sticker" ? undefined : `scale(${(el.size ?? 100) / 100})`,
+                  transformOrigin: "top left",
+                }}
               >
                 {el.kind === "sticker" ? (
                   <img src={el.src} alt="스티커" draggable={false} style={{ width: el.size, height: el.size, objectFit: "contain", pointerEvents: "none" }} />
@@ -4069,8 +4111,8 @@ function ScrapbookScreen({
         </div>
       </div>
 
-      {/* Selected sticker control (크기 조절) */}
-      {selectedEl && selectedEl.kind === "sticker" && tool === "none" && (
+      {/* Selected element control (이동은 드래그로 항상 가능, 여기선 크기 조절·삭제 — 스티커/노트/텍스트 공통) */}
+      {selectedEl && tool === "none" && (
         <div
           className="absolute z-40 flex items-center gap-2 rounded-full px-3 py-2 overflow-x-auto no-scrollbar"
           style={{
@@ -4086,7 +4128,9 @@ function ScrapbookScreen({
         >
           <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>크기</span>
           <button onClick={() => resizeSel(-16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
-          <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>{selectedEl.size}px</span>
+          <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>
+            {selectedEl.kind === "sticker" ? selectedEl.size ?? 72 : selectedEl.size ?? 100}{selectedEl.kind === "sticker" ? "px" : "%"}
+          </span>
           <button onClick={() => resizeSel(16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>+</span></button>
           <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
           <button onClick={deleteSel} className="rounded-full px-3 flex items-center" style={{ height: 28, backgroundColor: "var(--pt-bg-card)" }}><span className="caption" style={{ color: "#ff6b6b" }}>삭제</span></button>
@@ -4355,7 +4399,21 @@ function ScrapPreview({ doc }: { doc: ScrapDoc }) {
           el.kind === "sticker" ? (
             <img key={el.id} src={el.src} alt="" className="absolute" style={{ left: el.x, top: el.y, width: el.size, height: el.size, objectFit: "contain" }} />
           ) : (
-            <div key={el.id} className="absolute rounded-3xl" style={{ left: el.x, top: el.y, maxWidth: 240, padding: "10px 12px", backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)", border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none", boxShadow: "0px 2px 2px rgba(0,0,0,0.06)" }}>
+            <div
+              key={el.id}
+              className="absolute rounded-3xl"
+              style={{
+                left: el.x,
+                top: el.y,
+                maxWidth: 240,
+                padding: "10px 12px",
+                backgroundColor: el.kind === "note" ? el.bg : "var(--pt-bg-surface)",
+                border: el.kind === "text" ? "1px dashed var(--pt-border-strong)" : "none",
+                boxShadow: "0px 2px 2px rgba(0,0,0,0.06)",
+                transform: `scale(${(el.size ?? 100) / 100})`,
+                transformOrigin: "top left",
+              }}
+            >
               <p style={{ fontFamily: "var(--pt-font-title)", fontWeight: 600, fontSize: 12, lineHeight: "18px", color: el.color || "#1a1a1a", whiteSpace: "pre-wrap" }}>{el.text}</p>
             </div>
           )
@@ -4422,13 +4480,18 @@ function ScrapShareScreen({ doc, onBack }: { doc: ScrapDoc | null; onBack: () =>
     for (const el of d.elements) {
       if (el.kind === "sticker") { const im = await loadImg(el.src!); if (im) ctx.drawImage(im, el.x, el.y, el.size!, el.size!); }
       else {
+        const elScale = (el.size ?? 100) / 100;
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        ctx.scale(elScale, elScale);
         ctx.font = "600 12px sans-serif"; const pad = 12, maxW = 200;
         const lines = wrapText(ctx, el.text || "", maxW - pad * 2);
         const wBox = Math.min(maxW, Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2);
         const hBox = lines.length * 18 + pad * 2 - 4;
         ctx.fillStyle = el.kind === "note" ? bgHex(el.bg) : "#ffffff";
-        const r = 14, x = el.x, y = el.y; ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + wBox, y, x + wBox, y + hBox, r); ctx.arcTo(x + wBox, y + hBox, x, y + hBox, r); ctx.arcTo(x, y + hBox, x, y, r); ctx.arcTo(x, y, x + wBox, y, r); ctx.fill();
+        const r = 14, x = 0, y = 0; ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + wBox, y, x + wBox, y + hBox, r); ctx.arcTo(x + wBox, y + hBox, x, y + hBox, r); ctx.arcTo(x, y + hBox, x, y, r); ctx.arcTo(x, y, x + wBox, y, r); ctx.fill();
         ctx.fillStyle = el.color || "#1a1a1a"; lines.forEach((l, i) => ctx.fillText(l, x + pad, y + pad + 12 + i * 18));
+        ctx.restore();
       }
     }
     // 딥링크 URL을 이미지 하단에 찍어, 이미지를 본 사람도 앱으로 돌아올 수 있게 함
@@ -4829,12 +4892,13 @@ export default function App() {
   };
   // 1기사 1스크랩북 원칙 — 이미 이 기사로 만든 스크랩이 있으면 그걸 이어서 열고,
   // 없을 때만 새로 만든다. 뒤로가기/앱 재진입 후에도 꾸미던 내용이 그대로 보이는 이유이기도 함
-  // (자동저장이 항상 같은 id로 갱신되므로)
-  const openScrapForArticle = (title: string) => {
+  // (자동저장이 항상 같은 id로 갱신되므로). seedDoc은 기존 스크랩이 없을 때만 초기값으로 쓰인다
+  // (기사 제목·형광펜 클립을 미리 캔버스에 올려 빈 화면으로 시작하지 않도록)
+  const openScrapForArticle = (title: string, seedDoc?: ScrapDoc) => {
     const found = savedScraps.find((s) => s.title === title);
     currentScrapIdRef.current = found ? found.id : null;
     currentScrapTitleRef.current = found?.title ?? title;
-    setScrapInitialDoc(found?.doc);
+    setScrapInitialDoc(found?.doc ?? seedDoc);
     setScrapNew(!found);
     goTo("scrapbook");
   };
@@ -4940,7 +5004,12 @@ export default function App() {
             onComplete={markTodayRead}
             onReadComplete={handleArticleReadComplete}
             onToggleClip={toggleClip}
-            onOpenScrapbook={() => openScrapForArticle(selectedArticle.headline)}
+            onOpenScrapbook={() =>
+              openScrapForArticle(
+                selectedArticle.headline,
+                buildArticleScrapSeed(selectedArticle.headline, articleAnnotations[selectedArticle.id]?.highlights ?? [])
+              )
+            }
             initialHighlights={articleAnnotations[selectedArticle.id]?.highlights}
             initialStrokes={articleAnnotations[selectedArticle.id]?.strokes}
             onAnnotationsChange={(highlights, strokes) =>
