@@ -2495,7 +2495,7 @@ function MissionScreen({
                         color: m.done ? "var(--pt-chip-inactive-text)" : "#FCFFF1",
                       }}
                     >
-                      {m.reward}개
+                      {m.done ? "완료" : `${m.reward}개`}
                     </span>
                   </div>
                 </div>
