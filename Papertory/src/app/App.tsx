@@ -4849,7 +4849,8 @@ function NavigationDrawer({
           left: APP_SAFE_LEFT,
           width: `min(312px, calc(100% - ${APP_SAFE_LEFT} - 16px))`,
           backgroundColor: "var(--pt-bg-primary)",
-          borderRadius: "36px 12px 12px 36px",
+          // 좌측(화면 엣지)은 flush(0), 우측(노출 엣지)만 살짝 라운드 — 떠 있는 side sheet 느낌
+          borderRadius: "0px 12px 12px 0px",
         }}
       >
         {/* Drawer header */}
