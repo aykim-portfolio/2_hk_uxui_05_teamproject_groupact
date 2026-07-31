@@ -245,7 +245,7 @@ function InstallIcon() {
   );
 }
 
-function PwaInstallControl({ visible }: { visible: boolean }) {
+function PwaInstallControl() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [installed, setInstalled] = useState(() => {
@@ -307,25 +307,20 @@ function PwaInstallControl({ visible }: { visible: boolean }) {
     if (outcome === "accepted") setInstalled(true);
   };
 
-  if (!visible || installed) return null;
+  if (installed) return null;
 
   return (
     <>
+      {/* '포인트로 스티커 사러 가기' 버튼과 동일 UI, 컬러만 프라이머리 — 도토리 줍기 페이지에 인라인 배치 */}
       <button
         type="button"
-        className="pt-install-button fixed z-30 flex items-center gap-2 rounded-full px-4 py-3 label"
-        style={{
-          left: `calc(16px + ${APP_SAFE_LEFT})`,
-          bottom: `calc(16px + ${APP_SAFE_BOTTOM})`,
-          color: "#ffffff",
-          backgroundColor: "var(--pt-brand-primary)",
-          boxShadow: "0 8px 24px rgba(70,100,203,0.3)",
-        }}
+        className="w-full flex items-center justify-center gap-2 rounded-3xl py-4"
+        style={{ backgroundColor: "var(--pt-brand-primary)", color: "#ffffff" }}
         onClick={requestInstall}
         aria-haspopup={installPrompt ? undefined : "dialog"}
       >
+        <span className="label" style={{ color: "#ffffff" }}>앱 설치</span>
         <InstallIcon />
-        앱 설치
       </button>
 
       {guideOpen && (
@@ -2411,6 +2406,19 @@ function MissionScreen({
     { label: "스티커 구매하기", reward: 5, done: false },
   ];
 
+  // 도토리 알림 온/오프 — 켤 때 브라우저 알림 권한 요청 + 샘플 알림(데모). 반복 푸시는 서버·SW 필요(범위 밖)
+  const [alarmOn, setAlarmOn] = useState(false);
+  const toggleAlarm = async () => {
+    const next = !alarmOn;
+    setAlarmOn(next);
+    if (next && typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+        if (perm === "granted") new Notification("페이퍼토리", { body: "도토리 알림이 켜졌어요! 도토리를 찾으면 알려드릴게요 🐿️" });
+      } catch {}
+    }
+  };
+
   return (
     <div
       className="relative size-full overflow-hidden"
@@ -2498,7 +2506,7 @@ function MissionScreen({
 
         {/* Acorn notification card */}
         <div
-          className="mx-5 mt-4 rounded-xl p-4 flex items-center justify-between opacity-60"
+          className="mx-5 mt-4 rounded-xl p-4 flex items-center justify-between"
           style={{ backgroundColor: "var(--pt-bg-card)" }}
         >
           <div className="flex items-center gap-4">
@@ -2523,6 +2531,17 @@ function MissionScreen({
               </p>
             </div>
           </div>
+          {/* 알림 온/오프 토글 */}
+          <button
+            onClick={toggleAlarm}
+            role="switch"
+            aria-checked={alarmOn}
+            aria-label="도토리 알림 켜기"
+            className="shrink-0 rounded-full"
+            style={{ width: 48, height: 28, padding: 3, backgroundColor: alarmOn ? "var(--pt-brand-primary)" : "var(--pt-chip-inactive)", transition: "background-color 150ms" }}
+          >
+            <span className="block rounded-full bg-white" style={{ width: 22, height: 22, transform: alarmOn ? "translateX(20px)" : "translateX(0)", transition: "transform 150ms", boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }} />
+          </button>
         </div>
 
         {/* CTA: Shop button */}
@@ -2537,6 +2556,11 @@ function MissionScreen({
             </span>
             <ArrowRightIcon color="var(--pt-text-primary)" />
           </button>
+        </div>
+
+        {/* CTA: 앱 설치 — 웹에서 기능을 충분히 써본 유저의 앱 다운 동선(스티커 버튼 아래) */}
+        <div className="mx-5 mt-3">
+          <PwaInstallControl />
         </div>
       </div>
 
@@ -5303,8 +5327,6 @@ export default function App() {
         style={{ backgroundColor: "var(--pt-bg-primary)" }}
       >
         <main className="pt-screen-host h-full w-full">{renderScreen()}</main>
-        {/* 앱 설치(PWA) 버튼은 스크랩 라이브러리·스크랩북 편집 화면에선 숨김 — FAB·툴바와 겹치지 않도록 */}
-        <PwaInstallControl visible={screen !== "start" && screen !== "scrap-library" && screen !== "scrapbook"} />
         {drawerOpen && (
           <NavigationDrawer
             currentScreen={screen}
