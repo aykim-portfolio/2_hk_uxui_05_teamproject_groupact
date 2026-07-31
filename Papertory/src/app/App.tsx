@@ -1172,11 +1172,6 @@ function LandingScreen({
           </div>
         </div>
       </div>
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -1519,11 +1514,6 @@ function CategoryScreen({
           <BackArrowIcon />
         </GlassBtn>
       </div>
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -2398,11 +2388,6 @@ function ArticleScreen({
           완독했어요!
         </span>
       </div>
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -2555,11 +2540,6 @@ function MissionScreen({
         </div>
       </div>
 
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -2865,11 +2845,6 @@ function ShopScreen({
         </span>
       </div>
 
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -2978,11 +2953,6 @@ function MyPageScreen({ onMenuOpen }: { onMenuOpen: () => void }) {
         </div>
       </div>
 
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -3236,11 +3206,6 @@ function CalendarScreen({
         </div>
       </div>
 
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -3329,11 +3294,6 @@ function ReadingDetailScreen({
         )}
       </div>
 
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none border-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      />
     </div>
   );
 }
@@ -3645,7 +3605,6 @@ function ScrapLibraryScreen({
         />
       )}
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -4409,7 +4368,6 @@ function ScrapbookScreen({
         </div>
       )}
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -4773,7 +4731,6 @@ function ScrapShareScreen({ doc, title, onBack }: { doc: ScrapDoc | null; title:
         </div>
       )}
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
@@ -4837,7 +4794,6 @@ function SharedScrapView({ doc, onArticle, onFeed }: { doc: ScrapDoc | null; onA
         </p>
       </div>
 
-      <div aria-hidden className="absolute inset-0 pointer-events-none border-4" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }
