@@ -8,6 +8,7 @@
 * **응답자 수:** 20명
 * **블록 수:** 21개
 * **보고서 다운로드일:** 2026년 8월 3일
+* **테스트 결과 원본 링크: https://app.maze.co/report/papertory_UT/34edr7msaa9h1r/intro
 
 ---
 
