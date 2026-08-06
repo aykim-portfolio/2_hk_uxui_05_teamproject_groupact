@@ -3457,6 +3457,16 @@ function ShareIcon({ color = "var(--pt-text-primary)" }: { color?: string }) {
 }
 
 type PenTool = "keyboard" | "highlighter" | "pencil" | "eraser" | "clipboard" | "scissors" | "undo";
+// 스크린리더용 펜바 도구 이름표(접근성)
+const PEN_TOOL_LABELS: Record<PenTool, string> = {
+  keyboard: "텍스트 입력",
+  highlighter: "형광펜",
+  pencil: "펜",
+  eraser: "지우개",
+  clipboard: "클립보드",
+  scissors: "이미지 자르기",
+  undo: "실행 취소",
+};
 function PenToolIcon({ name, color = "var(--pt-text-primary)" }: { name: PenTool; color?: string }) {
   const paths: Record<PenTool, React.ReactNode> = {
     keyboard: (
@@ -4221,11 +4231,11 @@ function ScrapbookScreen({
           }}
         >
           <span className="caption" style={{ color: "var(--pt-text-secondary)" }}>크기</span>
-          <button onClick={() => resizeSel(-16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
+          <button onClick={() => resizeSel(-16)} aria-label="크기 줄이기" className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>−</span></button>
           <span className="caption" style={{ color: "var(--pt-text-primary)", width: 34, textAlign: "center" }}>
             {Math.round(selectedEl.kind === "sticker" ? selectedEl.size ?? 72 : selectedEl.size ?? 100)}{selectedEl.kind === "sticker" ? "px" : "%"}
           </span>
-          <button onClick={() => resizeSel(16)} className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>+</span></button>
+          <button onClick={() => resizeSel(16)} aria-label="크기 키우기" className="rounded-full flex items-center justify-center" style={{ width: 28, height: 28, backgroundColor: "var(--pt-bg-card)" }}><span style={{ fontSize: 18, color: "var(--pt-text-primary)", lineHeight: 1 }}>+</span></button>
           <div className="w-px h-5" style={{ backgroundColor: "var(--pt-border-default)" }} />
           <button onClick={deleteSel} className="rounded-full px-3 flex items-center" style={{ height: 28, backgroundColor: "var(--pt-bg-card)" }}><span className="caption" style={{ color: "#ff6b6b" }}>삭제</span></button>
         </div>
@@ -4249,7 +4259,7 @@ function ScrapbookScreen({
           <div className="flex items-start gap-2">
             <div className="flex flex-wrap gap-2 flex-1">
               {PEN_COLORS.map((c) => (
-                <button key={c} onClick={() => setActiveColor(c)} className="rounded-full shrink-0" style={{ width: 26, height: 26, backgroundColor: c, boxShadow: activeColor === c ? "0 0 0 2px #fff, 0 0 0 4px var(--pt-brand-primary)" : "0 1px 3px rgba(0,0,0,0.2)" }} />
+                <button key={c} onClick={() => setActiveColor(c)} aria-label={`색상 ${c}`} aria-pressed={activeColor === c} className="rounded-full shrink-0" style={{ width: 26, height: 26, backgroundColor: c, boxShadow: activeColor === c ? "0 0 0 2px #fff, 0 0 0 4px var(--pt-brand-primary)" : "0 1px 3px rgba(0,0,0,0.2)" }} />
               ))}
             </div>
             <button onClick={() => setTool("none")} aria-label="닫기" className="shrink-0 flex items-center justify-center" style={{ width: 24, height: 24 }}>
@@ -4378,6 +4388,8 @@ function ScrapbookScreen({
             <button
               key={t}
               onClick={() => selectTool(t)}
+              aria-label={PEN_TOOL_LABELS[t]}
+              aria-pressed={t !== "undo" && tool === t}
               className="flex items-center justify-center rounded-full shrink-0"
               style={{ width: "clamp(24px, 8vw, 28px)", height: "clamp(24px, 8vw, 28px)", backgroundColor: tool === t ? "var(--pt-brand-secondary)" : "transparent" }}
             >
